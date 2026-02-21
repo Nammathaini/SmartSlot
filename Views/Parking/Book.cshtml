@@ -4,30 +4,50 @@
 }
 
 <style>
-    body { background-color: #000 !important; color: white !important; }
-    .navbar { background-color: #111 !important; }
+    body {
+        background-image: url('/images/parking-bg.jpg');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        background-color: #000 !important;
+        color: white !important;
+    }
+
+    body::before {
+        content: '';
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.78);
+        z-index: 0;
+    }
+
+    .navbar { background-color: #111 !important; position: relative; z-index: 2; }
     .navbar-brand { color: white !important; }
 
     .page-wrapper {
         min-height: 100vh;
-        background-color: #000;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         padding: 40px 20px;
+        position: relative;
+        z-index: 1;
     }
 
     h2 { color: white; text-align: center; margin-bottom: 30px; }
 
     .card {
-        background-color: #1a1a1a;
+        background-color: rgba(26, 26, 26, 0.92);
         border: 1px solid #333;
         border-radius: 12px;
         padding: 30px;
         width: 100%;
         max-width: 480px;
         margin-bottom: 20px;
+        position: relative;
+        z-index: 1;
     }
 
     .card p { color: #ccc; margin: 8px 0; }
@@ -107,7 +127,7 @@
 
         @if (slot.PaymentMode == "UPI")
         {
-            <div style="background:#1a1a1a; border:1px solid #28a745; border-radius:8px; padding:15px; margin-top:15px;">
+            <div style="background:rgba(0,0,0,0.4); border:1px solid #28a745; border-radius:8px; padding:15px; margin-top:15px;">
                 <p style="color:#28a745; font-weight:bold; font-size:1.1rem;">&#128179; Owner Accepts: UPI Payment</p>
                 <p style="color:#ccc;">Click below to pay directly via your UPI app:</p>
                 <p style="color:white; font-size:1rem; background:#2a2a2a; padding:10px; border-radius:6px;">
@@ -126,7 +146,7 @@
         }
         else
         {
-            <div style="background:#1a1a1a; border:1px solid #ffc107; border-radius:8px; padding:15px; margin-top:15px;">
+            <div style="background:rgba(0,0,0,0.4); border:1px solid #ffc107; border-radius:8px; padding:15px; margin-top:15px;">
                 <p style="color:#ffc107; font-weight:bold; font-size:1.1rem;">&#128181; Owner Accepts: Cash on Delivery</p>
                 <p style="color:#ccc;">Pay directly to the owner when you arrive at the parking slot.</p>
                 <p style="color:#aaa; font-size:0.8rem;">&#9888; Please carry exact cash amount.</p>
@@ -167,7 +187,6 @@
 
             @if (slot.PaymentMode == "UPI")
             {
-                <!-- For UPI: Confirm button hidden until payment done -->
                 <div id="payNote" style="background:#2a2a2a; border:1px solid #ffc107;
                      border-radius:8px; padding:12px; margin-top:20px; text-align:center;">
                     <p style="color:#ffc107; margin:0; font-size:0.9rem;">
@@ -181,7 +200,6 @@
             }
             else
             {
-                <!-- For Cash: Show confirm button directly -->
                 <button type="submit" class="btn-submit">
                     &#9989; Confirm Booking
                 </button>
@@ -219,7 +237,6 @@
             document.getElementById("totalAmountField").value = total;
             document.getElementById("priceBox").style.display = "block";
 
-            // Update UPI pay link with calculated amount
             var upiBtn = document.getElementById("upiPayBtn");
             if (upiBtn) {
                 var ownerUpi = "@slot.OwnerUpiId";
@@ -235,6 +252,6 @@
         setTimeout(function () {
             document.getElementById("confirmBtn").style.display = "block";
             document.getElementById("payNote").style.display = "none";
-        }, 3000); // Show confirm button after 3 seconds
+        }, 3000);
     }
 </script>
