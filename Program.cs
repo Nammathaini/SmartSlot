@@ -6,7 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services
 builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<SmartSlot.Services.DistanceService>();
-builder.Services.AddScoped<SmartSlot.Services.PhonePeService>();
+
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
