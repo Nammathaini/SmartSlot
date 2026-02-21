@@ -4,14 +4,31 @@
 
 <style>
     body {
+        background-image: url('/images/parking-bg.jpg');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
         background-color: #000 !important;
         color: white !important;
         margin: 0;
         padding: 0;
     }
 
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.78);
+            z-index: 0;
+        }
+
     .navbar {
         background-color: #111 !important;
+        position: relative;
+        z-index: 2;
     }
 
     .navbar-brand {
@@ -20,12 +37,13 @@
 
     .page-wrapper {
         min-height: 100vh;
-        background-color: #000;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         padding: 40px 20px;
+        position: relative;
+        z-index: 1;
     }
 
     h2 {
@@ -37,12 +55,14 @@
     }
 
     .form-card {
-        background-color: #1a1a1a;
+        background-color: rgba(26, 26, 26, 0.9);
         border: 1px solid #333;
         border-radius: 12px;
         padding: 40px;
         width: 100%;
         max-width: 480px;
+        position: relative;
+        z-index: 1;
     }
 
         .form-card label {
@@ -73,6 +93,8 @@
         margin-bottom: 20px;
         width: 100%;
         max-width: 480px;
+        position: relative;
+        z-index: 1;
     }
 
     .btn-location {
@@ -175,6 +197,7 @@
                 <option>Car</option>
                 <option>Both</option>
             </select>
+
             <label>Payment Preference</label>
             <select name="PaymentMode" id="paymentMode" onchange="toggleUpi()">
                 <option value="Cash">Cash on Delivery</option>
@@ -191,7 +214,6 @@
         </form>
     </div>
 </div>
-
 
 <script>
     function getLocation() {
@@ -245,7 +267,8 @@
         }
         return true;
     }
-        function toggleUpi() {
+
+    function toggleUpi() {
         var mode = document.getElementById("paymentMode").value;
         if (mode === "UPI") {
             document.getElementById("upiSection").style.display = "block";
