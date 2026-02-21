@@ -1,4 +1,98 @@
-﻿@page
-@model SmartSlot.Views.Parking.SlotAddedModel
-@{
+﻿@{
+    ViewData["Title"] = "Slot Added Successfully";
+    Layout = "_Layout";
 }
+
+<style>
+    body {
+        background-color: #000 !important;
+        color: white !important;
+        margin: 0;
+        padding: 0;
+    }
+
+    body::before {
+        content: '';
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.78);
+        z-index: 0;
+    }
+
+    .navbar { background-color: #111 !important; position: relative; z-index: 2; }
+    .navbar-brand { color: white !important; }
+
+    .page-wrapper {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .success-card {
+        background-color: rgba(26, 26, 26, 0.95);
+        border: 2px solid #28a745;
+        border-radius: 16px;
+        padding: 50px 40px;
+        width: 100%;
+        max-width: 500px;
+        text-align: center;
+    }
+
+    .success-card h2 {
+        color: #28a745;
+        font-size: 2rem;
+        margin-bottom: 15px;
+    }
+
+    .success-card p {
+        color: #ccc;
+        font-size: 1.1rem;
+        margin-bottom: 30px;
+    }
+
+    .btn-home {
+        display: inline-block;
+        padding: 12px 30px;
+        background-color: #28a745;
+        color: white;
+        border-radius: 8px;
+        text-decoration: none;
+        font-size: 1rem;
+        font-weight: bold;
+        margin: 8px;
+    }
+
+    .btn-home:hover { background-color: #218838; color: white; }
+
+    .btn-find {
+        display: inline-block;
+        padding: 12px 30px;
+        background-color: #007bff;
+        color: white;
+        border-radius: 8px;
+        text-decoration: none;
+        font-size: 1rem;
+        font-weight: bold;
+        margin: 8px;
+    }
+
+    .btn-find:hover { background-color: #0056b3; color: white; }
+</style>
+
+<div class="page-wrapper">
+    <div class="success-card">
+        <div style="font-size:5rem; margin-bottom:20px;">🅿️</div>
+        <h2>✅ Slot Added Successfully!</h2>
+        <p>Your parking slot has been listed on SmartSlot.<br>Customers can now find and book your slot!</p>
+        <div>
+            <a href="/Parking/Index" class="btn-home">➕ Add Another Slot</a>
+            <a href="/Parking/Search" class="btn-find">🔍 Find Parking</a>
+        </div>
+    </div>
+</div>
