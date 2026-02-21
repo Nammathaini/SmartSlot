@@ -26,7 +26,12 @@ namespace SmartSlot.Controllers
         {
             _context.ParkingSlots.Add(slot);
             _context.SaveChanges();
-            return RedirectToAction("Index");
+            return RedirectToAction("SlotAdded");
+        }
+
+        public IActionResult SlotAdded()
+        {
+            return View();
         }
 
         public IActionResult Search()
