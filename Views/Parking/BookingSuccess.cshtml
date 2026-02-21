@@ -1,0 +1,25 @@
+﻿@{
+    ViewData["Title"] = "Booking Confirmed";
+}
+
+<style>
+    body { background-color: #000 !important; color: white !important; }
+    .navbar { background-color: #111 !important; }
+    .navbar-brand { color: white !important; }
+</style>
+
+<div style="text-align:center; background:#000; min-height:100vh; padding-top:100px;">
+    <h2 style="color:white;">&#9989; Booking Confirmed!</h2>
+    <p style="color:#ccc;">Your parking slot has been successfully booked.</p>
+
+    @if (TempData["Error"] != null)
+    {
+        <div style="background:#1a0000; border:1px solid red; padding:15px; margin:20px auto;
+                    max-width:800px; border-radius:8px; text-align:left; word-break:break-all;">
+            <p style="color:red; font-weight:bold;">&#9888; Debug Info:</p>
+            <p style="color:#ff6666; font-size:0.85rem;">@TempData["Error"]</p>
+        </div>
+    }
+
+    <a href="/Parking/Search" style="color:#28a745; font-size:1.1rem;">&#128269; Find More Parking</a>
+</div>

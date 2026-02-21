@@ -1,0 +1,257 @@
+﻿@{
+    ViewData["Title"] = "Add Parking Slot";
+}
+
+<style>
+    body {
+        background-color: #000 !important;
+        color: white !important;
+        margin: 0;
+        padding: 0;
+    }
+
+    .navbar {
+        background-color: #111 !important;
+    }
+
+    .navbar-brand {
+        color: white !important;
+    }
+
+    .page-wrapper {
+        min-height: 100vh;
+        background-color: #000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px;
+    }
+
+    h2 {
+        color: white;
+        text-align: center;
+        margin-bottom: 30px;
+        font-size: 2rem;
+        letter-spacing: 1px;
+    }
+
+    .form-card {
+        background-color: #1a1a1a;
+        border: 1px solid #333;
+        border-radius: 12px;
+        padding: 40px;
+        width: 100%;
+        max-width: 480px;
+    }
+
+        .form-card label {
+            color: #ccc;
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .form-card input,
+        .form-card select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background-color: #2a2a2a;
+            color: white;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+    .location-section {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+        width: 100%;
+        max-width: 480px;
+    }
+
+    .btn-location {
+        padding: 10px 20px;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1rem;
+        width: 100%;
+    }
+
+    .search-row {
+        display: flex;
+        gap: 8px;
+        width: 100%;
+    }
+
+        .search-row input {
+            flex: 1;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background-color: #2a2a2a;
+            color: white;
+            font-size: 1rem;
+        }
+
+        .search-row button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+    .status-text {
+        color: #aaa;
+        font-size: 0.85rem;
+        text-align: center;
+    }
+
+    .btn-submit {
+        width: 100%;
+        padding: 12px;
+        margin-top: 25px;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 1.1rem;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+        .btn-submit:hover {
+            background-color: #218838;
+        }
+</style>
+
+<div class="page-wrapper">
+    <h2>🅿️ Add Your Parking Slot</h2>
+
+    <!-- Location Section -->
+    <div class="location-section">
+        <button type="button" class="btn-location" onclick="getLocation()">📍 Use My Live Location</button>
+        <p id="locationStatus" class="status-text">Please fetch your location using one of the options below.</p>
+
+        <div class="search-row">
+            <input type="text" id="addressInput" placeholder="Search your area / address" />
+            <button type="button" onclick="searchAddress()">🔍</button>
+        </div>
+        <p id="addressStatus" class="status-text"></p>
+    </div>
+
+    <!-- Form Card -->
+    <div class="form-card">
+        <form method="post" action="/Parking/AddSlot" id="slotForm">
+            <input type="hidden" name="Latitude" id="latField" />
+            <input type="hidden" name="Longitude" id="lonField" />
+
+            <label>Owner Name</label>
+            <input type="text" name="OwnerName" required />
+
+            <label>Price Per Hour (₹)</label>
+            <input type="number" name="PricePerHour" required />
+
+            <label>Available From</label>
+            <input type="datetime-local" name="AvailableFrom" required />
+
+            <label>Available To</label>
+            <input type="datetime-local" name="AvailableTo" required />
+
+            <label>Vehicle Type</label>
+            <select name="VehicleType">
+                <option>Bike</option>
+                <option>Car</option>
+                <option>Both</option>
+            </select>
+            <label>Payment Preference</label>
+            <select name="PaymentMode" id="paymentMode" onchange="toggleUpi()">
+                <option value="Cash">Cash on Delivery</option>
+                <option value="UPI">UPI</option>
+            </select>
+
+            <div id="upiSection" style="display:none;">
+                <label>Your UPI ID</label>
+                <input type="text" name="OwnerUpiId" id="ownerUpiId" placeholder="example@upi" />
+                <p id="upiStatus" class="status-text"></p>
+            </div>
+
+            <button type="submit" class="btn-submit" onclick="return validateLocation()">➕ Add Slot</button>
+        </form>
+    </div>
+</div>
+
+
+<script>
+    function getLocation() {
+        if (navigator.geolocation) {
+            document.getElementById("locationStatus").innerText = "Fetching location...";
+            navigator.geolocation.getCurrentPosition(
+                function (position) {
+                    setLocation(position.coords.latitude, position.coords.longitude);
+                    document.getElementById("locationStatus").innerText = "✅ Live location fetched!";
+                },
+                function () {
+                    document.getElementById("locationStatus").innerText = "❌ Permission denied.";
+                }
+            );
+        }
+    }
+
+    function searchAddress() {
+        var address = document.getElementById("addressInput").value.trim();
+        if (!address) {
+            document.getElementById("addressStatus").innerText = "⚠️ Please enter an address.";
+            return;
+        }
+        document.getElementById("addressStatus").innerText = "Searching...";
+        fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.length === 0) {
+                    document.getElementById("addressStatus").innerText = "❌ No related area found.";
+                    setLocation("", "");
+                } else {
+                    setLocation(data[0].lat, data[0].lon);
+                    document.getElementById("addressStatus").innerText = `✅ Found: ${data[0].display_name}`;
+                }
+            })
+            .catch(() => {
+                document.getElementById("addressStatus").innerText = "❌ Error searching. Try again.";
+            });
+    }
+
+    function setLocation(lat, lon) {
+        document.getElementById("latField").value = lat;
+        document.getElementById("lonField").value = lon;
+    }
+
+    function validateLocation() {
+        var lat = document.getElementById("latField").value;
+        if (!lat) {
+            alert("⚠️ Please use live location or enter a valid address first!");
+            return false;
+        }
+        return true;
+    }
+        function toggleUpi() {
+        var mode = document.getElementById("paymentMode").value;
+        if (mode === "UPI") {
+            document.getElementById("upiSection").style.display = "block";
+        } else {
+            document.getElementById("upiSection").style.display = "none";
+            document.getElementById("ownerUpiId").value = "";
+        }
+    }
+</script>
