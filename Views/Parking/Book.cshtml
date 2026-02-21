@@ -76,6 +76,21 @@
     }
 
     .btn-submit:hover { background-color: #218838; }
+
+    .upi-pay-btn {
+        display: block;
+        background: linear-gradient(135deg, #6f42c1, #28a745);
+        color: white;
+        text-align: center;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        text-decoration: none;
+        margin-top: 10px;
+    }
+
+    .upi-pay-btn:hover { opacity: 0.9; color: white; text-decoration: none; }
 </style>
 
 <div class="page-wrapper">
@@ -89,25 +104,40 @@
         <p>&#128663; Vehicle Type: <b style="color:white;">@slot.VehicleType</b></p>
         <p>&#9200; Available From: <b style="color:white;">@slot.AvailableFrom</b></p>
         <p>&#9200; Available To: <b style="color:white;">@slot.AvailableTo</b></p>
+
         @if (slot.PaymentMode == "UPI")
-{
-    <p>💳 Payment: <b style="color:#28a745;">UPI</b></p>
-    <p>🔗 Owner UPI ID: <b style="color:white;">@slot.OwnerUpiId</b></p>
-}
-else
-{
-    <p>💵 Payment: <b style="color:#ffc107;">Cash on Delivery</b></p>
-    <p style="color:#aaa; font-size:0.85rem;">Pay directly to owner when you arrive.</p>
-}
+        {
+            <div style="background:#1a1a1a; border:1px solid #28a745; border-radius:8px; padding:15px; margin-top:15px;">
+                <p style="color:#28a745; font-weight:bold; font-size:1.1rem;">&#128179; Owner Accepts: UPI Payment</p>
+                <p style="color:#ccc;">Click below to pay directly via your UPI app:</p>
+                <p style="color:white; font-size:1rem; background:#2a2a2a; padding:10px; border-radius:6px;">
+                    &#128242; UPI ID: <b>@slot.OwnerUpiId</b>
+                </p>
+                <a id="upiPayBtn"
+                   href="upi://pay?pa=@slot.OwnerUpiId&pn=SmartSlot Parking&am=0&tn=Parking Payment"
+                   class="upi-pay-btn">
+                    &#128241; Pay with UPI App (GPay / PhonePe / Paytm)
+                </a>
+                <p style="color:#aaa; font-size:0.75rem; margin-top:8px; text-align:center;">
+                    &#9888; Select your booking time first to calculate amount
+                </p>
+            </div>
+        }
+        else
+        {
+            <div style="background:#1a1a1a; border:1px solid #ffc107; border-radius:8px; padding:15px; margin-top:15px;">
+                <p style="color:#ffc107; font-weight:bold; font-size:1.1rem;">&#128181; Owner Accepts: Cash on Delivery</p>
+                <p style="color:#ccc;">Pay directly to the owner when you arrive at the parking slot.</p>
+                <p style="color:#aaa; font-size:0.8rem;">&#9888; Please carry exact cash amount.</p>
+            </div>
+        }
     </div>
 
     <!-- Booking Form -->
     <div class="card">
         <form method="post" action="/Parking/ConfirmBooking">
-        <input type="hidden" name="ParkingSlotId" value="@slot.Id" />
-        <input type="hidden" name="totalAmount" id="totalAmountField" value="0" />
-        
             <input type="hidden" name="ParkingSlotId" value="@slot.Id" />
+            <input type="hidden" name="totalAmount" id="totalAmountField" value="0" />
 
             <label>Your Name</label>
             <input type="text" name="CustomerName" required />
@@ -167,6 +197,16 @@ else
             document.getElementById("totalPrice").innerText = total;
             document.getElementById("totalAmountField").value = total;
             document.getElementById("priceBox").style.display = "block";
+
+            // Update UPI pay link with calculated amount
+            var upiBtn = document.getElementById("upiPayBtn");
+            if (upiBtn) {
+                var ownerUpi = "@slot.OwnerUpiId";
+                upiBtn.href = "upi://pay?pa=" + ownerUpi +
+                    "&pn=SmartSlot Parking" +
+                    "&am=" + total +
+                    "&tn=Parking Payment";
+            }
         }
     }
 </script>
