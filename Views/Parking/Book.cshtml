@@ -115,7 +115,8 @@
                 </p>
                 <a id="upiPayBtn"
                    href="upi://pay?pa=@slot.OwnerUpiId&pn=SmartSlot Parking&am=0&tn=Parking Payment"
-                   class="upi-pay-btn">
+                   class="upi-pay-btn"
+                   onclick="paymentDone()">
                     &#128241; Pay with UPI App (GPay / PhonePe / Paytm)
                 </a>
                 <p style="color:#aaa; font-size:0.75rem; margin-top:8px; text-align:center;">
@@ -164,7 +165,27 @@
                 <p>&#64; &#8377;@slot.PricePerHour/hr</p>
             </div>
 
-            <button type="submit" class="btn-submit">&#9989; Confirm Booking</button>
+            @if (slot.PaymentMode == "UPI")
+            {
+                <!-- For UPI: Confirm button hidden until payment done -->
+                <div id="payNote" style="background:#2a2a2a; border:1px solid #ffc107;
+                     border-radius:8px; padding:12px; margin-top:20px; text-align:center;">
+                    <p style="color:#ffc107; margin:0; font-size:0.9rem;">
+                        &#9888; Please complete UPI payment first then click Confirm Booking
+                    </p>
+                </div>
+                <button type="submit" class="btn-submit" id="confirmBtn"
+                        style="display:none; background-color:#28a745;">
+                    &#9989; Confirm Booking (Payment Done)
+                </button>
+            }
+            else
+            {
+                <!-- For Cash: Show confirm button directly -->
+                <button type="submit" class="btn-submit">
+                    &#9989; Confirm Booking
+                </button>
+            }
         </form>
     </div>
 </div>
@@ -208,5 +229,12 @@
                     "&tn=Parking Payment";
             }
         }
+    }
+
+    function paymentDone() {
+        setTimeout(function () {
+            document.getElementById("confirmBtn").style.display = "block";
+            document.getElementById("payNote").style.display = "none";
+        }, 3000); // Show confirm button after 3 seconds
     }
 </script>
