@@ -54,9 +54,8 @@ namespace SmartSlot.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> ConfirmBooking(
+        public IActionResult ConfirmBooking(
             Booking booking,
-            [FromServices] PhonePeService phonePeService,
             double totalAmount)
         {
             // Save booking
@@ -71,47 +70,7 @@ namespace SmartSlot.Controllers
             }
             _context.SaveChanges();
 
-            // If UPI → initiate PhonePe payment
-            if (slot != null && slot.PaymentMode == "UPI" && !string.IsNullOrEmpty(slot.OwnerUpiId))
-            {
-                try
-                {
-                    var transactionId = "TXN" + DateTime.Now.Ticks;
-
-                    // Calculate amount from booking times if totalAmount is 0
-                    if (totalAmount <= 0)
-                    {
-                        var hours = (booking.BookingTo - booking.BookingFrom).TotalHours;
-                        totalAmount = hours * slot.PricePerHour;
-                    }
-
-                    var amountInPaise = (long)(totalAmount * 100);
-                    var redirectUrl = $"{Request.Scheme}://{Request.Host}/Parking/PaymentSuccess?bookingId={booking.Id}";
-
-                    var paymentUrl = await phonePeService.InitiatePayment(
-                        transactionId,
-                        amountInPaise,
-                        slot.OwnerUpiId,
-                        redirectUrl
-                    );
-
-                    if (!string.IsNullOrEmpty(paymentUrl))
-                    {
-                        return Redirect(paymentUrl);
-                    }
-
-                    // Show full debug info on page
-                    TempData["Error"] = $"TOKEN RESPONSE: {phonePeService.LastTokenResponse} || PAYMENT RESPONSE: {phonePeService.LastPaymentResponse}";
-                    return RedirectToAction("BookingSuccess");
-                }
-                catch (Exception ex)
-                {
-                    TempData["Error"] = $"EXCEPTION: {ex.Message} | INNER: {ex.InnerException?.Message}";
-                    return RedirectToAction("BookingSuccess");
-                }
-            }
-
-            // If Cash → go directly to success
+            // Payment handled by UPI deep link on booking page
             return RedirectToAction("BookingSuccess");
         }
 
