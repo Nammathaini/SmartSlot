@@ -1,0 +1,184 @@
+﻿@{
+    ViewData["Title"] = "Vehicle Verification";
+}
+
+<style>
+    body {
+        background-image: url('https://i.pinimg.com/1200x/ea/3f/92/ea3f92fcdab7799f742c813cdb651463.jpg');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        background-color: #000 !important;
+        color: white !important;
+    }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.80);
+            z-index: 0;
+        }
+
+    .navbar {
+        background-color: #111 !important;
+        position: relative;
+        z-index: 2;
+    }
+
+    .page-wrapper {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .card {
+        background-color: rgba(26, 26, 26, 0.95);
+        border: 1px solid #333;
+        border-radius: 12px;
+        padding: 35px;
+        width: 100%;
+        max-width: 520px;
+    }
+
+    h2 {
+        color: white;
+        text-align: center;
+        margin-bottom: 25px;
+    }
+
+    .upload-box {
+        border: 2px dashed #444;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 20px;
+        background: rgba(0,0,0,0.3);
+    }
+
+        .upload-box label {
+            color: #28a745;
+            font-weight: bold;
+            font-size: 1rem;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .upload-box input[type="file"] {
+            color: #ccc;
+            width: 100%;
+        }
+
+        .upload-box p {
+            color: #aaa;
+            font-size: 0.8rem;
+            margin-top: 8px;
+        }
+
+    .btn-verify {
+        width: 100%;
+        padding: 14px;
+        background: linear-gradient(135deg, #28a745, #007bff);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+
+        .btn-verify:hover {
+            opacity: 0.9;
+        }
+
+    .steps {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 25px;
+    }
+
+    .step {
+        text-align: center;
+        flex: 1;
+        padding: 8px;
+    }
+
+    .step-num {
+        width: 30px;
+        height: 30px;
+        background: #28a745;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .step p {
+        color: #aaa;
+        font-size: 0.75rem;
+        margin: 0;
+    }
+</style>
+
+<div class="page-wrapper">
+    <div class="card">
+        <h2>🔐 Vehicle Verification</h2>
+        <p style="color:#aaa; text-align:center; margin-bottom:20px;">
+            Upload your documents to verify your vehicle before booking
+        </p>
+
+        <!-- Steps -->
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <p>Upload RC</p>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <p>Upload DL</p>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <p>Vehicle Photo</p>
+            </div>
+        </div>
+
+        <form method="post" action="/Verification/Verify" enctype="multipart/form-data">
+            <input type="hidden" name="slotId" value="@ViewBag.SlotId" />
+
+            <div class="upload-box">
+                <label>📄 RC Book Photo</label>
+                <input type="file" name="rcImage" accept="image/*" required />
+                <p>⚠️ Number plate and owner name must be clearly visible</p>
+            </div>
+
+            <div class="upload-box">
+                <label>🪪 Driving License Photo</label>
+                <input type="file" name="dlImage" accept="image/*" required />
+                <p>⚠️ Your name must be clearly visible</p>
+            </div>
+
+            <div class="upload-box">
+                <label>🚗 Vehicle Photo (Number Plate Visible)</label>
+                <input type="file" name="vehicleImage" accept="image/*" required />
+                <p>⚠️ Take clear photo showing full number plate</p>
+            </div>
+
+            <button type="submit" class="btn-verify">
+                🔍 Verify My Vehicle
+            </button>
+        </form>
+        <p style="color:yellow;">SlotId = @ViewBag.SlotId</p>
+    </div>
+</div>

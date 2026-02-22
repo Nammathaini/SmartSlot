@@ -1,0 +1,200 @@
+﻿@model SmartSlot.Models.VerificationData
+
+@{
+    ViewData["Title"] = "Verification Result";
+    bool verified = Model.VerificationStatus == "Verified";
+}
+
+<style>
+    body {
+        background-image: url('https://i.pinimg.com/1200x/ea/3f/92/ea3f92fcdab7799f742c813cdb651463.jpg');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        background-color: #000 !important;
+        color: white !important;
+    }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.80);
+            z-index: 0;
+        }
+
+    .navbar {
+        background-color: #111 !important;
+        position: relative;
+        z-index: 2;
+    }
+
+    .page-wrapper {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .card {
+        background-color: rgba(26, 26, 26, 0.95);
+        border: 2px solid @(verified ? "#28a745" : "#ffc107");
+        border-radius: 12px;
+        padding: 35px;
+        width: 100%;
+        max-width: 520px;
+        text-align: center;
+    }
+
+    .result-icon {
+        font-size: 4rem;
+        margin-bottom: 15px;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 8px 20px;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 1.1rem;
+        background: @(verified ? "#28a745" : "#ffc107");
+        color: white;
+        margin-bottom: 20px;
+    }
+
+    .check-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px;
+        border-radius: 8px;
+        background: rgba(0,0,0,0.3);
+        margin-bottom: 10px;
+    }
+
+        .check-row p {
+            color: #ccc;
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+    .risk-bar {
+        width: 100%;
+        height: 12px;
+        background: #333;
+        border-radius: 6px;
+        margin-top: 15px;
+        overflow: hidden;
+    }
+
+    .risk-fill {
+        height: 100%;
+        width: @(Model.RiskScore) %;
+        background: @(Model.RiskScore >= 70 ? "#28a745" : "#ffc107");
+        border-radius: 6px;
+    }
+
+    .btn-proceed {
+        display: block;
+        width: 100%;
+        padding: 14px;
+        background: #28a745;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        text-decoration: none;
+        margin-top: 20px;
+        cursor: pointer;
+    }
+
+    .btn-retry {
+        display: block;
+        width: 100%;
+        padding: 14px;
+        background: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        text-decoration: none;
+        margin-top: 10px;
+    }
+</style>
+
+<div class="page-wrapper">
+    <div class="card">
+        <div class="result-icon">@(verified ? "✅" : "⚠️")</div>
+        <div class="status-badge">@Model.VerificationStatus</div>
+
+        <h3 style="color:white; margin-bottom:20px;">Verification Report</h3>
+
+        <div class="check-row">
+            <p>🚗 Plate from RC</p>
+            <b style="color:white;">@Model.ExtractedPlateFromRC</b>
+        </div>
+
+        <div class="check-row">
+            <p>📸 Plate from Vehicle Photo</p>
+            <b style="color:white;">@Model.ExtractedPlateFromVehicle</b>
+        </div>
+
+        <div class="check-row">
+            <p>Plate Match</p>
+            <b style="color:@(Model.PlateMatch ? "#28a745" : "#dc3545")">
+                @(Model.PlateMatch ? "✅ Match" : "❌ Mismatch")
+            </b>
+        </div>
+
+        <div class="check-row">
+            <p>👤 Name from RC</p>
+            <b style="color:white;">@Model.ExtractedNameFromRC</b>
+        </div>
+
+        <div class="check-row">
+            <p>🪪 Name from DL</p>
+            <b style="color:white;">@Model.ExtractedNameFromDL</b>
+        </div>
+
+        <div class="check-row">
+            <p>Name Match</p>
+            <b style="color:@(Model.NameMatch ? "#28a745" : "#dc3545")">
+                @(Model.NameMatch ? "✅ Match" : "❌ Mismatch")
+            </b>
+        </div>
+
+        <div style="margin-top:15px;">
+            <p style="color:#aaa; text-align:left; font-size:0.9rem;">
+                Trust Score: <b style="color:white;">@Model.RiskScore / 100</b>
+            </p>
+            <div class="risk-bar">
+                <div class="risk-fill"></div>
+            </div>
+        </div>
+
+        @if (verified)
+        {
+            <a href="/Parking/Book/@TempData["SlotId"]" class="btn-proceed">
+                ✅ Proceed to Booking
+            </a>
+        }
+        else
+        {
+            <p style="color:#ffc107; margin-top:15px; font-size:0.9rem;">
+                ⚠️ Verification incomplete. Please re-upload clear images.
+            </p>
+            <a href="/Verification/Upload/@ViewBag.SlotId" class="btn-retry">
+                🔄 Try Again
+            </a>
+        }
+    </div>
+</div>

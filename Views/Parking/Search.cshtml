@@ -4,7 +4,7 @@
 
 <style>
     body {
-        background-image: url('/images/parking-bg.jpg');
+        background-image: url('https://i.pinimg.com/1200x/ea/3f/92/ea3f92fcdab7799f742c813cdb651463.jpg');
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
@@ -105,10 +105,7 @@
     #slotsBox table th { background-color: #2a2a2a; color: white; }
     #slotsBox table td { color: #ddd; }
 
-    #status {
-        position: relative;
-        z-index: 1;
-    }
+    #status { position: relative; z-index: 1; }
 
     .top-section {
         position: relative;
@@ -272,7 +269,7 @@
                            🚗 ${slot.vehicleType}<br>
                            ⏰ ${new Date(slot.availableFrom).toLocaleString()}<br>
                            to ${new Date(slot.availableTo).toLocaleString()}<br><br>
-                           <a href="/Parking/Book/${slot.id}" style="background:#28a745; color:white; padding:5px 10px; text-decoration:none; border-radius:4px;">✅ Book This Slot</a>`;
+                           <a href="/Verification/Upload/${slot.id}" style="background:#28a745; color:white; padding:5px 10px; text-decoration:none; border-radius:4px;">✅ Book This Slot</a>`;
 
                     L.marker([slot.latitude, slot.longitude], { icon: icon })
                         .addTo(map)
@@ -284,7 +281,7 @@
 
                     var actionBtn = slot.isBooked
                         ? `<span style="color:gray;">—</span>`
-                        : `<a href="/Parking/Book/${slot.id}" style="background:#28a745; color:white; padding:4px 8px; text-decoration:none; border-radius:4px;">Book</a>`;
+                        : `<a href="/Verification/Upload/${slot.id}" style="background:#28a745; color:white; padding:4px 8px; text-decoration:none; border-radius:4px;">🔐 Verify & Book</a>`;
 
                     var distText = getDistanceKm(lat, lon, slot.latitude, slot.longitude).toFixed(2) + " km";
 
