@@ -2,7 +2,7 @@
 
 @{
     ViewData["Title"] = "Verification Result";
-    bool verified = Model.VerificationStatus == "Verified";
+    bool verified = Model.PlateMatch && Model.NameMatch;
 }
 
 <style>
@@ -45,7 +45,7 @@
 
     .card {
         background-color: rgba(26, 26, 26, 0.95);
-        border: 2px solid @(verified ? "#28a745" : "#ffc107");
+        border: 2px solid @(verified ? "#28a745" : "#dc3545");
         border-radius: 12px;
         padding: 35px;
         width: 100%;
@@ -64,7 +64,7 @@
         border-radius: 20px;
         font-weight: bold;
         font-size: 1.1rem;
-        background: @(verified ? "#28a745" : "#ffc107");
+        background: @(verified ? "#28a745" : "#dc3545");
         color: white;
         margin-bottom: 20px;
     }
@@ -85,22 +85,6 @@
             font-size: 0.9rem;
         }
 
-    .risk-bar {
-        width: 100%;
-        height: 12px;
-        background: #333;
-        border-radius: 6px;
-        margin-top: 15px;
-        overflow: hidden;
-    }
-
-    .risk-fill {
-        height: 100%;
-        width: @(Model.RiskScore) %;
-        background: @(Model.RiskScore >= 70 ? "#28a745" : "#ffc107");
-        border-radius: 6px;
-    }
-
     .btn-proceed {
         display: block;
         width: 100%;
@@ -116,11 +100,25 @@
         cursor: pointer;
     }
 
+    .btn-disabled {
+        display: block;
+        width: 100%;
+        padding: 14px;
+        background: #555;
+        color: #888;
+        border: none;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        margin-top: 20px;
+        cursor: not-allowed;
+    }
+
     .btn-retry {
         display: block;
         width: 100%;
         padding: 14px;
-        background: #dc3545;
+        background: #007bff;
         color: white;
         border: none;
         border-radius: 8px;
@@ -128,13 +126,17 @@
         font-weight: bold;
         text-decoration: none;
         margin-top: 10px;
+        cursor: pointer;
     }
 </style>
 
 <div class="page-wrapper">
     <div class="card">
-        <div class="result-icon">@(verified ? "✅" : "⚠️")</div>
-        <div class="status-badge">@Model.VerificationStatus</div>
+
+        <div class="result-icon">@(verified ? "✅" : "❌")</div>
+        <div class="status-badge">
+            @(verified ? "Identity Verified" : "Verification Failed")
+        </div>
 
         <h3 style="color:white; margin-bottom:20px;">Verification Report</h3>
 
@@ -172,29 +174,68 @@
             </b>
         </div>
 
-        <div style="margin-top:15px;">
-            <p style="color:#aaa; text-align:left; font-size:0.9rem;">
-                Trust Score: <b style="color:white;">@Model.RiskScore / 100</b>
-            </p>
-            <div class="risk-bar">
-                <div class="risk-fill"></div>
-            </div>
+        <!-- Result Message Box -->
+        <div style="
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background: @(verified ? "rgba(40,167,69,0.15)" : "rgba(220,53,69,0.15)");
+            border: 1px solid @(verified ? "#28a745" : "#dc3545");">
+
+            @if (verified)
+            {
+                <p style="color:#28a745; font-weight:bold; margin:0;">
+                    ✅ Both plate and name verified successfully!
+                </p>
+                <p style="color:#aaa; font-size:0.85rem; margin:5px 0 0 0;">
+                    You can now proceed to book this parking slot.
+                </p>
+            }
+            else if (!Model.PlateMatch && !Model.NameMatch)
+            {
+                <p style="color:#dc3545; font-weight:bold; margin:0;">
+                    ❌ Both plate number and name did not match.
+                </p>
+                <p style="color:#aaa; font-size:0.85rem; margin:5px 0 0 0;">
+                    Please upload clear, valid RC, DL and vehicle photos.
+                </p>
+            }
+            else if (!Model.PlateMatch)
+            {
+                <p style="color:#dc3545; font-weight:bold; margin:0;">
+                    ⚠️ Vehicle plate number did not match.
+                </p>
+                <p style="color:#aaa; font-size:0.85rem; margin:5px 0 0 0;">
+                    Please upload a clearer vehicle photo showing the number plate.
+                </p>
+            }
+            else if (!Model.NameMatch)
+            {
+                <p style="color:#dc3545; font-weight:bold; margin:0;">
+                    ⚠️ Name on RC did not match Driving License.
+                </p>
+                <p style="color:#aaa; font-size:0.85rem; margin:5px 0 0 0;">
+                    Please upload clearer RC and DL photos.
+                </p>
+            }
         </div>
 
+        <!-- Confirm Booking Button -->
         @if (verified)
         {
             <a href="/Parking/Book/@TempData["SlotId"]" class="btn-proceed">
-                ✅ Proceed to Booking
+                ✅ Confirm Booking
             </a>
         }
         else
         {
-            <p style="color:#ffc107; margin-top:15px; font-size:0.9rem;">
-                ⚠️ Verification incomplete. Please re-upload clear images.
-            </p>
-            <a href="/Verification/Upload/@ViewBag.SlotId" class="btn-retry">
-                🔄 Try Again
+            <button class="btn-disabled" disabled>
+                🔒 Confirm Booking
+            </button>
+            <a href="javascript:history.back()" class="btn-retry">
+                🔄 Re-upload Documents
             </a>
         }
+
     </div>
 </div>

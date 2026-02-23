@@ -129,6 +129,39 @@
         font-size: 0.75rem;
         margin: 0;
     }
+    <script>
+function validateDocument(input, docType) {
+    var file = input.files[0];
+    if (!file) return;
+
+    var validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    var maxSize = 5 * 1024 * 1024; // 5MB
+
+    if (!validTypes.includes(file.type)) {
+        alert("❌ Wrong file type! Please upload a JPG or PNG image for " + docType);
+        input.value = "";
+        return;
+    }
+
+    if (file.size > maxSize) {
+        alert("❌ File too large! Please upload image under 5MB for " + docType);
+        input.value = "";
+        return;
+    }
+
+    if (file.size < 5000) {
+        alert("⚠️ Image too small! This may not be a valid " + docType + " photo. Please upload a clear photo.");
+        input.value = "";
+        return;
+    }
+
+    // Show green confirmation
+    var statusId = docType === 'RC Book' ? 'rcStatus' :
+                   docType === 'Driving License' ? 'dlStatus' : 'vehicleStatus';
+    document.getElementById(statusId).innerHTML =
+        '<span style="color:#28a745;">✅ ' + file.name + ' selected</span>';
+}
+</script>
 </style>
 
 <div class="page-wrapper">
@@ -159,19 +192,25 @@
 
             <div class="upload-box">
                 <label>📄 RC Book Photo</label>
-                <input type="file" name="rcImage" accept="image/*" required />
+                <input type="file" name="rcImage" accept="image/*" required
+                       onchange="validateDocument(this, 'RC Book')" />
+                <p id="rcStatus" style="font-size:0.8rem; margin-top:5px;"></p>
                 <p>⚠️ Number plate and owner name must be clearly visible</p>
             </div>
 
             <div class="upload-box">
                 <label>🪪 Driving License Photo</label>
-                <input type="file" name="dlImage" accept="image/*" required />
+                <input type="file" name="dlImage" accept="image/*" required
+                       onchange="validateDocument(this, 'Driving License')" />
+                <p id="dlStatus" style="font-size:0.8rem; margin-top:5px;"></p>
                 <p>⚠️ Your name must be clearly visible</p>
             </div>
 
             <div class="upload-box">
                 <label>🚗 Vehicle Photo (Number Plate Visible)</label>
-                <input type="file" name="vehicleImage" accept="image/*" required />
+                <input type="file" name="vehicleImage" accept="image/*" required
+                       onchange="validateDocument(this, 'Vehicle Photo')" />
+                <p id="vehicleStatus" style="font-size:0.8rem; margin-top:5px;"></p>
                 <p>⚠️ Take clear photo showing full number plate</p>
             </div>
 

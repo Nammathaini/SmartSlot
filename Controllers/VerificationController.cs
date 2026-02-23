@@ -7,10 +7,17 @@ namespace SmartSlot.Controllers
     public class VerificationController : Controller
     {
         private readonly VerificationService _verificationService;
+        private readonly IConfiguration _configuration;
+        private readonly HttpClient _httpClient;
 
-        public VerificationController(VerificationService verificationService)
+        public VerificationController(
+            VerificationService verificationService,
+            IConfiguration configuration,
+            IHttpClientFactory httpClientFactory)
         {
             _verificationService = verificationService;
+            _configuration = configuration;
+            _httpClient = httpClientFactory.CreateClient();
         }
 
         [HttpGet]
@@ -35,28 +42,27 @@ namespace SmartSlot.Controllers
                 return View("Upload");
             }
 
-            // Read images
             var rcBytes = await ReadImage(rcImage);
             var dlBytes = await ReadImage(dlImage);
             var vehicleBytes = await ReadImage(vehicleImage);
 
-            // For now simulate OCR extraction
-            // In next step we will add real OCR
-            var simulatedRCText = "Name: RAMSULOCHANA\nVehicle: TN01AB1234";
-            var simulatedDLText = "Name: RAMSULOCHANA";
-            var simulatedVehicleText = "TN01AB1234";
+            // ANPR - Extract plate from vehicle photo
+            var plateFromVehicle = await ExtractPlateANPR(vehicleBytes);
 
-            // Extract data
-            var plateFromRC = _verificationService.ExtractPlateNumber(simulatedRCText);
-            var plateFromVehicle = _verificationService.ExtractPlateNumber(simulatedVehicleText);
-            var nameFromRC = _verificationService.ExtractName(simulatedRCText);
-            var nameFromDL = _verificationService.ExtractName(simulatedDLText);
+            // OCR - Extract plate and name from RC
+            var rcText = await ExtractTextOCR(rcBytes);
+            var plateFromRC = _verificationService.ExtractPlateNumber(rcText);
+            var nameFromRC = _verificationService.ExtractName(rcText);
+
+            // OCR - Extract name from DL
+            var dlText = await ExtractTextOCR(dlBytes);
+            var nameFromDL = _verificationService.ExtractName(dlText);
 
             // Compare
             bool plateMatch = _verificationService.IsMatch(plateFromRC, plateFromVehicle);
             bool nameMatch = _verificationService.IsMatch(nameFromRC, nameFromDL);
 
-            // Check EXIF (basic)
+            // Basic checks
             bool hasExif = rcImage.Length > 10000;
             bool normalSize = vehicleImage.Length < 10000000;
 
@@ -64,22 +70,115 @@ namespace SmartSlot.Controllers
             int riskScore = _verificationService.CalculateRiskScore(
                 plateMatch, nameMatch, hasExif, normalSize);
 
-            // Send to result page
             var result = new VerificationData
             {
-                ExtractedPlateFromRC = plateFromRC,
-                ExtractedPlateFromVehicle = plateFromVehicle,
-                ExtractedNameFromRC = nameFromRC,
-                ExtractedNameFromDL = nameFromDL,
+                ExtractedPlateFromRC = string.IsNullOrEmpty(plateFromRC) ? "Not detected" : plateFromRC,
+                ExtractedPlateFromVehicle = string.IsNullOrEmpty(plateFromVehicle) ? "Not detected" : plateFromVehicle,
+                ExtractedNameFromRC = string.IsNullOrEmpty(nameFromRC) ? "Not detected" : nameFromRC,
+                ExtractedNameFromDL = string.IsNullOrEmpty(nameFromDL) ? "Not detected" : nameFromDL,
                 PlateMatch = plateMatch,
                 NameMatch = nameMatch,
                 RiskScore = riskScore,
-                VerificationStatus = riskScore >= 70 ? "Verified" : "Review Required"
+                VerificationStatus = riskScore >= 30 ? "Verified" :
+    (!plateMatch && !nameMatch) ? "⚠ Name & Plate Mismatch - Review Required" :
+    !plateMatch ? "⚠ Plate Mismatch - Review Required" :
+    !nameMatch ? "⚠ Name Mismatch - Review Required" :
+    "Review Required",
             };
 
-            ViewBag.SlotId = slotId;
             TempData["SlotId"] = slotId;
+            ViewBag.SlotId = slotId;
             return View("Result", result);
+        }
+
+        // ANPR using Plate Recognizer API
+        private async Task<string> ExtractPlateANPR(byte[] imageBytes)
+        {
+            try
+            {
+                var apiToken = _configuration["PlateRecognizer:ApiToken"];
+                _httpClient.DefaultRequestHeaders.Clear();
+                _httpClient.DefaultRequestHeaders.Add("Authorization", $"Token {apiToken}");
+
+                var content = new MultipartFormDataContent();
+                content.Add(new ByteArrayContent(imageBytes), "upload", "vehicle.jpg");
+
+                var response = await _httpClient.PostAsync(
+                    "https://api.platerecognizer.com/v1/plate-reader/", content);
+
+                var json = await response.Content.ReadAsStringAsync();
+                return ParseANPRResponse(json);
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
+        private string ParseANPRResponse(string json)
+        {
+            try
+            {
+                var start = json.IndexOf("\"plate\":\"") + 9;
+                if (start < 9) return "";
+                var end = json.IndexOf("\"", start);
+                return json.Substring(start, end - start).ToUpper();
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
+        // OCR using OCR.Space API
+        private async Task<string> ExtractTextOCR(byte[] imageBytes)
+        {
+            try
+            {
+                var apiKey = _configuration["OcrSpace:ApiKey"];
+                var base64 = Convert.ToBase64String(imageBytes);
+                var dataUrl = $"data:image/jpeg;base64,{base64}";
+
+                var formData = new MultipartFormDataContent();
+                formData.Add(new StringContent(apiKey ?? ""), "apikey");
+                formData.Add(new StringContent(dataUrl), "base64Image");
+                formData.Add(new StringContent("eng"), "language");
+                formData.Add(new StringContent("true"), "isOverlayRequired");
+
+                var response = await _httpClient.PostAsync(
+                    "https://api.ocr.space/parse/image", formData);
+
+                var json = await response.Content.ReadAsStringAsync();
+                return ParseOCRResponse(json);
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
+        private string ParseOCRResponse(string json)
+        {
+            try
+            {
+                var start = json.IndexOf("\"ParsedText\":\"") + 14;
+                if (start < 14) return "";
+                var end = json.IndexOf("\"", start);
+                var raw = json.Substring(start, end - start);
+
+                // Clean up OCR line breaks and escape chars
+                raw = raw.Replace("\\r\\n", "\n")
+                         .Replace("\\R\\N", "\n")
+                         .Replace("\\n", "\n")
+                         .Replace("\\t", " ")
+                         .Replace("\\r", "\n");
+
+                return raw;
+            }
+            catch
+            {
+                return "";
+            }
         }
 
         private async Task<byte[]> ReadImage(IFormFile file)
@@ -89,4 +188,4 @@ namespace SmartSlot.Controllers
             return ms.ToArray();
         }
     }
-}
+}   

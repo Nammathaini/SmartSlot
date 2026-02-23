@@ -9,11 +9,16 @@ namespace SmartSlot.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly DistanceService _distanceService;
+        private readonly ParkingAIService _parkingAIService;
 
-        public ParkingController(ApplicationDbContext context, DistanceService distanceService)
+        public ParkingController(
+            ApplicationDbContext context,
+            DistanceService distanceService,
+            ParkingAIService parkingAIService)
         {
             _context = context;
             _distanceService = distanceService;
+            _parkingAIService = parkingAIService;
         }
 
         public IActionResult Index()
@@ -27,6 +32,22 @@ namespace SmartSlot.Controllers
             _context.ParkingSlots.Add(slot);
             _context.SaveChanges();
             return RedirectToAction("SlotAdded");
+        }
+
+        // AI Analyze Parking Image
+        [HttpPost]
+        public async Task<JsonResult> AnalyzeParking(IFormFile image)
+        {
+            if (image == null)
+                return Json(new { score = 0, badge = "❌ No image", details = "No image uploaded" });
+
+            using var ms = new MemoryStream();
+            await image.CopyToAsync(ms);
+            var imageBytes = ms.ToArray();
+
+            var (score, badge, details) = await _parkingAIService.AnalyzeParkingImage(imageBytes);
+
+            return Json(new { score, badge, details });
         }
 
         public IActionResult SlotAdded()
@@ -63,10 +84,8 @@ namespace SmartSlot.Controllers
             Booking booking,
             double totalAmount)
         {
-            // Save booking
             _context.Bookings.Add(booking);
 
-            // Mark slot as booked
             var slot = _context.ParkingSlots.Find(booking.ParkingSlotId);
             if (slot != null)
             {
@@ -75,7 +94,6 @@ namespace SmartSlot.Controllers
             }
             _context.SaveChanges();
 
-            // Payment handled by UPI deep link on booking page
             return RedirectToAction("BookingSuccess");
         }
 

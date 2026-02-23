@@ -5,8 +5,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services
 builder.Services.AddControllersWithViews();
+builder.Services.AddHttpClient();
 builder.Services.AddScoped<SmartSlot.Services.DistanceService>();
 builder.Services.AddScoped<SmartSlot.Services.VerificationService>();
+builder.Services.AddHttpClient<SmartSlot.Services.ParkingAIService>();
+builder.Services.AddScoped<SmartSlot.Services.ParkingAIService>();
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
