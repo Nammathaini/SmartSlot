@@ -2,6 +2,7 @@
 using SmartSlot.Data;
 using SmartSlot.Models;
 using SmartSlot.Services;
+using System;
 
 namespace SmartSlot.Controllers
 {
@@ -129,12 +130,32 @@ namespace SmartSlot.Controllers
 
             return Json(new { customerName = booking.CustomerName });
         }
+        [HttpGet]
+        public async Task<IActionResult> TestSms(string phone)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(phone))
+                    return Json(new { success = false, message = "Phone is empty" });
+
+                await _smsService.SendReviewSms(phone, 999);
+
+                return Json(new { success = true, message = "SMS triggered successfully" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = ex.Message });
+            }
+        }
 
         // ⭐ REVIEW PAGE
+        [HttpGet]
         public IActionResult Review(int id)
         {
             var booking = _context.Bookings.Find(id);
-            if (booking == null) return NotFound();
+
+            if (booking == null)
+                return NotFound();
 
             ViewBag.BookingId = booking.Id;
             ViewBag.ParkingSlotId = booking.ParkingSlotId;
@@ -145,27 +166,30 @@ namespace SmartSlot.Controllers
         // ⭐ SUBMIT REVIEW
         [HttpPost]
         [HttpPost]
-        public IActionResult SubmitReview(int bookingId, int parkingSlotId, int rating, string? comment)
+        [HttpPost]
+        public IActionResult SubmitReview(int BookingId, int ParkingSlotId, int Rating, string Comment)
         {
-            var booking = _context.Bookings.Find(bookingId);
-            if (booking == null) return NotFound();
-
             var review = new Review
             {
-                BookingId = bookingId,
-                ParkingSlotId = parkingSlotId,
-                Rating = rating,
-                Comment = comment
+                BookingId = BookingId,
+                ParkingSlotId = ParkingSlotId,
+                Rating = Rating,
+                Comment = Comment,
+                CreatedAt = DateTime.UtcNow
             };
 
             _context.Reviews.Add(review);
 
-            booking.ReviewSubmitted = true;
-            _context.Bookings.Update(booking);
+            var booking = _context.Bookings.Find(BookingId);
+            if (booking != null)
+            {
+                booking.ReviewSubmitted = true;
+                _context.Bookings.Update(booking);
+            }
 
             _context.SaveChanges();
 
-            return Content("Thank you for your review!");
+            return Content("Thank you! Your review has been submitted.");
         }
     }
 }

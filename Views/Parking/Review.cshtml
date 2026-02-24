@@ -1,0 +1,40 @@
+﻿@{
+    ViewData["Title"] = "Rate Your Parking Experience";
+}
+
+<div class="container mt-5 text-center">
+
+    <h2>⭐ Rate Your Parking Experience</h2>
+    <p>We value your feedback!</p>
+
+    <form method="post" asp-controller="Parking" asp-action="SubmitReview">
+
+        <!-- Hidden Booking Id -->
+        <input type="hidden" name="BookingId" value="@ViewBag.BookingId" />
+        <input type="hidden" name="ParkingSlotId" value="@ViewBag.ParkingSlotId" />
+
+        <div style="font-size:30px; margin:20px 0;">
+            <input type="radio" name="Rating" value="5" required /> ★
+            <input type="radio" name="Rating" value="4" /> ★
+            <input type="radio" name="Rating" value="3" /> ★
+            <input type="radio" name="Rating" value="2" /> ★
+            <input type="radio" name="Rating" value="1" /> ★
+        </div>
+
+        <div>
+            <textarea name="Comment"
+                  placeholder="Optional comment..."
+                  style="width:60%; height:100px;"
+                      class="form-control mx-auto">
+            </textarea>
+        </div>
+
+        <br />
+
+        <button type="submit" class="btn btn-success">
+            Submit Review
+        </button>
+
+    </form>
+
+</div>

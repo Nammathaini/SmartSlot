@@ -17,6 +17,7 @@ namespace SmartSlot.Services
 
         public async Task SendReviewSms(string toNumber, int bookingId)
         {
+            Console.WriteLine($"📞 Attempting to send SMS to: {toNumber}");
             // ✅ Safety check
             if (string.IsNullOrWhiteSpace(toNumber))
                 throw new ArgumentException("Phone number is empty.");

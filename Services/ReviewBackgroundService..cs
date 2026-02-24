@@ -15,8 +15,12 @@ namespace SmartSlot.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            Console.WriteLine("🔥 ReviewBackgroundService Started");
+
             while (!stoppingToken.IsCancellationRequested)
             {
+                Console.WriteLine($"⏰ Background check at: {DateTime.Now}");
+
                 try
                 {
                     using (var scope = _serviceProvider.CreateScope())
@@ -25,45 +29,39 @@ namespace SmartSlot.Services
                         var smsService = scope.ServiceProvider.GetRequiredService<SmsService>();
 
                         var expiredBookings = context.Bookings
-                            .Where(b => b.BookingTo <= DateTime.Now && !b.ReviewSmsSent)
+                            .Where(b => !b.ReviewSmsSent)
                             .ToList();
+
+                        Console.WriteLine($"📦 Total bookings pending review: {expiredBookings.Count}");
 
                         foreach (var booking in expiredBookings)
                         {
-                            try
+                            Console.WriteLine($"🔎 Checking Booking ID: {booking.Id}");
+                            Console.WriteLine($"   BookingTo: {booking.BookingTo}");
+                            Console.WriteLine($"   CurrentTime: {DateTime.Now}");
+
+                            if (booking.BookingTo <= DateTime.Now)
                             {
-                                if (!string.IsNullOrWhiteSpace(booking.CustomerPhone))
+                                Console.WriteLine($"✅ Booking {booking.Id} expired. Sending SMS...");
+
+                                try
                                 {
-                                    await smsService.SendReviewSms(
-                                        booking.CustomerPhone,
-                                        booking.Id
-                                    );
+                                    await smsService.SendReviewSms(booking.CustomerPhone, booking.Id);
 
                                     booking.ReviewSmsSent = true;
-
-                                    // Force EF tracking update
                                     context.Bookings.Update(booking);
-
                                     await context.SaveChangesAsync();
+
+                                    Console.WriteLine($"📨 SMS sent for Booking {booking.Id}");
                                 }
-                                else
+                                catch (Exception ex)
                                 {
-                                    Console.WriteLine(
-                                        $"⚠️ Booking {booking.Id} skipped — No phone number."
-                                    );
-
-                                    booking.ReviewSmsSent = true;
-
-                                    context.Bookings.Update(booking);
-
-                                    await context.SaveChangesAsync();
+                                    Console.WriteLine($"❌ SMS Error for Booking {booking.Id}: {ex.Message}");
                                 }
                             }
-                            catch (Exception ex)
+                            else
                             {
-                                Console.WriteLine(
-                                    $"❌ SMS failed for Booking {booking.Id}: {ex.Message}"
-                                );
+                                Console.WriteLine($"⏳ Booking {booking.Id} not yet expired.");
                             }
                         }
                     }
