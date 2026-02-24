@@ -35,7 +35,7 @@ namespace SmartSlot.Services
             TwilioClient.Init(_settings.AccountSid, _settings.AuthToken);
 
             // ✅ Review link (change when deployed)
-            var reviewLink = $"https://smartslot-fkc6.onrender.com/Parking/Review/{bookingId}"; ;
+            var reviewLink = $"https://smartslot-fkc6.onrender.com/Parking/Review/{bookingId}"; 
 
             // ✅ Send SMS (Async version)
             await MessageResource.CreateAsync(
