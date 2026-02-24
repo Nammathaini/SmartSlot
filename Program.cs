@@ -5,7 +5,6 @@ using SmartSlot.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services
 builder.Services.AddControllersWithViews();
 builder.Services.AddHttpClient();
 
@@ -14,7 +13,6 @@ builder.Services.Configure<TwilioSettings>(
 
 builder.Services.AddScoped<SmsService>();
 builder.Services.AddHostedService<ReviewBackgroundService>();
-
 builder.Services.AddScoped<SmartSlot.Services.DistanceService>();
 builder.Services.AddScoped<SmartSlot.Services.VerificationService>();
 builder.Services.AddHttpClient<SmartSlot.Services.ParkingAIService>();
@@ -29,7 +27,11 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 var app = builder.Build();
 
-app.UseHttpsRedirection();
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthorization();
@@ -41,7 +43,6 @@ app.MapControllerRoute(
 app.MapControllerRoute(
     name: "parking",
     pattern: "{controller=Parking}/{action=Book}/{slotId?}");
+
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
 app.Run($"http://0.0.0.0:{port}");
-
-app.Run();
