@@ -3,6 +3,10 @@ using SmartSlot.Data;
 using SmartSlot.Models;
 using SmartSlot.Services;
 using System;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using System.IO;
 
 namespace SmartSlot.Controllers
 {
@@ -30,6 +34,7 @@ namespace SmartSlot.Controllers
             return View();
         }
 
+        // ================= ADD SLOT =================
         [HttpPost]
         public IActionResult AddSlot(ParkingSlot slot)
         {
@@ -38,6 +43,12 @@ namespace SmartSlot.Controllers
             return RedirectToAction("SlotAdded");
         }
 
+        public IActionResult SlotAdded()
+        {
+            return View();
+        }
+
+        // ================= AI ANALYSIS =================
         [HttpPost]
         public async Task<JsonResult> AnalyzeParking(IFormFile image)
         {
@@ -48,30 +59,23 @@ namespace SmartSlot.Controllers
             await image.CopyToAsync(ms);
             var imageBytes = ms.ToArray();
 
-            var (score, badge, details) = await _parkingAIService.AnalyzeParkingImage(imageBytes);
+            var (score, badge, details) =
+                await _parkingAIService.AnalyzeParkingImage(imageBytes);
 
             return Json(new { score, badge, details });
         }
 
-        public IActionResult SlotAdded()
-        {
-            return View();
-        }
-
+        // ================= SEARCH =================
         public IActionResult Search()
         {
             return View();
         }
 
-        // UPDATED: Includes Average Rating
-        [HttpGet]
         [HttpGet]
         public JsonResult NearbySlots(double lat, double lon, double radius = 6)
         {
-            // Step 1: Bring data to memory first
             var allSlots = _context.ParkingSlots.ToList();
 
-            // Step 2: Then apply C# distance filtering
             var nearbySlots = allSlots
                 .Where(slot =>
                     _distanceService.GetDistance(
@@ -86,11 +90,13 @@ namespace SmartSlot.Controllers
             return Json(nearbySlots);
         }
 
+        // ================= BOOKING =================
         [Route("Parking/Book/{id}")]
         public IActionResult Book(int id)
         {
             var slot = _context.ParkingSlots.Find(id);
             if (slot == null) return NotFound();
+
             ViewBag.Slot = slot;
             return View();
         }
@@ -112,24 +118,12 @@ namespace SmartSlot.Controllers
             return RedirectToAction("BookingSuccess");
         }
 
-        public IActionResult PaymentSuccess(int bookingId)
-        {
-            return View("BookingSuccess");
-        }
-
         public IActionResult BookingSuccess()
         {
             return View();
         }
 
-        [HttpGet]
-        public JsonResult GetBookingInfo(int id)
-        {
-            var booking = _context.Bookings.FirstOrDefault(b => b.ParkingSlotId == id);
-            if (booking == null) return Json(null);
-
-            return Json(new { customerName = booking.CustomerName });
-        }
+        // ================= TEST SMS =================
         [HttpGet]
         public async Task<IActionResult> TestSms(string phone)
         {
@@ -148,14 +142,15 @@ namespace SmartSlot.Controllers
             }
         }
 
-        // ⭐ REVIEW PAGE
+        // ================= REVIEW PAGE =================
         [HttpGet]
+        [Route("Parking/Review/{id}")]
         public IActionResult Review(int id)
         {
-            var booking = _context.Bookings.Find(id);
+            var booking = _context.Bookings.FirstOrDefault(b => b.Id == id);
 
             if (booking == null)
-                return NotFound();
+                return NotFound($"Booking with ID {id} not found.");
 
             ViewBag.BookingId = booking.Id;
             ViewBag.ParkingSlotId = booking.ParkingSlotId;
@@ -163,11 +158,13 @@ namespace SmartSlot.Controllers
             return View();
         }
 
-        // ⭐ SUBMIT REVIEW
+        // ================= SUBMIT REVIEW =================
         [HttpPost]
-        [HttpPost]
-        [HttpPost]
-        public IActionResult SubmitReview(int BookingId, int ParkingSlotId, int Rating, string Comment)
+        public IActionResult SubmitReview(
+            int BookingId,
+            int ParkingSlotId,
+            int Rating,
+            string Comment)
         {
             var review = new Review
             {
@@ -190,6 +187,13 @@ namespace SmartSlot.Controllers
             _context.SaveChanges();
 
             return Content("Thank you! Your review has been submitted.");
+        }
+
+        // ================= DEBUG TEST =================
+        [HttpGet]
+        public IActionResult DebugTest()
+        {
+            return Content("ParkingController is working on Render.");
         }
     }
 }

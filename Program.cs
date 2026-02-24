@@ -41,5 +41,6 @@ app.MapControllerRoute(
 app.MapControllerRoute(
     name: "parking",
     pattern: "{controller=Parking}/{action=Book}/{slotId?}");
+app.UseDeveloperExceptionPage();    
 
 app.Run();
