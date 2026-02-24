@@ -19,7 +19,8 @@ namespace SmartSlot.Services
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                Console.WriteLine($"⏰ Background check at: {DateTime.Now}");
+                var istNow = DateTime.UtcNow.AddHours(5.5);
+                Console.WriteLine($"⏰ Background check at (IST): {istNow}");
 
                 try
                 {
@@ -37,10 +38,10 @@ namespace SmartSlot.Services
                         foreach (var booking in expiredBookings)
                         {
                             Console.WriteLine($"🔎 Checking Booking ID: {booking.Id}");
-                            Console.WriteLine($"   BookingTo: {booking.BookingTo}");
-                            Console.WriteLine($"   CurrentTime: {DateTime.Now}");
+                            Console.WriteLine($"   BookingTo (stored): {booking.BookingTo}");
+                            Console.WriteLine($"   Current IST time:   {istNow}");
 
-                            if (booking.BookingTo <= DateTime.Now)
+                            if (booking.BookingTo <= istNow)
                             {
                                 Console.WriteLine($"✅ Booking {booking.Id} expired. Sending SMS...");
 
@@ -61,7 +62,7 @@ namespace SmartSlot.Services
                             }
                             else
                             {
-                                Console.WriteLine($"⏳ Booking {booking.Id} not yet expired.");
+                                Console.WriteLine($"⏳ Booking {booking.Id} not yet expired. BookingTo: {booking.BookingTo}, IST Now: {istNow}");
                             }
                         }
                     }
