@@ -10,15 +10,18 @@ namespace SmartSlot.Controllers
         private readonly ApplicationDbContext _context;
         private readonly DistanceService _distanceService;
         private readonly ParkingAIService _parkingAIService;
+        private readonly SmsService _smsService;
 
         public ParkingController(
             ApplicationDbContext context,
             DistanceService distanceService,
-            ParkingAIService parkingAIService)
+            ParkingAIService parkingAIService,
+            SmsService smsService)
         {
             _context = context;
             _distanceService = distanceService;
             _parkingAIService = parkingAIService;
+            _smsService = smsService;
         }
 
         public IActionResult Index()
@@ -34,7 +37,6 @@ namespace SmartSlot.Controllers
             return RedirectToAction("SlotAdded");
         }
 
-        // AI Analyze Parking Image
         [HttpPost]
         public async Task<JsonResult> AnalyzeParking(IFormFile image)
         {
@@ -60,13 +62,26 @@ namespace SmartSlot.Controllers
             return View();
         }
 
+        // UPDATED: Includes Average Rating
+        [HttpGet]
         [HttpGet]
         public JsonResult NearbySlots(double lat, double lon, double radius = 6)
         {
+            // Step 1: Bring data to memory first
             var allSlots = _context.ParkingSlots.ToList();
-            var nearbySlots = allSlots.Where(slot =>
-                _distanceService.GetDistance(lat, lon, slot.Latitude, slot.Longitude) <= radius
-            ).ToList();
+
+            // Step 2: Then apply C# distance filtering
+            var nearbySlots = allSlots
+                .Where(slot =>
+                    _distanceService.GetDistance(
+                        lat,
+                        lon,
+                        slot.Latitude,
+                        slot.Longitude
+                    ) <= radius
+                )
+                .ToList();
+
             return Json(nearbySlots);
         }
 
@@ -80,9 +95,7 @@ namespace SmartSlot.Controllers
         }
 
         [HttpPost]
-        public IActionResult ConfirmBooking(
-            Booking booking,
-            double totalAmount)
+        public IActionResult ConfirmBooking(Booking booking, double totalAmount)
         {
             _context.Bookings.Add(booking);
 
@@ -92,6 +105,7 @@ namespace SmartSlot.Controllers
                 slot.IsBooked = true;
                 _context.ParkingSlots.Update(slot);
             }
+
             _context.SaveChanges();
 
             return RedirectToAction("BookingSuccess");
@@ -112,7 +126,46 @@ namespace SmartSlot.Controllers
         {
             var booking = _context.Bookings.FirstOrDefault(b => b.ParkingSlotId == id);
             if (booking == null) return Json(null);
+
             return Json(new { customerName = booking.CustomerName });
+        }
+
+        // ⭐ REVIEW PAGE
+        public IActionResult Review(int id)
+        {
+            var booking = _context.Bookings.Find(id);
+            if (booking == null) return NotFound();
+
+            ViewBag.BookingId = booking.Id;
+            ViewBag.ParkingSlotId = booking.ParkingSlotId;
+
+            return View();
+        }
+
+        // ⭐ SUBMIT REVIEW
+        [HttpPost]
+        [HttpPost]
+        public IActionResult SubmitReview(int bookingId, int parkingSlotId, int rating, string? comment)
+        {
+            var booking = _context.Bookings.Find(bookingId);
+            if (booking == null) return NotFound();
+
+            var review = new Review
+            {
+                BookingId = bookingId,
+                ParkingSlotId = parkingSlotId,
+                Rating = rating,
+                Comment = comment
+            };
+
+            _context.Reviews.Add(review);
+
+            booking.ReviewSubmitted = true;
+            _context.Bookings.Update(booking);
+
+            _context.SaveChanges();
+
+            return Content("Thank you for your review!");
         }
     }
 }

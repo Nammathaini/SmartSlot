@@ -1,11 +1,20 @@
 using Microsoft.EntityFrameworkCore;
 using SmartSlot.Data;
+using SmartSlot.Models;
+using SmartSlot.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services
 builder.Services.AddControllersWithViews();
 builder.Services.AddHttpClient();
+
+builder.Services.Configure<TwilioSettings>(
+    builder.Configuration.GetSection("Twilio"));
+
+builder.Services.AddScoped<SmsService>();
+builder.Services.AddHostedService<ReviewBackgroundService>();
+
 builder.Services.AddScoped<SmartSlot.Services.DistanceService>();
 builder.Services.AddScoped<SmartSlot.Services.VerificationService>();
 builder.Services.AddHttpClient<SmartSlot.Services.ParkingAIService>();

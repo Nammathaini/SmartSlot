@@ -14,6 +14,8 @@ namespace SmartSlot.Data
 
         public DbSet<ParkingSlot> ParkingSlots { get; set; }
         public DbSet<Booking> Bookings { get; set; }
+        public DbSet<Review> Reviews { get; set; }
+
 
     }
 }

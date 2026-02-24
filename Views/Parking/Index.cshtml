@@ -397,12 +397,12 @@
         }
     }
 
-    function analyzeParking(input) {
+       function analyzeParking(input) {
         var file = input.files[0];
         if (!file) return;
 
         var reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = function (e) {
             document.getElementById("previewImage").src = e.target.result;
             document.getElementById("previewImage").style.display = "block";
         };
@@ -418,42 +418,53 @@
             method: "POST",
             body: formData
         })
-        .then(response => response.json())
+        .then(async response => {
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error("Server Error: " + text);
+            }
+
+            return response.json();
+        })
         .then(data => {
+
+            console.log("AI Response:", data);
+
             document.getElementById("analyzingBox").style.display = "none";
             document.getElementById("aiScoreBox").style.display = "block";
 
+            if (!data || data.score === undefined) {
+                throw new Error("Invalid response from server");
+            }
+
             var score = data.score;
             var badge = data.badge;
-            var details = data.details;
+            var details = data.details || "";
 
             var info = getBadgeInfo(score);
 
-            // Show badge pill
             document.getElementById("badgePill").innerText = info.label;
             document.getElementById("badgePill").style.background = info.color;
             document.getElementById("badgePill").style.color =
                 score >= 70 ? "#000" : "white";
 
-            // Sub text
             document.getElementById("badgeSubText").innerText = info.sub;
-
-            // Update ai score box border color
             document.getElementById("aiScoreBox").style.borderColor = info.color;
 
-            // Build breakdown boxes
             var lines = details.split("|").filter(l => l.trim() !== "");
             var breakdownHtml = "";
 
-            lines.forEach(function(line) {
+            lines.forEach(function (line) {
+
                 var parts = line.split(":");
                 var labelPart = parts[0].trim();
                 var percent = parts[1] ? parts[1].trim() : "";
 
                 var boxColor = "#28a745";
                 if (labelPart.includes("Outdoor")) boxColor = "#ffc107";
-                if (labelPart.includes("Basic"))   boxColor = "#17a2b8";
-                if (labelPart.includes("❌"))       boxColor = "#dc3545";
+                if (labelPart.includes("Basic")) boxColor = "#17a2b8";
+                if (labelPart.includes("❌")) boxColor = "#dc3545";
 
                 breakdownHtml += `
                 <div class="score-row" style="border-left:4px solid ${boxColor};">
@@ -468,15 +479,24 @@
             document.getElementById("parkingBadgeField").value = badge;
             document.getElementById("parkingDetailsField").value = details;
         })
-        .catch(() => {
+        .catch(error => {
+
+            console.error("Analyze Error:", error);
+
             document.getElementById("analyzingBox").style.display = "none";
             document.getElementById("aiScoreBox").style.display = "block";
+
             document.getElementById("badgePill").innerText = "❌ Failed";
             document.getElementById("badgePill").style.background = "#dc3545";
             document.getElementById("badgePill").style.color = "white";
-            document.getElementById("badgeSubText").innerText = "Could not analyze image";
+
+            document.getElementById("badgeSubText").innerText =
+                "Could not analyze image";
+
             document.getElementById("scoreBreakdown").innerHTML =
-                '<div class="score-row" style="border-left:4px solid #dc3545;"><span class="score-label">Please try again</span></div>';
+                `<div class="score-row" style="border-left:4px solid #dc3545;">
+                    <span class="score-label">${error.message}</span>
+                </div>`;
         });
     }
 </script>

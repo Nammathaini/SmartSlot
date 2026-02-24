@@ -1,0 +1,76 @@
+﻿@{
+    ViewData["Title"] = "Rate Your Parking";
+}
+
+<style>
+    .stars {
+        display: flex;
+        flex-direction: row-reverse;
+        justify-content: center;
+        font-size: 40px;
+    }
+
+        .stars input {
+            display: none;
+        }
+
+        .stars label {
+            color: #ccc;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+            .stars input:checked ~ label,
+            .stars label:hover,
+            .stars label:hover ~ label {
+                color: gold;
+                transform: scale(1.1);
+            }
+</style>
+
+<h2 class="text-center">Rate Your Parking Experience</h2>
+
+@{
+    ViewData["Title"] = "Rate Your Parking Experience";
+}
+
+<h2 class="text-center">⭐ Rate Your Parking Experience</h2>
+
+<form method="post" asp-action="SubmitReview" class="text-center">
+
+    <!-- Hidden IDs -->
+    <input type="hidden" name="bookingId" value="@ViewBag.BookingId" />
+    <input type="hidden" name="parkingSlotId" value="@ViewBag.ParkingSlotId" />
+
+    <!-- Star Rating -->
+    <div class="stars" style="font-size: 40px; direction: rtl; display: inline-block;">
+        <input type="radio" name="rating" value="5" id="star5" required hidden />
+        <label for="star5" style="cursor:pointer;">★</label>
+
+        <input type="radio" name="rating" value="4" id="star4" hidden />
+        <label for="star4" style="cursor:pointer;">★</label>
+
+        <input type="radio" name="rating" value="3" id="star3" hidden />
+        <label for="star3" style="cursor:pointer;">★</label>
+
+        <input type="radio" name="rating" value="2" id="star2" hidden />
+        <label for="star2" style="cursor:pointer;">★</label>
+
+        <input type="radio" name="rating" value="1" id="star1" hidden />
+        <label for="star1" style="cursor:pointer;">★</label>
+    </div>
+
+    <br /><br />
+
+    <!-- Optional Comment -->
+    <textarea name="comment"
+              placeholder="Optional comment..."
+              style="width: 60%; height: 80px; padding:10px;"></textarea>
+
+    <br /><br />
+
+    <button type="submit" class="btn btn-success">
+        Submit Review
+    </button>
+
+</form>
