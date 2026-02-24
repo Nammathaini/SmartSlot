@@ -41,7 +41,7 @@ app.MapControllerRoute(
 app.MapControllerRoute(
     name: "parking",
     pattern: "{controller=Parking}/{action=Book}/{slotId?}");
-app.UseDeveloperExceptionPage();
-app.MapGet("/health", () => "SmartSlot is running on Render");
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
+app.Run($"http://0.0.0.0:{port}");
 
 app.Run();
