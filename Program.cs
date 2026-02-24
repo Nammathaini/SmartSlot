@@ -44,5 +44,12 @@ app.MapControllerRoute(
     name: "parking",
     pattern: "{controller=Parking}/{action=Book}/{slotId?}");
 
-var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
-app.Run($"http://0.0.0.0:{port}");
+if (app.Environment.IsProduction())
+{
+    var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
+    app.Run($"http://0.0.0.0:{port}");
+}
+else
+{
+    app.Run();
+}

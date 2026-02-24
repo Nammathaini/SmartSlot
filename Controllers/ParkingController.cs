@@ -72,6 +72,7 @@ namespace SmartSlot.Controllers
         }
 
         [HttpGet]
+        [HttpGet]
         public JsonResult NearbySlots(double lat, double lon, double radius = 6)
         {
             var allSlots = _context.ParkingSlots.ToList();
@@ -93,7 +94,7 @@ namespace SmartSlot.Controllers
                     isBooked = slot.IsBooked,
                     parkingScore = slot.ParkingScore,
                     parkingBadge = slot.ParkingBadge,
-                    distance = _distanceService.GetDistance(lat, lon, slot.Latitude, slot.Longitude),
+
                     averageRating = _context.Reviews
                         .Where(r => r.ParkingSlotId == slot.Id)
                         .Select(r => (double?)r.Rating)
@@ -103,13 +104,7 @@ namespace SmartSlot.Controllers
 
             return Json(nearbySlots);
         }
-```
 
-Now push:
-```
-git add.
-git commit -m "Fixed NearbySlots camelCase JSON response"
-git push origin master
 
         // ================= BOOKING =================
         [Route("Parking/Book/{id}")]

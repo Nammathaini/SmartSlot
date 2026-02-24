@@ -18,5 +18,6 @@
         public int ParkingScore { get; set; } = 0;
         public string? ParkingBadge { get; set; } = "";
         public string? ParkingScoreDetails { get; set; } = "";
+     
     }
 }

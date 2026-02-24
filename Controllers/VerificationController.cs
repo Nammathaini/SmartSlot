@@ -143,16 +143,21 @@ namespace SmartSlot.Controllers
                 formData.Add(new StringContent(apiKey ?? ""), "apikey");
                 formData.Add(new StringContent(dataUrl), "base64Image");
                 formData.Add(new StringContent("eng"), "language");
-                formData.Add(new StringContent("true"), "isOverlayRequired");
+                formData.Add(new StringContent("false"), "isOverlayRequired");
+                formData.Add(new StringContent("2"), "OCREngine");  // Engine 2 is more accurate
+                formData.Add(new StringContent("true"), "scale");
+                formData.Add(new StringContent("true"), "detectOrientation");
 
                 var response = await _httpClient.PostAsync(
                     "https://api.ocr.space/parse/image", formData);
 
                 var json = await response.Content.ReadAsStringAsync();
+                Console.WriteLine("OCR RAW RESPONSE: " + json); // debug
                 return ParseOCRResponse(json);
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine("OCR ERROR: " + ex.Message);
                 return "";
             }
         }
@@ -161,26 +166,42 @@ namespace SmartSlot.Controllers
         {
             try
             {
+                // Check for error
+                if (json.Contains("\"IsErroredOnProcessing\":true"))
+                {
+                    Console.WriteLine("OCR API ERROR IN RESPONSE: " + json);
+                    return "";
+                }
+
                 var start = json.IndexOf("\"ParsedText\":\"") + 14;
                 if (start < 14) return "";
-                var end = json.IndexOf("\"", start);
+
+                // Find end properly — look for \r\n pattern or closing quote
+                var end = start;
+                while (end < json.Length)
+                {
+                    if (json[end] == '"' && json[end - 1] != '\\')
+                        break;
+                    end++;
+                }
+
                 var raw = json.Substring(start, end - start);
 
-                // Clean up OCR line breaks and escape chars
                 raw = raw.Replace("\\r\\n", "\n")
                          .Replace("\\R\\N", "\n")
                          .Replace("\\n", "\n")
                          .Replace("\\t", " ")
                          .Replace("\\r", "\n");
 
+                Console.WriteLine("OCR PARSED TEXT: " + raw); // debug
                 return raw;
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine("OCR PARSE ERROR: " + ex.Message);
                 return "";
             }
         }
-
         private async Task<byte[]> ReadImage(IFormFile file)
         {
             using var ms = new MemoryStream();
