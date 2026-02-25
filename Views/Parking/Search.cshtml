@@ -21,91 +21,7 @@
         z-index: 0;
     }
 
-    .navbar {
-        background-color: #111 !important;
-        position: relative;
-        z-index: 2;
-    }
-
-    .navbar-brand { color: white !important; }
-
-    h2 {
-        color: white;
-        text-align: center;
-        margin-bottom: 20px;
-        font-size: 2rem;
-        position: relative;
-        z-index: 1;
-    }
-
-    .btn-location {
-        padding: 10px 25px;
-        background-color: #28a745;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 1rem;
-        margin-bottom: 8px;
-    }
-
-    .search-row {
-        display: flex;
-        gap: 8px;
-        margin-top: 10px;
-        justify-content: center;
-    }
-
-    .search-row input {
-        padding: 10px;
-        width: 300px;
-        border-radius: 6px;
-        border: 1px solid #444;
-        background-color: #2a2a2a;
-        color: white;
-        font-size: 1rem;
-    }
-
-    .search-row button {
-        padding: 10px 15px;
-        background-color: #007bff;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 1rem;
-    }
-
-    .status-text {
-        color: #aaa;
-        font-size: 0.85rem;
-        text-align: center;
-        margin-top: 5px;
-    }
-
-    #map {
-        margin: 0 20px;
-        border-radius: 10px;
-        position: relative;
-        z-index: 1;
-    }
-
-    .slots-section {
-        margin: 20px;
-        background-color: rgba(26, 26, 26, 0.92);
-        border: 1px solid #333;
-        border-radius: 10px;
-        padding: 15px;
-        color: white;
-        position: relative;
-        z-index: 1;
-    }
-
-    .slots-section h4 { color: white; margin-bottom: 12px; }
-    .slots-section table th { background-color: #2a2a2a; color: white; }
-    .slots-section table td { color: #ddd; vertical-align: middle; }
-
-    #status { position: relative; z-index: 1; }
+    h2 { text-align:center; margin:20px 0; position:relative; z-index:1; }
 
     .top-section {
         position: relative;
@@ -114,77 +30,66 @@
         padding: 20px;
     }
 
-    .section-divider {
-        margin: 30px 20px 0 20px;
+    .btn-toggle {
+        padding: 8px 15px;
         border: none;
-        border-top: 1px solid #444;
+        border-radius: 6px;
+        cursor: pointer;
+        margin: 0 5px;
+        font-weight: bold;
+    }
+
+    .btn-available { background:#28a745; color:white; }
+    .btn-booked { background:#dc3545; color:white; }
+
+    #map { height:500px; margin:20px; border-radius:10px; z-index:1; }
+
+    .slots-section {
+        margin: 20px;
+        background-color: rgba(26, 26, 26, 0.92);
+        border: 1px solid #333;
+        border-radius: 10px;
+        padding: 15px;
         position: relative;
         z-index: 1;
     }
+
+    table { width:100%; border-collapse: collapse; }
+    th, td { padding:8px; border:1px solid #444; }
+    th { background:#2a2a2a; }
+
 </style>
 
 <h2>🔍 Find Parking Near Me</h2>
 
 <div class="top-section">
-    <button type="button" class="btn-location" onclick="findParking()">📍 Use My Live Location</button>
-    <p id="locationStatus" class="status-text"></p>
-
-    <div class="search-row">
-        <input type="text" id="searchAddress" placeholder="Search your area / address" />
-        <button type="button" onclick="searchByAddress()">🔍</button>
-    </div>
-    <p id="addressStatus" class="status-text"></p>
+    <button class="btn-toggle btn-available" onclick="showAvailable()">🟢 Available Slots</button>
+    <button class="btn-toggle btn-booked" onclick="showBooked()">🔴 Booked Slots</button>
 </div>
 
-<p id="status" style="text-align:center; color:#aaa; position:relative; z-index:1;">Click above to find parking slots near you.</p>
+<p id="status" style="text-align:center;">Click location to load slots.</p>
 
-<div id="map" style="height: 500px; margin-top: 20px;"></div>
+<div id="map"></div>
 
-<!-- Available Slots Table -->
-<div id="availableBox" style="display:none;" class="slots-section">
-    <h4>🟢 Available Slots</h4>
+<div class="slots-section">
     <div style="overflow-x:auto;">
-        <table style="width:100%; border-collapse: collapse;">
+        <table>
             <thead>
                 <tr>
-                    <th style="padding:8px; border:1px solid #444;">Owner</th>
-                    <th style="padding:8px; border:1px solid #444;">Price</th>
-                    <th style="padding:8px; border:1px solid #444;">Vehicle</th>
-                    <th style="padding:8px; border:1px solid #444;">Available From</th>
-                    <th style="padding:8px; border:1px solid #444;">Available To</th>
-                    <th style="padding:8px; border:1px solid #444;">Distance</th>
-                    <th style="padding:8px; border:1px solid #444;">Rating</th>
-                    <th style="padding:8px; border:1px solid #444;">Slot Status</th>
-                    <th style="padding:8px; border:1px solid #444;">Action</th>
+                    <th>Owner</th>
+                    <th>Price</th>
+                    <th>Vehicle</th>
+                    <th>Available From</th>
+                    <th>Available To</th>
+                    <th class="booking-col" style="display:none;">Booked From</th>
+                    <th class="booking-col" style="display:none;">Booked To</th>
+                    <th>Distance</th>
+                    <th>Rating</th>
+                    <th>Slot Status</th>
+                    <th>Action</th>
                 </tr>
             </thead>
-            <tbody id="availableTableBody"></tbody>
-        </table>
-    </div>
-</div>
-
-<hr class="section-divider" id="tableDivider" style="display:none;" />
-
-<!-- Booked Slots Table -->
-<div id="bookedBox" style="display:none;" class="slots-section">
-    <h4>🔴 Booked Slots</h4>
-    <div style="overflow-x:auto;">
-        <table style="width:100%; border-collapse: collapse;">
-            <thead>
-                <tr>
-                    <th style="padding:8px; border:1px solid #444;">Owner</th>
-                    <th style="padding:8px; border:1px solid #444;">Price</th>
-                    <th style="padding:8px; border:1px solid #444;">Vehicle</th>
-                    <th style="padding:8px; border:1px solid #444;">Available From</th>
-                    <th style="padding:8px; border:1px solid #444;">Available To</th>
-                    <th style="padding:8px; border:1px solid #444;">Booked From</th>
-                    <th style="padding:8px; border:1px solid #444;">Booked To</th>
-                    <th style="padding:8px; border:1px solid #444;">Distance</th>
-                    <th style="padding:8px; border:1px solid #444;">Rating</th>
-                    <th style="padding:8px; border:1px solid #444;">Slot Status</th>
-                </tr>
-            </thead>
-            <tbody id="bookedTableBody"></tbody>
+            <tbody id="slotsTableBody"></tbody>
         </table>
     </div>
 </div>
@@ -193,190 +98,114 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-    var map = L.map('map').setView([13.0827, 80.2707], 13);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
+var map = L.map('map').setView([13.0827, 80.2707], 13);
 
-    var greenIcon = L.icon({
-        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
-        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-        iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34],
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+}).addTo(map);
+
+var allSlots = [];
+var currentLat, currentLon;
+
+function getScoreBadge(score) {
+    if (!score || score === 0) return "<span style='color:#aaa;'>—</span>";
+    if (score >= 80) return "🥇 Premium";
+    if (score >= 70) return "🥈 Gold";
+    if (score >= 50) return "🥉 Silver";
+    if (score >= 30) return "🏠 Basic";
+    return "❌ Poor";
+}
+
+function getDistanceKm(lat1, lon1, lat2, lon2) {
+    var R = 6371;
+    var dLat = (lat2 - lat1) * Math.PI / 180;
+    var dLon = (lon2 - lon1) * Math.PI / 180;
+    var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+            Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180) *
+            Math.sin(dLon/2)*Math.sin(dLon/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function loadSlots(lat, lon) {
+
+    currentLat = lat;
+    currentLon = lon;
+
+    fetch("/Parking/NearbySlots?lat=" + lat + "&lon=" + lon + "&radius=6")
+        .then(r => r.json())
+        .then(data => {
+            allSlots = data;
+            document.getElementById("status").innerText =
+                "Found " + data.length + " slots nearby.";
+            renderTable("available");
+        });
+}
+
+function renderTable(type) {
+
+    var body = document.getElementById("slotsTableBody");
+    body.innerHTML = "";
+
+    var bookingCols = document.querySelectorAll(".booking-col");
+    bookingCols.forEach(c => {
+        c.style.display = (type === "booked") ? "" : "none";
     });
 
-    var redIcon = L.icon({
-        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-        iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34],
+    var filtered = type === "available"
+        ? allSlots.filter(s => !s.isBooked)
+        : allSlots.filter(s => s.isBooked);
+
+    filtered.forEach(slot => {
+
+        var dist = getDistanceKm(currentLat, currentLon,
+                    slot.latitude, slot.longitude).toFixed(2) + " km";
+
+        var rating = slot.averageRating > 0
+            ? "⭐ " + slot.averageRating.toFixed(1)
+            : "No reviews";
+
+        var action = slot.isBooked
+            ? "-"
+            : "<a href='/Verification/Upload/" + slot.id +
+              "' style='background:#28a745;color:white;padding:4px 8px;border-radius:4px;'>Book</a>";
+
+        var row = "<tr>" +
+            "<td>" + slot.ownerName + "</td>" +
+            "<td>₹" + slot.pricePerHour + "/hr</td>" +
+            "<td>" + slot.vehicleType + "</td>" +
+            "<td>" + new Date(slot.availableFrom).toLocaleString() + "</td>" +
+            "<td>" + new Date(slot.availableTo).toLocaleString() + "</td>";
+
+        if (type === "booked") {
+            row += "<td>" +
+                (slot.bookingFrom ? new Date(slot.bookingFrom).toLocaleString() : "—")
+                + "</td>";
+            row += "<td>" +
+                (slot.bookingTo ? new Date(slot.bookingTo).toLocaleString() : "—")
+                + "</td>";
+        }
+
+        row += "<td>" + dist + "</td>" +
+               "<td>" + rating + "</td>" +
+               "<td>" + getScoreBadge(slot.parkingScore) + "</td>" +
+               "<td>" + action + "</td>" +
+               "</tr>";
+
+        body.innerHTML += row;
     });
+}
 
-    function getScoreBadge(score) {
-        if (!score || score === 0) return "<span style='color:#aaa;'>—</span>";
-        var label, color, textColor;
-        if (score >= 80) { label = "🥇 Premium"; color = "#FFD700"; textColor = "#000"; }
-        else if (score >= 70) { label = "🥈 Gold"; color = "#C0C0C0"; textColor = "#000"; }
-        else if (score >= 50) { label = "🥉 Silver"; color = "#CD7F32"; textColor = "#fff"; }
-        else if (score >= 30) { label = "🏠 Basic"; color = "#28a745"; textColor = "#fff"; }
-        else { label = "❌ Poor"; color = "#dc3545"; textColor = "#fff"; }
-        return "<span style='background:" + color + "; color:" + textColor + "; padding:4px 10px; border-radius:12px; font-weight:bold; font-size:0.8rem;'>" + label + "</span>";
-    }
+function showAvailable() {
+    renderTable("available");
+}
 
-    function findParking() {
-        if (navigator.geolocation) {
-            document.getElementById("locationStatus").innerText = "Fetching your location...";
-            navigator.geolocation.getCurrentPosition(
-                function (position) {
-                    var lat = position.coords.latitude;
-                    var lon = position.coords.longitude;
-                    document.getElementById("locationStatus").innerText = "✅ Live location fetched!";
-                    loadSlotsForLocation(lat, lon);
-                },
-                function () {
-                    document.getElementById("locationStatus").innerText = "❌ Location permission denied.";
-                }
-            );
-        }
-    }
+function showBooked() {
+    renderTable("booked");
+}
 
-    function searchByAddress() {
-        var address = document.getElementById("searchAddress").value.trim();
-        if (!address) {
-            document.getElementById("addressStatus").innerText = "⚠️ Please enter an address.";
-            return;
-        }
-        document.getElementById("addressStatus").innerText = "Searching...";
-        fetch("https://nominatim.openstreetmap.org/search?q=" + encodeURIComponent(address) + "&format=json&limit=1")
-            .then(function(response) { return response.json(); })
-            .then(function(data) {
-                if (data.length === 0) {
-                    document.getElementById("addressStatus").innerText = "❌ No related area found.";
-                } else {
-                    var lat = parseFloat(data[0].lat);
-                    var lon = parseFloat(data[0].lon);
-                    document.getElementById("addressStatus").innerText = "✅ Found: " + data[0].display_name;
-                    loadSlotsForLocation(lat, lon);
-                }
-            })
-            .catch(function() {
-                document.getElementById("addressStatus").innerText = "❌ Error searching. Try again.";
-            });
-    }
+navigator.geolocation.getCurrentPosition(function(pos){
+    loadSlots(pos.coords.latitude, pos.coords.longitude);
+});
 
-    function getDistanceKm(lat1, lon1, lat2, lon2) {
-        var R = 6371;
-        var dLat = (lat2 - lat1) * Math.PI / 180;
-        var dLon = (lon2 - lon1) * Math.PI / 180;
-        var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    }
-
-    function loadSlotsForLocation(lat, lon) {
-        map.setView([lat, lon], 14);
-
-        L.marker([lat, lon])
-            .addTo(map)
-            .bindPopup("📍 You are here!")
-            .openPopup();
-
-        L.circle([lat, lon], {
-            color: 'blue',
-            fillColor: '#add8e6',
-            fillOpacity: 0.2,
-            radius: 3000
-        }).addTo(map);
-
-        fetch("/Parking/NearbySlots?lat=" + lat + "&lon=" + lon + "&radius=6")
-            .then(function(response) { return response.json(); })
-            .then(function(slots) {
-                var available = slots.filter(function(s) { return !s.isBooked; });
-                var booked = slots.filter(function(s) { return s.isBooked; });
-
-                document.getElementById("status").innerText =
-                    "✅ Found " + slots.length + " slot(s) nearby — " + available.length + " available, " + booked.length + " booked.";
-
-                var availableBody = document.getElementById("availableTableBody");
-                var bookedBody = document.getElementById("bookedTableBody");
-                availableBody.innerHTML = "";
-                bookedBody.innerHTML = "";
-
-                // Draw map markers
-                slots.forEach(function(slot) {
-                    var icon = slot.isBooked ? redIcon : greenIcon;
-                    var ratingText = slot.averageRating > 0 ? "⭐ " + slot.averageRating.toFixed(1) : "No reviews yet";
-
-                    var popupContent = slot.isBooked
-                        ? "<b>" + slot.ownerName + "</b><br>" +
-                          "🚗 " + slot.vehicleType + "<br>" +
-                          "⏰ " + new Date(slot.availableFrom).toLocaleString() + "<br>" +
-                          "to " + new Date(slot.availableTo).toLocaleString() + "<br>" +
-                          (slot.bookingFrom ? "📅 Booked: " + new Date(slot.bookingFrom).toLocaleString() + "<br>" : "") +
-                          (slot.bookingTo ? "until " + new Date(slot.bookingTo).toLocaleString() + "<br>" : "") +
-                          "<br><span style='color:red; font-weight:bold;'>🔴 Already Booked</span>"
-                        : "<b>" + slot.ownerName + "</b><br>" +
-                          "💰 ₹" + slot.pricePerHour + "/hr<br>" +
-                          "🚗 " + slot.vehicleType + "<br>" +
-                          "⭐ " + ratingText + "<br>" +
-                          "⏰ " + new Date(slot.availableFrom).toLocaleString() + "<br>" +
-                          "to " + new Date(slot.availableTo).toLocaleString() + "<br><br>" +
-                          "<a href='/Verification/Upload/" + slot.id + "' style='background:#28a745; color:white; padding:5px 10px; text-decoration:none; border-radius:4px;'>✅ Book This Slot</a>";
-
-                    L.marker([slot.latitude, slot.longitude], { icon: icon })
-                        .addTo(map)
-                        .bindPopup(popupContent);
-                });
-
-                // Available slots table
-                if (available.length > 0) {
-                    available.forEach(function(slot) {
-                        var distText = getDistanceKm(lat, lon, slot.latitude, slot.longitude).toFixed(2) + " km";
-                        var starDisplay = slot.averageRating > 0 ? "⭐ " + slot.averageRating.toFixed(1) : "<span style='color:#aaa;'>No reviews</span>";
-
-                        availableBody.innerHTML += "<tr>" +
-                            "<td style='padding:8px; border:1px solid #444;'>" + slot.ownerName + "</td>" +
-                            "<td style='padding:8px; border:1px solid #444;'>₹" + slot.pricePerHour + "/hr</td>" +
-                            "<td style='padding:8px; border:1px solid #444;'>" + slot.vehicleType + "</td>" +
-                            "<td style='padding:8px; border:1px solid #444;'>" + new Date(slot.availableFrom).toLocaleString() + "</td>" +
-                            "<td style='padding:8px; border:1px solid #444;'>" + new Date(slot.availableTo).toLocaleString() + "</td>" +
-                            "<td style='padding:8px; border:1px solid #444;'>📍 " + distText + "</td>" +
-                            "<td style='padding:8px; border:1px solid #444;'>" + starDisplay + "</td>" +
-                            "<td style='padding:8px; border:1px solid #444;'>" + getScoreBadge(slot.parkingScore) + "</td>" +
-                            "<td style='padding:8px; border:1px solid #444;'><a href='/Verification/Upload/" + slot.id + "' style='background:#28a745; color:white; padding:4px 8px; text-decoration:none; border-radius:4px;'>🔐 Verify & Book</a></td>" +
-                            "</tr>";
-                    });
-                    document.getElementById("availableBox").style.display = "block";
-                }
-
-                // Booked slots table
-                if (booked.length > 0) {
-                    booked.forEach(function(slot) {
-                        var distText = getDistanceKm(lat, lon, slot.latitude, slot.longitude).toFixed(2) + " km";
-                        var starDisplay = slot.averageRating > 0 ? "⭐ " + slot.averageRating.toFixed(1) : "<span style='color:#aaa;'>No reviews</span>";
-                        var bookedFrom = slot.bookingFrom ? new Date(slot.bookingFrom).toLocaleString() : "<span style='color:#aaa;'>—</span>";
-                        var bookedTo = slot.bookingTo ? new Date(slot.bookingTo).toLocaleString() : "<span style='color:#aaa;'>—</span>";
-
-                        bookedBody.innerHTML += "<tr>" +
-                            "<td style='padding:8px; border:1px solid #444;'>" + slot.ownerName + "</td>" +
-                            "<td style='padding:8px; border:1px solid #444;'>₹" + slot.pricePerHour + "/hr</td>" +
-                            "<td style='padding:8px; border:1px solid #444;'>" + slot.vehicleType + "</td>" +
-                            "<td style='padding:8px; border:1px solid #444;'>" + new Date(slot.availableFrom).toLocaleString() + "</td>" +
-                            "<td style='padding:8px; border:1px solid #444;'>" + new Date(slot.availableTo).toLocaleString() + "</td>" +
-                            "<td style='padding:8px; border:1px solid #444; color:#ff6b6b;'>" + bookedFrom + "</td>" +
-                            "<td style='padding:8px; border:1px solid #444; color:#ff6b6b;'>" + bookedTo + "</td>" +
-                            "<td style='padding:8px; border:1px solid #444;'>📍 " + distText + "</td>" +
-                            "<td style='padding:8px; border:1px solid #444;'>" + starDisplay + "</td>" +
-                            "<td style='padding:8px; border:1px solid #444;'>" + getScoreBadge(slot.parkingScore) + "</td>" +
-                            "</tr>";
-                    });
-                    document.getElementById("bookedBox").style.display = "block";
-                    document.getElementById("tableDivider").style.display = "block";
-                }
-            })
-            .catch(function(err) {
-                console.error("Error loading slots:", err);
-                document.getElementById("status").innerText = "❌ Error loading slots. Try again.";
-            });
-    }
 </script>
