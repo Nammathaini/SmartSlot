@@ -72,8 +72,7 @@ namespace SmartSlot.Controllers
         }
 
         [HttpGet]
-        [HttpGet]
-        [HttpGet]
+     
         public JsonResult NearbySlots(double lat, double lon, double radius = 6)
         {
             var allSlots = _context.ParkingSlots.ToList();

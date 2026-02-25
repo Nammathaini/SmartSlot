@@ -1,6 +1,4 @@
-﻿
-
-@{
+﻿@{
     ViewData["Title"] = "Find Parking Near Me";
 }
 
@@ -92,7 +90,7 @@
         z-index: 1;
     }
 
-    #slotsBox {
+    .slots-section {
         margin: 20px;
         background-color: rgba(26, 26, 26, 0.92);
         border: 1px solid #333;
@@ -103,9 +101,9 @@
         z-index: 1;
     }
 
-    #slotsBox h4 { color: white; }
-    #slotsBox table th { background-color: #2a2a2a; color: white; }
-    #slotsBox table td { color: #ddd; vertical-align: middle; }
+    .slots-section h4 { color: white; margin-bottom: 12px; }
+    .slots-section table th { background-color: #2a2a2a; color: white; }
+    .slots-section table td { color: #ddd; vertical-align: middle; }
 
     #status { position: relative; z-index: 1; }
 
@@ -116,13 +114,12 @@
         padding: 20px;
     }
 
-    .slot-badge {
-        display: inline-block;
-        padding: 5px 14px;
-        border-radius: 20px;
-        font-weight: bold;
-        font-size: 0.8rem;
-        color: white;
+    .section-divider {
+        margin: 30px 20px 0 20px;
+        border: none;
+        border-top: 1px solid #444;
+        position: relative;
+        z-index: 1;
     }
 </style>
 
@@ -139,12 +136,13 @@
     <p id="addressStatus" class="status-text"></p>
 </div>
 
-<p id="status" style="text-align:center; color:#aaa;">Click above to find parking slots near you.</p>
+<p id="status" style="text-align:center; color:#aaa; position:relative; z-index:1;">Click above to find parking slots near you.</p>
 
 <div id="map" style="height: 500px; margin-top: 20px;"></div>
 
-<div id="slotsBox" style="display:none; margin-top: 20px;">
-    <h4>🅿️ Nearby Parking Slots</h4>
+<!-- Available Slots Table -->
+<div id="availableBox" style="display:none;" class="slots-section">
+    <h4>🟢 Available Slots</h4>
     <div style="overflow-x:auto;">
         <table style="width:100%; border-collapse: collapse;">
             <thead>
@@ -154,16 +152,39 @@
                     <th style="padding:8px; border:1px solid #444;">Vehicle</th>
                     <th style="padding:8px; border:1px solid #444;">Available From</th>
                     <th style="padding:8px; border:1px solid #444;">Available To</th>
-                    <th style="padding:8px; border:1px solid #444;">Status</th>
-                    <th style="padding:8px; border:1px solid #444;">Booking From</th>
-<th style="padding:8px; border:1px solid #444;">Booking To</th>
                     <th style="padding:8px; border:1px solid #444;">Distance</th>
                     <th style="padding:8px; border:1px solid #444;">Rating</th>
                     <th style="padding:8px; border:1px solid #444;">Slot Status</th>
                     <th style="padding:8px; border:1px solid #444;">Action</th>
                 </tr>
             </thead>
-            <tbody id="slotsTableBody"></tbody>
+            <tbody id="availableTableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<hr class="section-divider" id="tableDivider" style="display:none;" />
+
+<!-- Booked Slots Table -->
+<div id="bookedBox" style="display:none;" class="slots-section">
+    <h4>🔴 Booked Slots</h4>
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse: collapse;">
+            <thead>
+                <tr>
+                    <th style="padding:8px; border:1px solid #444;">Owner</th>
+                    <th style="padding:8px; border:1px solid #444;">Price</th>
+                    <th style="padding:8px; border:1px solid #444;">Vehicle</th>
+                    <th style="padding:8px; border:1px solid #444;">Available From</th>
+                    <th style="padding:8px; border:1px solid #444;">Available To</th>
+                    <th style="padding:8px; border:1px solid #444;">Booked From</th>
+                    <th style="padding:8px; border:1px solid #444;">Booked To</th>
+                    <th style="padding:8px; border:1px solid #444;">Distance</th>
+                    <th style="padding:8px; border:1px solid #444;">Rating</th>
+                    <th style="padding:8px; border:1px solid #444;">Slot Status</th>
+                </tr>
+            </thead>
+            <tbody id="bookedTableBody"></tbody>
         </table>
     </div>
 </div>
@@ -270,32 +291,34 @@
         fetch("/Parking/NearbySlots?lat=" + lat + "&lon=" + lon + "&radius=6")
             .then(function(response) { return response.json(); })
             .then(function(slots) {
-                var available = slots.filter(function(s) { return !s.isBooked; }).length;
-                var booked = slots.filter(function(s) { return s.isBooked; }).length;
+                var available = slots.filter(function(s) { return !s.isBooked; });
+                var booked = slots.filter(function(s) { return s.isBooked; });
 
                 document.getElementById("status").innerText =
-                    "✅ Found " + slots.length + " slot(s) nearby — " + available + " available, " + booked + " booked.";
+                    "✅ Found " + slots.length + " slot(s) nearby — " + available.length + " available, " + booked.length + " booked.";
 
-                var tableBody = document.getElementById("slotsTableBody");
-                tableBody.innerHTML = "";
+                var availableBody = document.getElementById("availableTableBody");
+                var bookedBody = document.getElementById("bookedTableBody");
+                availableBody.innerHTML = "";
+                bookedBody.innerHTML = "";
 
+                // Draw map markers
                 slots.forEach(function(slot) {
                     var icon = slot.isBooked ? redIcon : greenIcon;
-
-                    var ratingText = slot.averageRating > 0
-                        ? "⭐ " + slot.averageRating.toFixed(1)
-                        : "No reviews yet";
+                    var ratingText = slot.averageRating > 0 ? "⭐ " + slot.averageRating.toFixed(1) : "No reviews yet";
 
                     var popupContent = slot.isBooked
                         ? "<b>" + slot.ownerName + "</b><br>" +
                           "🚗 " + slot.vehicleType + "<br>" +
                           "⏰ " + new Date(slot.availableFrom).toLocaleString() + "<br>" +
                           "to " + new Date(slot.availableTo).toLocaleString() + "<br>" +
+                          (slot.bookingFrom ? "📅 Booked: " + new Date(slot.bookingFrom).toLocaleString() + "<br>" : "") +
+                          (slot.bookingTo ? "until " + new Date(slot.bookingTo).toLocaleString() + "<br>" : "") +
                           "<br><span style='color:red; font-weight:bold;'>🔴 Already Booked</span>"
                         : "<b>" + slot.ownerName + "</b><br>" +
                           "💰 ₹" + slot.pricePerHour + "/hr<br>" +
                           "🚗 " + slot.vehicleType + "<br>" +
-                          "⭐ Rating: " + ratingText + "<br>" +
+                          "⭐ " + ratingText + "<br>" +
                           "⏰ " + new Date(slot.availableFrom).toLocaleString() + "<br>" +
                           "to " + new Date(slot.availableTo).toLocaleString() + "<br><br>" +
                           "<a href='/Verification/Upload/" + slot.id + "' style='background:#28a745; color:white; padding:5px 10px; text-decoration:none; border-radius:4px;'>✅ Book This Slot</a>";
@@ -303,39 +326,53 @@
                     L.marker([slot.latitude, slot.longitude], { icon: icon })
                         .addTo(map)
                         .bindPopup(popupContent);
-
-                    var statusBadge = slot.isBooked
-                        ? "<span style='color:red; font-weight:bold;'>🔴 Booked</span>"
-                        : "<span style='color:green; font-weight:bold;'>🟢 Available</span>";
-
-                    var actionBtn = slot.isBooked
-                        ? "<span style='color:gray;'>—</span>"
-                        : "<a href='/Verification/Upload/" + slot.id + "' style='background:#28a745; color:white; padding:4px 8px; text-decoration:none; border-radius:4px;'>🔐 Verify & Book</a>";
-
-                    var distText = getDistanceKm(lat, lon, slot.latitude, slot.longitude).toFixed(2) + " km";
-
-                    var starDisplay = slot.averageRating > 0
-                        ? "⭐ " + slot.averageRating.toFixed(1)
-                        : "<span style='color:#aaa;'>No reviews</span>";
-
-                    tableBody.innerHTML += "<tr>" +
-                        "<td style='padding:8px; border:1px solid #444;'>" + slot.ownerName + "</td>" +
-                        "<td style='padding:8px; border:1px solid #444;'>₹" + slot.pricePerHour + "/hr</td>" +
-                        "<td style='padding:8px; border:1px solid #444;'>" + slot.vehicleType + "</td>" +
-                        "<td style='padding:8px; border:1px solid #444;'>" + new Date(slot.availableFrom).toLocaleString() + "</td>" +
-                        "<td style='padding:8px; border:1px solid #444;'>" + new Date(slot.availableTo).toLocaleString() + "</td>" +
-                        "<td style='padding:8px; border:1px solid #444;'>" + statusBadge + "</td>" +
-"<td style='padding:8px; border:1px solid #444;'>" + (slot.isBooked && slot.bookingFrom ? new Date(slot.bookingFrom).toLocaleString() : "<span style='color:#aaa;'>—</span>") + "</td>" +
-"<td style='padding:8px; border:1px solid #444;'>" + (slot.isBooked && slot.bookingTo ? new Date(slot.bookingTo).toLocaleString() : "<span style='color:#aaa;'>—</span>") + "</td>" +
-                       
-                        "<td style='padding:8px; border:1px solid #444;'>📍 " + distText + "</td>" +
-                        "<td style='padding:8px; border:1px solid #444;'>" + starDisplay + "</td>" +
-                        "<td style='padding:8px; border:1px solid #444;'>" + getScoreBadge(slot.parkingScore) + "</td>" +
-                        "<td style='padding:8px; border:1px solid #444;'>" + actionBtn + "</td>" +
-                        "</tr>";
                 });
 
-                document.getElementById("slotsBox").style.display = "block";
+                // Available slots table
+                if (available.length > 0) {
+                    available.forEach(function(slot) {
+                        var distText = getDistanceKm(lat, lon, slot.latitude, slot.longitude).toFixed(2) + " km";
+                        var starDisplay = slot.averageRating > 0 ? "⭐ " + slot.averageRating.toFixed(1) : "<span style='color:#aaa;'>No reviews</span>";
+
+                        availableBody.innerHTML += "<tr>" +
+                            "<td style='padding:8px; border:1px solid #444;'>" + slot.ownerName + "</td>" +
+                            "<td style='padding:8px; border:1px solid #444;'>₹" + slot.pricePerHour + "/hr</td>" +
+                            "<td style='padding:8px; border:1px solid #444;'>" + slot.vehicleType + "</td>" +
+                            "<td style='padding:8px; border:1px solid #444;'>" + new Date(slot.availableFrom).toLocaleString() + "</td>" +
+                            "<td style='padding:8px; border:1px solid #444;'>" + new Date(slot.availableTo).toLocaleString() + "</td>" +
+                            "<td style='padding:8px; border:1px solid #444;'>📍 " + distText + "</td>" +
+                            "<td style='padding:8px; border:1px solid #444;'>" + starDisplay + "</td>" +
+                            "<td style='padding:8px; border:1px solid #444;'>" + getScoreBadge(slot.parkingScore) + "</td>" +
+                            "<td style='padding:8px; border:1px solid #444;'><a href='/Verification/Upload/" + slot.id + "' style='background:#28a745; color:white; padding:4px 8px; text-decoration:none; border-radius:4px;'>🔐 Verify & Book</a></td>" +
+                            "</tr>";
+                    });
+                    document.getElementById("availableBox").style.display = "block";
+                }
+
+                // Booked slots table
+                if (booked.length > 0) {
+                    booked.forEach(function(slot) {
+                        var distText = getDistanceKm(lat, lon, slot.latitude, slot.longitude).toFixed(2) + " km";
+                        var starDisplay = slot.averageRating > 0 ? "⭐ " + slot.averageRating.toFixed(1) : "<span style='color:#aaa;'>No reviews</span>";
+                        var bookedFrom = slot.bookingFrom ? new Date(slot.bookingFrom).toLocaleString() : "<span style='color:#aaa;'>—</span>";
+                        var bookedTo = slot.bookingTo ? new Date(slot.bookingTo).toLocaleString() : "<span style='color:#aaa;'>—</span>";
+
+                        bookedBody.innerHTML += "<tr>" +
+                            "<td style='padding:8px; border:1px solid #444;'>" + slot.ownerName + "</td>" +
+                            "<td style='padding:8px; border:1px solid #444;'>₹" + slot.pricePerHour + "/hr</td>" +
+                            "<td style='padding:8px; border:1px solid #444;'>" + slot.vehicleType + "</td>" +
+                            "<td style='padding:8px; border:1px solid #444;'>" + new Date(slot.availableFrom).toLocaleString() + "</td>" +
+                            "<td style='padding:8px; border:1px solid #444;'>" + new Date(slot.availableTo).toLocaleString() + "</td>" +
+                            "<td style='padding:8px; border:1px solid #444; color:#ff6b6b;'>" + bookedFrom + "</td>" +
+                            "<td style='padding:8px; border:1px solid #444; color:#ff6b6b;'>" + bookedTo + "</td>" +
+                            "<td style='padding:8px; border:1px solid #444;'>📍 " + distText + "</td>" +
+                            "<td style='padding:8px; border:1px solid #444;'>" + starDisplay + "</td>" +
+                            "<td style='padding:8px; border:1px solid #444;'>" + getScoreBadge(slot.parkingScore) + "</td>" +
+                            "</tr>";
+                    });
+                    document.getElementById("bookedBox").style.display = "block";
+                    document.getElementById("tableDivider").style.display = "block";
+                }
             })
             .catch(function(err) {
                 console.error("Error loading slots:", err);
