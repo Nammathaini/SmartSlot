@@ -2,39 +2,169 @@
     ViewData["Title"] = "Rate Your Parking Experience";
 }
 
-<div class="container mt-5 text-center">
+<style>
+    body {
+        background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Segoe UI', sans-serif;
+    }
 
+    .review-card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 40px;
+        max-width: 480px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+
+    .review-card h2 {
+        color: white;
+        font-size: 1.6rem;
+        margin-bottom: 8px;
+    }
+
+    .review-card p {
+        color: #aaa;
+        margin-bottom: 30px;
+    }
+
+    /* Star Rating */
+    .stars {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 30px;
+        flex-direction: row-reverse;
+    }
+
+    .stars input {
+        display: none;
+    }
+
+    .stars label {
+        font-size: 48px;
+        color: #444;
+        cursor: pointer;
+        transition: color 0.2s, transform 0.1s;
+    }
+
+    .stars label:hover,
+    .stars label:hover ~ label,
+    .stars input:checked ~ label {
+        color: #FFD700;
+    }
+
+    .stars label:hover {
+        transform: scale(1.2);
+    }
+
+    .selected-rating {
+        color: #FFD700;
+        font-size: 1rem;
+        margin-bottom: 20px;
+        min-height: 24px;
+        font-weight: bold;
+    }
+
+    textarea {
+        width: 100%;
+        height: 100px;
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 10px;
+        color: white;
+        padding: 12px;
+        font-size: 0.95rem;
+        resize: none;
+        outline: none;
+        margin-bottom: 20px;
+    }
+
+    textarea::placeholder {
+        color: #888;
+    }
+
+    .btn-submit {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        border: none;
+        padding: 14px 40px;
+        border-radius: 30px;
+        font-size: 1rem;
+        font-weight: bold;
+        cursor: pointer;
+        width: 100%;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+    }
+
+    .btn-submit:disabled {
+        background: #555;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+</style>
+
+<div class="review-card">
     <h2>⭐ Rate Your Parking Experience</h2>
     <p>We value your feedback!</p>
 
     <form method="post" asp-controller="Parking" asp-action="SubmitReview">
 
-        <!-- Hidden Booking Id -->
         <input type="hidden" name="BookingId" value="@ViewBag.BookingId" />
         <input type="hidden" name="ParkingSlotId" value="@ViewBag.ParkingSlotId" />
+        <input type="hidden" name="Rating" id="ratingValue" value="" />
 
-        <div style="font-size:30px; margin:20px 0;">
-            <input type="radio" name="Rating" value="5" required /> ★
-            <input type="radio" name="Rating" value="4" /> ★
-            <input type="radio" name="Rating" value="3" /> ★
-            <input type="radio" name="Rating" value="2" /> ★
-            <input type="radio" name="Rating" value="1" /> ★
+        <!-- Stars (reverse order for CSS trick) -->
+        <div class="stars">
+            <label for="star1" title="1 star">★</label>
+            <input type="radio" id="star1" name="StarDisplay" value="1" />
+
+            <label for="star2" title="2 stars">★</label>
+            <input type="radio" id="star2" name="StarDisplay" value="2" />
+
+            <label for="star3" title="3 stars">★</label>
+            <input type="radio" id="star3" name="StarDisplay" value="3" />
+
+            <label for="star4" title="4 stars">★</label>
+            <input type="radio" id="star4" name="StarDisplay" value="4" />
+
+            <label for="star5" title="5 stars">★</label>
+            <input type="radio" id="star5" name="StarDisplay" value="5" />
         </div>
 
-        <div>
-            <textarea name="Comment"
-                  placeholder="Optional comment..."
-                  style="width:60%; height:100px;"
-                      class="form-control mx-auto">
-            </textarea>
-        </div>
+        <div class="selected-rating" id="ratingText">Click a star to rate</div>
 
-        <br />
+        <textarea name="Comment" placeholder="Share your experience (optional)..."></textarea>
 
-        <button type="submit" class="btn btn-success">
+        <button type="submit" class="btn-submit" id="submitBtn" disabled>
             Submit Review
         </button>
 
     </form>
-
 </div>
+
+<script>
+    var labels = ["", "😞 Poor", "😐 Fair", "🙂 Good", "😊 Great", "🤩 Excellent!"];
+
+    document.querySelectorAll('.stars input').forEach(function(input) {
+        input.addEventListener('change', function() {
+            var val = this.value;
+            document.getElementById('ratingValue').value = val;
+            document.getElementById('ratingText').innerText = labels[val] + " (" + val + "/5)";
+            document.getElementById('submitBtn').disabled = false;
+        });
+    });
+</script>

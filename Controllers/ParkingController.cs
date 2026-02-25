@@ -202,7 +202,7 @@ namespace SmartSlot.Controllers
 
             _context.SaveChanges();
 
-            return Content("Thank you! Your review has been submitted.");
+            return View("ReviewSuccess");
         }
 
         // ================= DEBUG TEST =================

@@ -1,0 +1,219 @@
+﻿@{
+    ViewData["Title"] = "Review Submitted!";
+}
+
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+        background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Segoe UI', sans-serif;
+        overflow: hidden;
+    }
+
+    canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    .success-card {
+        position: relative;
+        z-index: 1;
+        background: rgba(255, 255, 255, 0.07);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 24px;
+        padding: 50px 40px;
+        max-width: 480px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+        animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @@keyframes popIn {
+        0% { transform: scale(0.5); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    .checkmark {
+        width: 90px;
+        height: 90px;
+        background: linear-gradient(135deg, #28a745, #20c997);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 25px;
+        font-size: 42px;
+        animation: bounceIn 0.8s 0.3s both;
+        box-shadow: 0 10px 30px rgba(40, 167, 69, 0.4);
+    }
+
+    @@keyframes bounceIn {
+        0% { transform: scale(0); }
+        60% { transform: scale(1.2); }
+        100% { transform: scale(1); }
+    }
+
+    h1 {
+        color: white;
+        font-size: 2rem;
+        margin-bottom: 12px;
+        animation: fadeUp 0.6s 0.5s both;
+    }
+
+    .subtitle {
+        color: #aaa;
+        font-size: 1.1rem;
+        margin-bottom: 30px;
+        animation: fadeUp 0.6s 0.7s both;
+    }
+
+    .stars-display {
+        font-size: 36px;
+        margin-bottom: 25px;
+        animation: fadeUp 0.6s 0.9s both;
+        letter-spacing: 4px;
+    }
+
+    .btn-home {
+        display: inline-block;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        text-decoration: none;
+        padding: 14px 40px;
+        border-radius: 30px;
+        font-size: 1rem;
+        font-weight: bold;
+        transition: transform 0.2s, box-shadow 0.2s;
+        animation: fadeUp 0.6s 1.1s both;
+    }
+
+    .btn-home:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
+        color: white;
+        text-decoration: none;
+    }
+
+    @@keyframes fadeUp {
+        0% { transform: translateY(20px); opacity: 0; }
+        100% { transform: translateY(0); opacity: 1; }
+    }
+
+    .emoji-float {
+        position: fixed;
+        font-size: 30px;
+        animation: floatUp 3s ease-out forwards;
+        pointer-events: none;
+        z-index: 2;
+    }
+
+    @@keyframes floatUp {
+        0% { transform: translateY(100vh) rotate(0deg); opacity: 1; }
+        100% { transform: translateY(-20vh) rotate(360deg); opacity: 0; }
+    }
+</style>
+
+<canvas id="confettiCanvas"></canvas>
+
+<div class="success-card">
+    <div class="checkmark">✓</div>
+    <h1>Thank You! 🎉</h1>
+    <p class="subtitle">Your review has been submitted successfully!</p>
+    <div class="stars-display">⭐⭐⭐⭐⭐</div>
+    <p style="color:#888; font-size:0.9rem; margin-bottom:25px;">
+        Your feedback helps other drivers find great parking spots.
+    </p>
+    <a href="/" class="btn-home">🏠 Back to Home</a>
+</div>
+
+<script>
+    // Confetti
+    var canvas = document.getElementById('confettiCanvas');
+    var ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    var confetti = [];
+    var colors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
+                  '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE'];
+
+    for (var i = 0; i < 200; i++) {
+        confetti.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height - canvas.height,
+            w: Math.random() * 12 + 6,
+            h: Math.random() * 6 + 4,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            speed: Math.random() * 4 + 2,
+            angle: Math.random() * 360,
+            spin: Math.random() * 6 - 3,
+            drift: Math.random() * 2 - 1
+        });
+    }
+
+    function drawConfetti() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        confetti.forEach(function(c) {
+            ctx.save();
+            ctx.translate(c.x, c.y);
+            ctx.rotate(c.angle * Math.PI / 180);
+            ctx.fillStyle = c.color;
+            ctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h);
+            ctx.restore();
+
+            c.y += c.speed;
+            c.x += c.drift;
+            c.angle += c.spin;
+
+            if (c.y > canvas.height) {
+                c.y = -20;
+                c.x = Math.random() * canvas.width;
+            }
+        });
+
+        requestAnimationFrame(drawConfetti);
+    }
+
+    drawConfetti();
+
+    // Floating emojis burst
+    var emojis = ['⭐', '🎉', '🎊', '✨', '🌟', '💫', '🎈', '🏆'];
+
+    function spawnEmoji() {
+        var el = document.createElement('div');
+        el.className = 'emoji-float';
+        el.innerText = emojis[Math.floor(Math.random() * emojis.length)];
+        el.style.left = Math.random() * 100 + 'vw';
+        el.style.animationDuration = (Math.random() * 2 + 2) + 's';
+        el.style.fontSize = (Math.random() * 20 + 20) + 'px';
+        document.body.appendChild(el);
+        setTimeout(function() { el.remove(); }, 4000);
+    }
+
+    // Burst emojis on load
+    for (var i = 0; i < 15; i++) {
+        setTimeout(spawnEmoji, i * 150);
+    }
+
+    // Keep spawning for 5 seconds
+    var interval = setInterval(spawnEmoji, 300);
+    setTimeout(function() { clearInterval(interval); }, 5000);
+
+    window.addEventListener('resize', function() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    });
+</script>
