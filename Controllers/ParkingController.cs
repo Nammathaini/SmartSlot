@@ -73,6 +73,7 @@ namespace SmartSlot.Controllers
 
         [HttpGet]
         [HttpGet]
+        [HttpGet]
         public JsonResult NearbySlots(double lat, double lon, double radius = 6)
         {
             var allSlots = _context.ParkingSlots.ToList();
@@ -94,11 +95,20 @@ namespace SmartSlot.Controllers
                     isBooked = slot.IsBooked,
                     parkingScore = slot.ParkingScore,
                     parkingBadge = slot.ParkingBadge,
-
                     averageRating = _context.Reviews
                         .Where(r => r.ParkingSlotId == slot.Id)
                         .Select(r => (double?)r.Rating)
-                        .Average() ?? 0
+                        .Average() ?? 0,
+                    bookingFrom = _context.Bookings
+                        .Where(b => b.ParkingSlotId == slot.Id)
+                        .OrderByDescending(b => b.BookingFrom)
+                        .Select(b => (DateTime?)b.BookingFrom)
+                        .FirstOrDefault(),
+                    bookingTo = _context.Bookings
+                        .Where(b => b.ParkingSlotId == slot.Id)
+                        .OrderByDescending(b => b.BookingFrom)
+                        .Select(b => (DateTime?)b.BookingTo)
+                        .FirstOrDefault()
                 })
                 .ToList();
 
