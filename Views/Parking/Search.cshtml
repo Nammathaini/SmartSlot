@@ -32,7 +32,10 @@
         border:none;
         border-radius:6px;
         cursor:pointer;
+        font-size:15px;
+        font-weight:600;
     }
+    .btn-location:hover { background:#218838; }
 
     .search-row { margin-top:10px; }
 
@@ -54,7 +57,27 @@
         cursor:pointer;
     }
 
-    #map { height:500px; margin:20px; border-radius:10px; z-index:1; }
+    #status {
+        margin-top:10px;
+        font-size:15px;
+        font-weight:600;
+        min-height:24px;
+    }
+
+    /* Searching spinner */
+    .searching {
+        color: #f59e0b;
+        animation: blink 1s infinite alternate;
+    }
+    @@keyframes blink {
+        from { opacity: 0.5; }
+        to   { opacity: 1; }
+    }
+
+    .found-msg  { color: #4ade80; }
+    .notfound-msg { color: #f87171; }
+
+    #map { height:500px; margin:20px; border-radius:10px; z-index:1; position:relative; }
 
     .toggle-section {
         display:none;
@@ -65,16 +88,17 @@
     }
 
     .toggle-section button {
-        padding:8px 18px;
+        padding:10px 22px;
         border:none;
         border-radius:6px;
         margin:0 10px;
         cursor:pointer;
         font-weight:bold;
+        font-size:15px;
     }
 
     .available-btn { background:#28a745; color:white; }
-    .booked-btn { background:#dc3545; color:white; }
+    .booked-btn    { background:#dc3545; color:white; }
 
     .slots-section {
         display:none;
@@ -88,15 +112,8 @@
     }
 
     table { width:100%; border-collapse:collapse; }
-
-    th, td {
-        padding:8px;
-        border:1px solid #444;
-        text-align:center;
-    }
-
+    th, td { padding:8px; border:1px solid #444; text-align:center; }
     th { background:#2a2a2a; }
-
 </style>
 
 <h2>🔍 Find Parking Near Me</h2>
@@ -111,26 +128,19 @@
 
     <p id="status"></p>
 
-@if (TempData["ExtensionError"] != null)
-{
-    <div style="
-        background:#dc3545;
-        padding:12px;
-        margin:15px auto;
-        max-width:600px;
-        border-radius:8px;
-        text-align:center;
-        font-weight:bold;">
-        @TempData["ExtensionError"]
-    </div>
-}
+    @if (TempData["ExtensionError"] != null)
+    {
+        <div style="background:#dc3545;padding:12px;margin:15px auto;max-width:600px;border-radius:8px;text-align:center;font-weight:bold;">
+            @TempData["ExtensionError"]
+        </div>
+    }
 </div>
 
 <div id="map"></div>
 
 <div id="toggleSection" class="toggle-section">
     <button class="available-btn" onclick="goToAvailable()">🟢 Available Slots</button>
-    <button class="booked-btn" onclick="goToBooked()">🔴 Booked Slots</button>
+    <button class="booked-btn"    onclick="goToBooked()">🔴 Booked Slots</button>
 </div>
 
 <div id="availableBox" class="slots-section">
@@ -138,15 +148,9 @@
     <table>
         <thead>
             <tr>
-                <th>Owner</th>
-                <th>Price</th>
-                <th>Vehicle</th>
-                <th>Available From</th>
-                <th>Available To</th>
-                <th>Distance</th>
-                <th>Rating</th>
-                <th>Slot Status</th>
-                <th>Action</th>
+                <th>Owner</th><th>Price</th><th>Vehicle</th>
+                <th>Available From</th><th>Available To</th>
+                <th>Distance</th><th>Rating</th><th>Slot Status</th><th>Action</th>
             </tr>
         </thead>
         <tbody id="availableTableBody"></tbody>
@@ -158,16 +162,10 @@
     <table>
         <thead>
             <tr>
-                <th>Owner</th>
-                <th>Price</th>
-                <th>Vehicle</th>
-                <th>Available From</th>
-                <th>Available To</th>
-                <th>Booked From</th>
-                <th>Booked To</th>
-                <th>Distance</th>
-                <th>Rating</th>
-                <th>Slot Status</th>
+                <th>Owner</th><th>Price</th><th>Vehicle</th>
+                <th>Available From</th><th>Available To</th>
+                <th>Booked From</th><th>Booked To</th>
+                <th>Distance</th><th>Rating</th><th>Slot Status</th>
             </tr>
         </thead>
         <tbody id="bookedTableBody"></tbody>
@@ -184,58 +182,61 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
 var markerLayer = L.layerGroup().addTo(map);
 var searchCircle = null;
-
 var availableSlots = [];
 var bookedSlots = [];
 var userLat, userLon;
 
-// Green & Red Icons
 var greenIcon = L.icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
     shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41]
+    iconSize: [25, 41], iconAnchor: [12, 41]
 });
 
 var redIcon = L.icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
     shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41]
+    iconSize: [25, 41], iconAnchor: [12, 41]
 });
 
 function getDistanceKm(lat1, lon1, lat2, lon2) {
     var R = 6371;
     var dLat = (lat2 - lat1) * Math.PI / 180;
     var dLon = (lon2 - lon1) * Math.PI / 180;
-    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) *
-            Math.sin(dLon/2) * Math.sin(dLon/2);
+    var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+            Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+            Math.sin(dLon/2)*Math.sin(dLon/2);
     return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(2);
 }
 
 function getSlotStatus(score) {
-    if (!score) return "—";
-    if (score >= 80) return "🥇 Premium";
-    if (score >= 70) return "🥈 Gold";
-    if (score >= 50) return "🥉 Silver";
-    if (score >= 30) return "🏠 Basic";
+    if (!score)    return "—";
+    if (score>=80) return "🥇 Premium";
+    if (score>=70) return "🥈 Gold";
+    if (score>=50) return "🥉 Silver";
+    if (score>=30) return "🏠 Basic";
     return "❌ Poor";
+}
+
+function setStatus(msg, type) {
+    var el = document.getElementById("status");
+    el.className = type || "";
+    el.innerHTML = msg;
 }
 
 function resetUI() {
     document.getElementById("toggleSection").style.display = "none";
-    document.getElementById("availableBox").style.display = "none";
-    document.getElementById("bookedBox").style.display = "none";
+    document.getElementById("availableBox").style.display  = "none";
+    document.getElementById("bookedBox").style.display     = "none";
     markerLayer.clearLayers();
-    if (searchCircle) {
-        map.removeLayer(searchCircle);
-    }
+    if (searchCircle) { map.removeLayer(searchCircle); searchCircle = null; }
 }
 
 function useLiveLocation() {
-    navigator.geolocation.getCurrentPosition(function(pos){
+    setStatus("📡 Getting your location...", "searching");
+    navigator.geolocation.getCurrentPosition(function(pos) {
         performSearch(pos.coords.latitude, pos.coords.longitude);
+    }, function() {
+        setStatus("❌ Location access denied.", "notfound-msg");
     });
 }
 
@@ -243,12 +244,14 @@ function searchByAddress() {
     var address = document.getElementById("searchAddress").value.trim();
     if (!address) return;
 
+    setStatus("🔍 Searching for <b>" + address + "</b>...", "searching");
+
     fetch("https://nominatim.openstreetmap.org/search?q=" +
         encodeURIComponent(address) + "&format=json&limit=1")
-    .then(res=>res.json())
-    .then(data=>{
+    .then(res => res.json())
+    .then(data => {
         if (!data.length) {
-            document.getElementById("status").innerText="Location not found.";
+            setStatus("❌ Location not found.", "notfound-msg");
             return;
         }
         performSearch(parseFloat(data[0].lat), parseFloat(data[0].lon));
@@ -256,9 +259,7 @@ function searchByAddress() {
 }
 
 function performSearch(lat, lon) {
-
     resetUI();
-
     userLat = lat;
     userLon = lon;
 
@@ -271,202 +272,157 @@ function performSearch(lat, lon) {
 
     // 3km blue circle
     searchCircle = L.circle([lat, lon], {
-        color:'blue',
-        fillColor:'#3f51b5',
-        fillOpacity:0.2,
-        radius:3000
+        color: 'blue', fillColor: '#3f51b5', fillOpacity: 0.15, radius: 3000
     }).addTo(map);
 
-    fetch("/Parking/NearbySlots?lat="+lat+"&lon="+lon+"&radius=3")
-    .then(res=>res.json())
-    .then(slots=>{
+    setStatus("⏳ Searching for parking slots nearby...", "searching");
 
-        if (!slots.length) {
-            document.getElementById("status").innerText =
-                "No parking slots found within 3 km.";
+    fetch("/Parking/NearbySlots?lat=" + lat + "&lon=" + lon + "&radius=3")
+    .then(res => res.json())
+    .then(slots => {
+
+        if (!slots || !slots.length) {
+            setStatus("😕 No parking slots found within 3 km.", "notfound-msg");
             return;
         }
 
-        availableSlots = slots.filter(s=>!s.isBooked);
-        bookedSlots = slots.filter(s=>s.isBooked);
+        availableSlots = slots.filter(s => !s.isBooked);
+        bookedSlots    = slots.filter(s =>  s.isBooked);
 
-        document.getElementById("status").innerText =
-            "Found "+slots.length+" slot(s) nearby.";
+        // ✅ Add ALL markers to map immediately
+        var coordCount = {};
 
-        document.getElementById("toggleSection").style.display="block";
+        availableSlots.forEach(function(slot) {
+            var slotLat = parseFloat(slot.latitude);
+            var slotLon = parseFloat(slot.longitude);
+            if (isNaN(slotLat) || isNaN(slotLon)) return;
+
+            var key = slotLat.toFixed(6) + "," + slotLon.toFixed(6);
+            if (!coordCount[key]) coordCount[key] = 0;
+            else coordCount[key]++;
+            var offset = coordCount[key] * 0.00015;
+
+            var dist = getDistanceKm(lat, lon, slotLat, slotLon);
+
+            markerLayer.addLayer(
+                L.marker([slotLat + offset, slotLon + offset], { icon: greenIcon })
+                .bindPopup(
+                    "<b>" + slot.ownerName + "</b><br>" +
+                    "₹" + slot.pricePerHour + "/hr<br>" +
+                    slot.vehicleType + "<br>" +
+                    "🟢 Available<br>" +
+                    dist + " km away"
+                )
+            );
+        });
+
+        bookedSlots.forEach(function(slot) {
+            var slotLat = parseFloat(slot.latitude);
+            var slotLon = parseFloat(slot.longitude);
+            if (isNaN(slotLat) || isNaN(slotLon)) return;
+
+            var key = slotLat.toFixed(6) + "," + slotLon.toFixed(6);
+            if (!coordCount[key]) coordCount[key] = 0;
+            else coordCount[key]++;
+            var offset = coordCount[key] * 0.00015;
+
+            var dist = getDistanceKm(lat, lon, slotLat, slotLon);
+
+            markerLayer.addLayer(
+                L.marker([slotLat + offset, slotLon + offset], { icon: redIcon })
+                .bindPopup(
+                    "<b>" + slot.ownerName + "</b><br>" +
+                    "₹" + slot.pricePerHour + "/hr<br>" +
+                    slot.vehicleType + "<br>" +
+                    "🔴 Booked<br>" +
+                    dist + " km away"
+                )
+            );
+        });
+
+        // ✅ Status message
+        setStatus(
+            "✅ Found <b>" + availableSlots.length + " available</b> and <b>" +
+            bookedSlots.length + " booked</b> slot(s) nearby.",
+            "found-msg"
+        );
+
+        document.getElementById("toggleSection").style.display = "block";
+    })
+    .catch(function() {
+        setStatus("❌ Failed to load slots. Please try again.", "notfound-msg");
     });
 }
 
-// 🔵 Show Available
 function showAvailable() {
-
     if (!userLat || !userLon) return;
+    document.getElementById("bookedBox").style.display    = "none";
+    document.getElementById("availableBox").style.display = "block";
 
-    fetch("/Parking/NearbySlots?lat=" + userLat + "&lon=" + userLon + "&radius=3")
-    .then(res => res.json())
-    .then(slots => {
+    var body = document.getElementById("availableTableBody");
+    body.innerHTML = "";
 
-        availableSlots = slots.filter(s => !s.isBooked);
-        bookedSlots = slots.filter(s => s.isBooked);
-
-        markerLayer.clearLayers();
-
-        markerLayer.addLayer(
-            L.marker([userLat, userLon]).bindPopup("📍 You are here!")
-        );
-
-        document.getElementById("bookedBox").style.display="none";
-        document.getElementById("availableBox").style.display="block";
-
-        var body = document.getElementById("availableTableBody");
-        body.innerHTML = "";
-
-        var coordCount = {};
-
-        availableSlots.forEach(slot => {
-
-            var lat = parseFloat(slot.latitude);
-            var lon = parseFloat(slot.longitude);
-            if (isNaN(lat) || isNaN(lon)) return;
-
-            var distance = getDistanceKm(userLat, userLon, lat, lon);
-            if (distance > 3) return;
-
-            var key = lat.toFixed(6) + "," + lon.toFixed(6);
-
-            if (!coordCount[key]) coordCount[key] = 0;
-            else coordCount[key]++;
-
-            var offset = coordCount[key] * 0.00015;
-            var adjustedLat = lat + offset;
-            var adjustedLon = lon + offset;
-
-            markerLayer.addLayer(
-                L.marker([adjustedLat, adjustedLon], { icon: greenIcon })
-                .bindPopup("<b>" + slot.ownerName + "</b><br>₹" +
-                           slot.pricePerHour + "/hr<br>" +
-                           distance + " km away")
-            );
-
-            body.innerHTML += "<tr>"+
-                "<td>"+slot.ownerName+"</td>"+
-                "<td>₹"+slot.pricePerHour+"/hr</td>"+
-                "<td>"+slot.vehicleType+"</td>"+
-                "<td>"+new Date(slot.availableFrom).toLocaleString()+"</td>"+
-                "<td>"+new Date(slot.availableTo).toLocaleString()+"</td>"+
-                "<td>"+distance+" km</td>"+
-                "<td>"+(slot.averageRating ? "⭐ "+slot.averageRating.toFixed(1) : "No reviews")+"</td>"+
-                "<td>"+getSlotStatus(slot.parkingScore)+"</td>"+
-                "<td><a href='/Verification/Upload/"+slot.id+"' style='background:#28a745;color:white;padding:5px 10px;border-radius:5px;text-decoration:none;'>Verify & Book</a></td>"+
-            "</tr>";
-        });
-
+    availableSlots.forEach(function(slot) {
+        var dist = getDistanceKm(userLat, userLon, slot.latitude, slot.longitude);
+        body.innerHTML += "<tr>" +
+            "<td>" + slot.ownerName + "</td>" +
+            "<td>₹" + slot.pricePerHour + "/hr</td>" +
+            "<td>" + slot.vehicleType + "</td>" +
+            "<td>" + new Date(slot.availableFrom).toLocaleString() + "</td>" +
+            "<td>" + new Date(slot.availableTo).toLocaleString() + "</td>" +
+            "<td>" + dist + " km</td>" +
+            "<td>" + (slot.averageRating ? "⭐ " + slot.averageRating.toFixed(1) : "No reviews") + "</td>" +
+            "<td>" + getSlotStatus(slot.parkingScore) + "</td>" +
+            "<td><a href='/Verification/Upload/" + slot.id + "' style='background:#28a745;color:white;padding:5px 10px;border-radius:5px;text-decoration:none;'>Verify & Book</a></td>" +
+        "</tr>";
     });
+
+    if (!availableSlots.length)
+        body.innerHTML = "<tr><td colspan='9'>No available slots nearby</td></tr>";
 }
-// 🔴 Show Booked
+
 function showBooked() {
-
     if (!userLat || !userLon) return;
+    document.getElementById("availableBox").style.display = "none";
+    document.getElementById("bookedBox").style.display    = "block";
 
-    fetch("/Parking/NearbySlots?lat=" + userLat + "&lon=" + userLon + "&radius=3")
-    .then(res => res.json())
-    .then(slots => {
+    var body = document.getElementById("bookedTableBody");
+    body.innerHTML = "";
 
-        availableSlots = slots.filter(s => !s.isBooked);
-        bookedSlots = slots.filter(s => s.isBooked);
-
-        markerLayer.clearLayers();
-
-        markerLayer.addLayer(
-            L.marker([userLat, userLon]).bindPopup("📍 You are here!")
-        );
-
-        document.getElementById("availableBox").style.display="none";
-        document.getElementById("bookedBox").style.display="block";
-
-        var body = document.getElementById("bookedTableBody");
-        body.innerHTML = "";
-
-        var coordCount = {};
-
-        bookedSlots.forEach(slot => {
-
-            var lat = parseFloat(slot.latitude);
-            var lon = parseFloat(slot.longitude);
-            if (isNaN(lat) || isNaN(lon)) return;
-
-            var distance = getDistanceKm(userLat, userLon, lat, lon);
-            if (distance > 3) return;
-
-            var key = lat.toFixed(6) + "," + lon.toFixed(6);
-
-            if (!coordCount[key]) coordCount[key] = 0;
-            else coordCount[key]++;
-
-            var offset = coordCount[key] * 0.00015;
-            var adjustedLat = lat + offset;
-            var adjustedLon = lon + offset;
-
-            markerLayer.addLayer(
-                L.marker([adjustedLat, adjustedLon], { icon: redIcon })
-                .bindPopup("<b>" + slot.ownerName + "</b><br>BOOKED<br>" +
-                           distance + " km away")
-            );
-
-            body.innerHTML += "<tr>"+
-                "<td>"+slot.ownerName+"</td>"+
-                "<td>₹"+slot.pricePerHour+"/hr</td>"+
-                "<td>"+slot.vehicleType+"</td>"+
-                "<td>"+new Date(slot.availableFrom).toLocaleString()+"</td>"+
-                "<td>"+new Date(slot.availableTo).toLocaleString()+"</td>"+
-                "<td>"+(slot.bookingFrom?new Date(slot.bookingFrom).toLocaleString():"-")+"</td>"+
-                "<td>"+(slot.bookingTo?new Date(slot.bookingTo).toLocaleString():"-")+"</td>"+
-                "<td>"+distance+" km</td>"+
-                "<td>"+(slot.averageRating ? "⭐ "+slot.averageRating.toFixed(1) : "No reviews")+"</td>"+
-                "<td>"+getSlotStatus(slot.parkingScore)+"</td>"+
-            "</tr>";
-        });
-
+    bookedSlots.forEach(function(slot) {
+        var dist = getDistanceKm(userLat, userLon, slot.latitude, slot.longitude);
+        body.innerHTML += "<tr>" +
+            "<td>" + slot.ownerName + "</td>" +
+            "<td>₹" + slot.pricePerHour + "/hr</td>" +
+            "<td>" + slot.vehicleType + "</td>" +
+            "<td>" + new Date(slot.availableFrom).toLocaleString() + "</td>" +
+            "<td>" + new Date(slot.availableTo).toLocaleString() + "</td>" +
+            "<td>" + (slot.bookingFrom ? new Date(slot.bookingFrom).toLocaleString() : "-") + "</td>" +
+            "<td>" + (slot.bookingTo   ? new Date(slot.bookingTo).toLocaleString()   : "-") + "</td>" +
+            "<td>" + dist + " km</td>" +
+            "<td>" + (slot.averageRating ? "⭐ " + slot.averageRating.toFixed(1) : "No reviews") + "</td>" +
+            "<td>" + getSlotStatus(slot.parkingScore) + "</td>" +
+        "</tr>";
     });
+
+    if (!bookedSlots.length)
+        body.innerHTML = "<tr><td colspan='10'>No booked slots nearby</td></tr>";
 }
-// 🔥 Auto refresh every 60 seconds
-setInterval(function () {
 
-    if (!userLat || !userLon) return;
-
-    fetch("/Parking/NearbySlots?lat=" + userLat + "&lon=" + userLon + "&radius=3")
-    .then(res => res.json())
-    .then(slots => {
-
-        availableSlots = slots.filter(s => !s.isBooked);
-        bookedSlots = slots.filter(s => s.isBooked);
-
-        // Refresh whichever table is open
-        if (document.getElementById("availableBox").style.display === "block") {
-            showAvailable();
-        }
-
-        if (document.getElementById("bookedBox").style.display === "block") {
-            showBooked();
-        }
-    });
-
-}, 60000); // 1 minute
 function goToAvailable() {
     if (!userLat || !userLon) return;
-
-    window.location.href =
-        "/Parking/AvailableSlots?lat=" + userLat +
-        "&lon=" + userLon +
-        "&radius=3";
+    window.location.href = "/Parking/AvailableSlots?lat=" + userLat + "&lon=" + userLon + "&radius=3";
 }
 
 function goToBooked() {
     if (!userLat || !userLon) return;
-
-    window.location.href =
-        "/Parking/BookedSlots?lat=" + userLat +
-        "&lon=" + userLon +
-        "&radius=3";
+    window.location.href = "/Parking/BookedSlots?lat=" + userLat + "&lon=" + userLon + "&radius=3";
 }
+
+// Auto refresh every 60 seconds
+setInterval(function() {
+    if (!userLat || !userLon) return;
+    performSearch(userLat, userLon);
+}, 60000);
+
 </script>

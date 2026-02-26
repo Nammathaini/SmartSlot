@@ -11,11 +11,13 @@ namespace SmartSlot.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly SmsService _smsService;
+        private readonly EmailService _emailService;
 
-        public AuthController(ApplicationDbContext context, SmsService smsService)
+        public AuthController(ApplicationDbContext context, SmsService smsService, EmailService emailService)
         {
             _context = context;
             _smsService = smsService;
+            _emailService = emailService;
         }
 
         // =========================
@@ -61,10 +63,7 @@ namespace SmartSlot.Controllers
         // SIGN UP - STEP 1: Enter Phone
         // =========================
         [HttpGet]
-        public IActionResult Signup()
-        {
-            return View();
-        }
+        public IActionResult Signup() => View();
 
         [HttpPost]
         public async Task<IActionResult> Signup(string phone)
@@ -221,18 +220,176 @@ namespace SmartSlot.Controllers
         }
 
         // =========================
-        // RESET PASSWORD - STEP 1: Enter Phone
+        // FORGOT PASSWORD - Show Page
         // =========================
         [HttpGet]
-        public IActionResult ResetPassword()
+        public IActionResult ForgotPassword() => View();
+
+        // =========================
+        // FORGOT PASSWORD - By Email
+        // =========================
+        [HttpPost]
+        public async Task<IActionResult> ForgotPasswordEmail(string email)
         {
+            var user = _context.Users.FirstOrDefault(u => u.Email == email);
+            if (user == null)
+            {
+                ViewBag.Error = "No account found with this email address.";
+                return View("ForgotPassword");
+            }
+
+            await SendResetLink(user);
+
+            ViewBag.Success = $"✅ Password reset link sent to {MaskEmail(email)}. Please check your inbox.";
+            return View("ForgotPassword");
+        }
+
+        // =========================
+        // FORGOT PASSWORD - By Phone
+        // =========================
+        [HttpPost]
+        public async Task<IActionResult> ForgotPasswordPhone(string phone)
+        {
+            var user = _context.Users.FirstOrDefault(u => u.PhoneNumber == phone);
+            if (user == null)
+            {
+                ViewBag.Error = "No account found with this phone number.";
+                return View("ForgotPassword");
+            }
+
+            if (string.IsNullOrEmpty(user.Email))
+            {
+                ViewBag.Error = "No email address linked to this account.";
+                return View("ForgotPassword");
+            }
+
+            await SendResetLink(user);
+
+            ViewBag.Success = $"✅ Password reset link sent to {MaskEmail(user.Email)}. Please check your inbox.";
+            return View("ForgotPassword");
+        }
+
+        // Shared: generate token and send email
+        private async Task SendResetLink(User user)
+        {
+            // Delete any old tokens for this user
+            var oldTokens = _context.PasswordResetTokens
+                .Where(t => t.PhoneNumber == user.PhoneNumber && !t.Used)
+                .ToList();
+            _context.PasswordResetTokens.RemoveRange(oldTokens);
+
+            // Create new token
+            var token = Guid.NewGuid().ToString("N");
+            var resetToken = new PasswordResetToken
+            {
+                Token = token,
+                PhoneNumber = user.PhoneNumber,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(30),
+                Used = false
+            };
+
+            _context.PasswordResetTokens.Add(resetToken);
+            _context.SaveChanges();
+
+            var resetLink = $"https://smartslot-fkc6.onrender.com/Auth/ResetPasswordByToken?token={token}";
+
+            try
+            {
+                await _emailService.SendPasswordResetEmail(user.Email!, user.Username, resetLink);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Reset email failed: {ex.Message}");
+            }
+        }
+
+        private string MaskEmail(string email)
+        {
+            var parts = email.Split('@');
+            if (parts.Length != 2) return email;
+            var name = parts[0];
+            var masked = name.Length <= 2 ? new string('*', name.Length)
+                : name[0] + new string('*', name.Length - 2) + name[^1];
+            return masked + "@" + parts[1];
+        }
+
+        // =========================
+        // RESET PASSWORD BY TOKEN - Show Page
+        // =========================
+        [HttpGet]
+        public IActionResult ResetPasswordByToken(string token)
+        {
+            var resetToken = _context.PasswordResetTokens
+                .FirstOrDefault(t => t.Token == token && !t.Used);
+
+            if (resetToken == null || resetToken.ExpiresAt < DateTime.UtcNow)
+            {
+                ViewBag.TokenInvalid = true;
+                return View();
+            }
+
+            ViewBag.Token = token;
             return View();
         }
+
+        // =========================
+        // RESET PASSWORD BY TOKEN - Submit
+        // =========================
+        [HttpPost]
+        public IActionResult ResetPasswordByToken(string token, string newPassword, string confirmPassword)
+        {
+            var resetToken = _context.PasswordResetTokens
+                .FirstOrDefault(t => t.Token == token && !t.Used);
+
+            if (resetToken == null || resetToken.ExpiresAt < DateTime.UtcNow)
+            {
+                ViewBag.TokenInvalid = true;
+                return View();
+            }
+
+            if (newPassword != confirmPassword)
+            {
+                ViewBag.Error = "Passwords do not match.";
+                ViewBag.Token = token;
+                return View();
+            }
+
+            if (newPassword.Length < 6)
+            {
+                ViewBag.Error = "Password must be at least 6 characters.";
+                ViewBag.Token = token;
+                return View();
+            }
+
+            var user = _context.Users.FirstOrDefault(u => u.PhoneNumber == resetToken.PhoneNumber);
+            if (user == null)
+            {
+                ViewBag.TokenInvalid = true;
+                return View();
+            }
+
+            // Update password
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+
+            // Mark token as used
+            resetToken.Used = true;
+
+            _context.SaveChanges();
+
+            // Show success on same page
+            ViewBag.PasswordReset = true;
+            return View();
+        }
+
+        // =========================
+        // SETTINGS RESET PASSWORD (OTP flow from Settings)
+        // =========================
+        [HttpGet]
+        public IActionResult ResetPassword() => View();
 
         [HttpPost]
         public async Task<IActionResult> ResetPassword(string phone)
         {
-            // Check phone exists in DB
             var user = _context.Users.FirstOrDefault(u => u.PhoneNumber == phone);
             if (user == null)
             {
@@ -258,9 +415,6 @@ namespace SmartSlot.Controllers
             return RedirectToAction("ResetPasswordVerify");
         }
 
-        // =========================
-        // RESET PASSWORD - STEP 2: Verify OTP
-        // =========================
         [HttpGet]
         public IActionResult ResetPasswordVerify()
         {
@@ -324,9 +478,6 @@ namespace SmartSlot.Controllers
             return RedirectToAction("ResetPasswordVerify");
         }
 
-        // =========================
-        // RESET PASSWORD - STEP 3: Set New Password
-        // =========================
         [HttpGet]
         public IActionResult ResetPasswordNew()
         {
@@ -369,7 +520,6 @@ namespace SmartSlot.Controllers
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
             _context.SaveChanges();
 
-            // Clear reset session
             HttpContext.Session.Remove("ResetPhone");
             HttpContext.Session.Remove("ResetOtpCode");
             HttpContext.Session.Remove("ResetOtpExpiry");

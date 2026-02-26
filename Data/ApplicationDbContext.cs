@@ -14,8 +14,9 @@ namespace SmartSlot.Data
         public DbSet<Booking> Bookings { get; set; }
         public DbSet<Review> Reviews { get; set; }
         public DbSet<User> Users { get; set; }
-
-        // ✅ NEW: Slot availability notification requests
         public DbSet<SlotNotifyRequest> SlotNotifyRequests { get; set; }
+
+        // ✅ NEW: Password reset tokens
+        public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
     }
 }
