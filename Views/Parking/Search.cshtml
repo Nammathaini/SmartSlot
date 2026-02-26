@@ -15,47 +15,86 @@
     body::before {
         content: '';
         position: fixed;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        background: rgba(0, 0, 0, 0.78);
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.78);
         z-index: 0;
     }
 
     h2 { text-align:center; margin:20px 0; position:relative; z-index:1; }
 
-    .top-section {
-        position: relative;
-        z-index: 1;
-        text-align: center;
-        padding: 20px;
+    .top-section { text-align:center; position:relative; z-index:1; padding:20px; }
+
+    .btn-location {
+        padding:10px 20px;
+        background:#28a745;
+        color:white;
+        border:none;
+        border-radius:6px;
+        cursor:pointer;
     }
 
-    .btn-toggle {
-        padding: 8px 15px;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        margin: 0 5px;
-        font-weight: bold;
+    .search-row { margin-top:10px; }
+
+    .search-row input {
+        padding:10px;
+        width:280px;
+        border-radius:6px;
+        border:1px solid #444;
+        background:#2a2a2a;
+        color:white;
     }
 
-    .btn-available { background:#28a745; color:white; }
-    .btn-booked { background:#dc3545; color:white; }
+    .search-row button {
+        padding:10px 15px;
+        background:#007bff;
+        color:white;
+        border:none;
+        border-radius:6px;
+        cursor:pointer;
+    }
 
     #map { height:500px; margin:20px; border-radius:10px; z-index:1; }
 
-    .slots-section {
-        margin: 20px;
-        background-color: rgba(26, 26, 26, 0.92);
-        border: 1px solid #333;
-        border-radius: 10px;
-        padding: 15px;
-        position: relative;
-        z-index: 1;
+    .toggle-section {
+        display:none;
+        text-align:center;
+        margin-top:20px;
+        z-index:1;
+        position:relative;
     }
 
-    table { width:100%; border-collapse: collapse; }
-    th, td { padding:8px; border:1px solid #444; }
+    .toggle-section button {
+        padding:8px 18px;
+        border:none;
+        border-radius:6px;
+        margin:0 10px;
+        cursor:pointer;
+        font-weight:bold;
+    }
+
+    .available-btn { background:#28a745; color:white; }
+    .booked-btn { background:#dc3545; color:white; }
+
+    .slots-section {
+        display:none;
+        margin:20px;
+        background:rgba(26,26,26,0.95);
+        border:1px solid #333;
+        border-radius:10px;
+        padding:15px;
+        z-index:1;
+        position:relative;
+    }
+
+    table { width:100%; border-collapse:collapse; }
+
+    th, td {
+        padding:8px;
+        border:1px solid #444;
+        text-align:center;
+    }
+
     th { background:#2a2a2a; }
 
 </style>
@@ -63,53 +102,120 @@
 <h2>🔍 Find Parking Near Me</h2>
 
 <div class="top-section">
-    <button class="btn-toggle btn-available" onclick="showAvailable()">🟢 Available Slots</button>
-    <button class="btn-toggle btn-booked" onclick="showBooked()">🔴 Booked Slots</button>
-</div>
+    <button class="btn-location" onclick="useLiveLocation()">📍 Use My Live Location</button>
 
-<p id="status" style="text-align:center;">Click location to load slots.</p>
+    <div class="search-row">
+        <input type="text" id="searchAddress" placeholder="Search your area / address" />
+        <button onclick="searchByAddress()">🔍 Search (3 km)</button>
+    </div>
+
+    <p id="status"></p>
+
+@if (TempData["ExtensionError"] != null)
+{
+    <div style="
+        background:#dc3545;
+        padding:12px;
+        margin:15px auto;
+        max-width:600px;
+        border-radius:8px;
+        text-align:center;
+        font-weight:bold;">
+        @TempData["ExtensionError"]
+    </div>
+}
+</div>
 
 <div id="map"></div>
 
-<div class="slots-section">
-    <div style="overflow-x:auto;">
-        <table>
-            <thead>
-                <tr>
-                    <th>Owner</th>
-                    <th>Price</th>
-                    <th>Vehicle</th>
-                    <th>Available From</th>
-                    <th>Available To</th>
-                    <th class="booking-col" style="display:none;">Booked From</th>
-                    <th class="booking-col" style="display:none;">Booked To</th>
-                    <th>Distance</th>
-                    <th>Rating</th>
-                    <th>Slot Status</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody id="slotsTableBody"></tbody>
-        </table>
-    </div>
+<div id="toggleSection" class="toggle-section">
+    <button class="available-btn" onclick="goToAvailable()">🟢 Available Slots</button>
+    <button class="booked-btn" onclick="goToBooked()">🔴 Booked Slots</button>
 </div>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<div id="availableBox" class="slots-section">
+    <h4>🟢 Available Slots</h4>
+    <table>
+        <thead>
+            <tr>
+                <th>Owner</th>
+                <th>Price</th>
+                <th>Vehicle</th>
+                <th>Available From</th>
+                <th>Available To</th>
+                <th>Distance</th>
+                <th>Rating</th>
+                <th>Slot Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="availableTableBody"></tbody>
+    </table>
+</div>
+
+<div id="bookedBox" class="slots-section">
+    <h4>🔴 Booked Slots</h4>
+    <table>
+        <thead>
+            <tr>
+                <th>Owner</th>
+                <th>Price</th>
+                <th>Vehicle</th>
+                <th>Available From</th>
+                <th>Available To</th>
+                <th>Booked From</th>
+                <th>Booked To</th>
+                <th>Distance</th>
+                <th>Rating</th>
+                <th>Slot Status</th>
+            </tr>
+        </thead>
+        <tbody id="bookedTableBody"></tbody>
+    </table>
+</div>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
 
 var map = L.map('map').setView([13.0827, 80.2707], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors'
-}).addTo(map);
+var markerLayer = L.layerGroup().addTo(map);
+var searchCircle = null;
 
-var allSlots = [];
-var currentLat, currentLon;
+var availableSlots = [];
+var bookedSlots = [];
+var userLat, userLon;
 
-function getScoreBadge(score) {
-    if (!score || score === 0) return "<span style='color:#aaa;'>—</span>";
+// Green & Red Icons
+var greenIcon = L.icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41]
+});
+
+var redIcon = L.icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41]
+});
+
+function getDistanceKm(lat1, lon1, lat2, lon2) {
+    var R = 6371;
+    var dLat = (lat2 - lat1) * Math.PI / 180;
+    var dLon = (lon2 - lon1) * Math.PI / 180;
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+    return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(2);
+}
+
+function getSlotStatus(score) {
+    if (!score) return "—";
     if (score >= 80) return "🥇 Premium";
     if (score >= 70) return "🥈 Gold";
     if (score >= 50) return "🥉 Silver";
@@ -117,95 +223,250 @@ function getScoreBadge(score) {
     return "❌ Poor";
 }
 
-function getDistanceKm(lat1, lon1, lat2, lon2) {
-    var R = 6371;
-    var dLat = (lat2 - lat1) * Math.PI / 180;
-    var dLon = (lon2 - lon1) * Math.PI / 180;
-    var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
-            Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180) *
-            Math.sin(dLon/2)*Math.sin(dLon/2);
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+function resetUI() {
+    document.getElementById("toggleSection").style.display = "none";
+    document.getElementById("availableBox").style.display = "none";
+    document.getElementById("bookedBox").style.display = "none";
+    markerLayer.clearLayers();
+    if (searchCircle) {
+        map.removeLayer(searchCircle);
+    }
 }
 
-function loadSlots(lat, lon) {
-
-    currentLat = lat;
-    currentLon = lon;
-
-    fetch("/Parking/NearbySlots?lat=" + lat + "&lon=" + lon + "&radius=6")
-        .then(r => r.json())
-        .then(data => {
-            allSlots = data;
-            document.getElementById("status").innerText =
-                "Found " + data.length + " slots nearby.";
-            renderTable("available");
-        });
-}
-
-function renderTable(type) {
-
-    var body = document.getElementById("slotsTableBody");
-    body.innerHTML = "";
-
-    var bookingCols = document.querySelectorAll(".booking-col");
-    bookingCols.forEach(c => {
-        c.style.display = (type === "booked") ? "" : "none";
+function useLiveLocation() {
+    navigator.geolocation.getCurrentPosition(function(pos){
+        performSearch(pos.coords.latitude, pos.coords.longitude);
     });
+}
 
-    var filtered = type === "available"
-        ? allSlots.filter(s => !s.isBooked)
-        : allSlots.filter(s => s.isBooked);
+function searchByAddress() {
+    var address = document.getElementById("searchAddress").value.trim();
+    if (!address) return;
 
-    filtered.forEach(slot => {
+    fetch("https://nominatim.openstreetmap.org/search?q=" +
+        encodeURIComponent(address) + "&format=json&limit=1")
+    .then(res=>res.json())
+    .then(data=>{
+        if (!data.length) {
+            document.getElementById("status").innerText="Location not found.";
+            return;
+        }
+        performSearch(parseFloat(data[0].lat), parseFloat(data[0].lon));
+    });
+}
 
-        var dist = getDistanceKm(currentLat, currentLon,
-                    slot.latitude, slot.longitude).toFixed(2) + " km";
+function performSearch(lat, lon) {
 
-        var rating = slot.averageRating > 0
-            ? "⭐ " + slot.averageRating.toFixed(1)
-            : "No reviews";
+    resetUI();
 
-        var action = slot.isBooked
-            ? "-"
-            : "<a href='/Verification/Upload/" + slot.id +
-              "' style='background:#28a745;color:white;padding:4px 8px;border-radius:4px;'>Book</a>";
+    userLat = lat;
+    userLon = lon;
 
-        var row = "<tr>" +
-            "<td>" + slot.ownerName + "</td>" +
-            "<td>₹" + slot.pricePerHour + "/hr</td>" +
-            "<td>" + slot.vehicleType + "</td>" +
-            "<td>" + new Date(slot.availableFrom).toLocaleString() + "</td>" +
-            "<td>" + new Date(slot.availableTo).toLocaleString() + "</td>";
+    map.setView([lat, lon], 14);
 
-        if (type === "booked") {
-            row += "<td>" +
-                (slot.bookingFrom ? new Date(slot.bookingFrom).toLocaleString() : "—")
-                + "</td>";
-            row += "<td>" +
-                (slot.bookingTo ? new Date(slot.bookingTo).toLocaleString() : "—")
-                + "</td>";
+    // User marker
+    markerLayer.addLayer(
+        L.marker([lat, lon]).bindPopup("📍 You are here!").openPopup()
+    );
+
+    // 3km blue circle
+    searchCircle = L.circle([lat, lon], {
+        color:'blue',
+        fillColor:'#3f51b5',
+        fillOpacity:0.2,
+        radius:3000
+    }).addTo(map);
+
+    fetch("/Parking/NearbySlots?lat="+lat+"&lon="+lon+"&radius=3")
+    .then(res=>res.json())
+    .then(slots=>{
+
+        if (!slots.length) {
+            document.getElementById("status").innerText =
+                "No parking slots found within 3 km.";
+            return;
         }
 
-        row += "<td>" + dist + "</td>" +
-               "<td>" + rating + "</td>" +
-               "<td>" + getScoreBadge(slot.parkingScore) + "</td>" +
-               "<td>" + action + "</td>" +
-               "</tr>";
+        availableSlots = slots.filter(s=>!s.isBooked);
+        bookedSlots = slots.filter(s=>s.isBooked);
 
-        body.innerHTML += row;
+        document.getElementById("status").innerText =
+            "Found "+slots.length+" slot(s) nearby.";
+
+        document.getElementById("toggleSection").style.display="block";
     });
 }
 
+// 🔵 Show Available
 function showAvailable() {
-    renderTable("available");
-}
 
+    if (!userLat || !userLon) return;
+
+    fetch("/Parking/NearbySlots?lat=" + userLat + "&lon=" + userLon + "&radius=3")
+    .then(res => res.json())
+    .then(slots => {
+
+        availableSlots = slots.filter(s => !s.isBooked);
+        bookedSlots = slots.filter(s => s.isBooked);
+
+        markerLayer.clearLayers();
+
+        markerLayer.addLayer(
+            L.marker([userLat, userLon]).bindPopup("📍 You are here!")
+        );
+
+        document.getElementById("bookedBox").style.display="none";
+        document.getElementById("availableBox").style.display="block";
+
+        var body = document.getElementById("availableTableBody");
+        body.innerHTML = "";
+
+        var coordCount = {};
+
+        availableSlots.forEach(slot => {
+
+            var lat = parseFloat(slot.latitude);
+            var lon = parseFloat(slot.longitude);
+            if (isNaN(lat) || isNaN(lon)) return;
+
+            var distance = getDistanceKm(userLat, userLon, lat, lon);
+            if (distance > 3) return;
+
+            var key = lat.toFixed(6) + "," + lon.toFixed(6);
+
+            if (!coordCount[key]) coordCount[key] = 0;
+            else coordCount[key]++;
+
+            var offset = coordCount[key] * 0.00015;
+            var adjustedLat = lat + offset;
+            var adjustedLon = lon + offset;
+
+            markerLayer.addLayer(
+                L.marker([adjustedLat, adjustedLon], { icon: greenIcon })
+                .bindPopup("<b>" + slot.ownerName + "</b><br>₹" +
+                           slot.pricePerHour + "/hr<br>" +
+                           distance + " km away")
+            );
+
+            body.innerHTML += "<tr>"+
+                "<td>"+slot.ownerName+"</td>"+
+                "<td>₹"+slot.pricePerHour+"/hr</td>"+
+                "<td>"+slot.vehicleType+"</td>"+
+                "<td>"+new Date(slot.availableFrom).toLocaleString()+"</td>"+
+                "<td>"+new Date(slot.availableTo).toLocaleString()+"</td>"+
+                "<td>"+distance+" km</td>"+
+                "<td>"+(slot.averageRating ? "⭐ "+slot.averageRating.toFixed(1) : "No reviews")+"</td>"+
+                "<td>"+getSlotStatus(slot.parkingScore)+"</td>"+
+                "<td><a href='/Verification/Upload/"+slot.id+"' style='background:#28a745;color:white;padding:5px 10px;border-radius:5px;text-decoration:none;'>Verify & Book</a></td>"+
+            "</tr>";
+        });
+
+    });
+}
+// 🔴 Show Booked
 function showBooked() {
-    renderTable("booked");
+
+    if (!userLat || !userLon) return;
+
+    fetch("/Parking/NearbySlots?lat=" + userLat + "&lon=" + userLon + "&radius=3")
+    .then(res => res.json())
+    .then(slots => {
+
+        availableSlots = slots.filter(s => !s.isBooked);
+        bookedSlots = slots.filter(s => s.isBooked);
+
+        markerLayer.clearLayers();
+
+        markerLayer.addLayer(
+            L.marker([userLat, userLon]).bindPopup("📍 You are here!")
+        );
+
+        document.getElementById("availableBox").style.display="none";
+        document.getElementById("bookedBox").style.display="block";
+
+        var body = document.getElementById("bookedTableBody");
+        body.innerHTML = "";
+
+        var coordCount = {};
+
+        bookedSlots.forEach(slot => {
+
+            var lat = parseFloat(slot.latitude);
+            var lon = parseFloat(slot.longitude);
+            if (isNaN(lat) || isNaN(lon)) return;
+
+            var distance = getDistanceKm(userLat, userLon, lat, lon);
+            if (distance > 3) return;
+
+            var key = lat.toFixed(6) + "," + lon.toFixed(6);
+
+            if (!coordCount[key]) coordCount[key] = 0;
+            else coordCount[key]++;
+
+            var offset = coordCount[key] * 0.00015;
+            var adjustedLat = lat + offset;
+            var adjustedLon = lon + offset;
+
+            markerLayer.addLayer(
+                L.marker([adjustedLat, adjustedLon], { icon: redIcon })
+                .bindPopup("<b>" + slot.ownerName + "</b><br>BOOKED<br>" +
+                           distance + " km away")
+            );
+
+            body.innerHTML += "<tr>"+
+                "<td>"+slot.ownerName+"</td>"+
+                "<td>₹"+slot.pricePerHour+"/hr</td>"+
+                "<td>"+slot.vehicleType+"</td>"+
+                "<td>"+new Date(slot.availableFrom).toLocaleString()+"</td>"+
+                "<td>"+new Date(slot.availableTo).toLocaleString()+"</td>"+
+                "<td>"+(slot.bookingFrom?new Date(slot.bookingFrom).toLocaleString():"-")+"</td>"+
+                "<td>"+(slot.bookingTo?new Date(slot.bookingTo).toLocaleString():"-")+"</td>"+
+                "<td>"+distance+" km</td>"+
+                "<td>"+(slot.averageRating ? "⭐ "+slot.averageRating.toFixed(1) : "No reviews")+"</td>"+
+                "<td>"+getSlotStatus(slot.parkingScore)+"</td>"+
+            "</tr>";
+        });
+
+    });
+}
+// 🔥 Auto refresh every 60 seconds
+setInterval(function () {
+
+    if (!userLat || !userLon) return;
+
+    fetch("/Parking/NearbySlots?lat=" + userLat + "&lon=" + userLon + "&radius=3")
+    .then(res => res.json())
+    .then(slots => {
+
+        availableSlots = slots.filter(s => !s.isBooked);
+        bookedSlots = slots.filter(s => s.isBooked);
+
+        // Refresh whichever table is open
+        if (document.getElementById("availableBox").style.display === "block") {
+            showAvailable();
+        }
+
+        if (document.getElementById("bookedBox").style.display === "block") {
+            showBooked();
+        }
+    });
+
+}, 60000); // 1 minute
+function goToAvailable() {
+    if (!userLat || !userLon) return;
+
+    window.location.href =
+        "/Parking/AvailableSlots?lat=" + userLat +
+        "&lon=" + userLon +
+        "&radius=3";
 }
 
-navigator.geolocation.getCurrentPosition(function(pos){
-    loadSlots(pos.coords.latitude, pos.coords.longitude);
-});
+function goToBooked() {
+    if (!userLat || !userLon) return;
 
+    window.location.href =
+        "/Parking/BookedSlots?lat=" + userLat +
+        "&lon=" + userLon +
+        "&radius=3";
+}
 </script>

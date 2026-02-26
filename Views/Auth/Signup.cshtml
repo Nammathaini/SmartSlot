@@ -1,0 +1,154 @@
+﻿@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sign Up - SmartSlot</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background-image: url('https://i.pinimg.com/1200x/ea/3f/92/ea3f92fcdab7799f742c813cdb651463.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.75);
+            z-index: 0;
+        }
+        .auth-container {
+            position: relative;
+            z-index: 1;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .auth-card {
+            background: rgba(26,26,26,0.95);
+            padding: 35px;
+            width: 350px;
+            border-radius: 12px;
+            border: 1px solid #333;
+        }
+        .step-label {
+            text-align: center;
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 6px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        h2 {
+            color: white;
+            text-align: center;
+            margin-bottom: 8px;
+            font-size: 22px;
+        }
+        .desc {
+            text-align: center;
+            color: #aaa;
+            font-size: 13px;
+            margin-bottom: 24px;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background: #2a2a2a;
+            color: white;
+            font-size: 15px;
+            box-sizing: border-box;
+        }
+        input:focus {
+            outline: none;
+            border-color: #28a745;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #28a745;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            margin-top: 12px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+        }
+        button:hover { opacity: 0.9; }
+        .error {
+            color: #ff4d4d;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 13px;
+            background: rgba(255,77,77,0.1);
+            padding: 8px;
+            border-radius: 6px;
+        }
+        .switch {
+            text-align: center;
+            margin-top: 18px;
+            color: #aaa;
+            font-size: 13px;
+        }
+        .switch a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .steps {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+        .step-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #444;
+        }
+        .step-dot.active { background: #28a745; }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="step-label">Step 1 of 3</div>
+            <h2>Create Account</h2>
+            <p class="desc">Enter your phone number to receive a verification code</p>
+
+            <div class="steps">
+                <div class="step-dot active"></div>
+                <div class="step-dot"></div>
+                <div class="step-dot"></div>
+            </div>
+
+            @if (ViewBag.Error != null)
+            {
+                <div class="error">@ViewBag.Error</div>
+            }
+
+            <form method="post">
+                <input type="tel" name="phone" placeholder="Phone Number (10 digits)" required
+                       pattern="[0-9]{10}" maxlength="10" />
+                <button type="submit">Send OTP →</button>
+            </form>
+
+            <div class="switch">
+                Already have an account? <a href="/Auth/Signin">Sign In</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,7 +1,12 @@
 ﻿@{
     ViewData["Title"] = "Book Parking Slot";
     var slot = ViewBag.Slot as SmartSlot.Models.ParkingSlot;
+    var bookedRanges = ViewBag.BookedRanges as List<dynamic>;
+    bool isExtension = ViewBag.ExtensionMode != null && (bool)ViewBag.ExtensionMode;
+DateTime? extensionStart = ViewBag.ExtensionStart as DateTime?;
 }
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 <style>
     body {
@@ -115,6 +120,18 @@
 
 <div class="page-wrapper">
     <h2>&#9989; Book Parking Slot</h2>
+    @if (isExtension)
+{
+    <div style="
+        background:#17a2b8;
+        padding:12px;
+        margin-bottom:20px;
+        border-radius:8px;
+        text-align:center;
+        font-weight:bold;">
+        🔄 Extension Mode Active — Extending Your Previous Booking
+    </div>
+}
 
     <!-- Slot Details -->
     <div class="card">
@@ -174,10 +191,15 @@
             <input type="text" name="VehicleNumber" placeholder="TN01AB1234" required />
 
             <label>Booking From</label>
-            <input type="datetime-local" name="BookingFrom" id="bookingFrom"
-                   min="@slot.AvailableFrom.ToString("yyyy-MM-ddTHH:mm")"
-                   max="@slot.AvailableTo.ToString("yyyy-MM-ddTHH:mm")"
-                   onchange="calculatePrice()" required />
+       <input type="datetime-local"
+       name="BookingFrom"
+       id="bookingFrom"
+       value="@(isExtension && extensionStart != null ? extensionStart.Value.ToString("yyyy-MM-ddTHH:mm") : "")"
+       min="@slot.AvailableFrom.ToString("yyyy-MM-ddTHH:mm")"
+       max="@slot.AvailableTo.ToString("yyyy-MM-ddTHH:mm")"
+       @(isExtension ? "readonly" : "")
+       onchange="calculatePrice()"
+       required />
 
             <label>Booking To</label>
             <input type="datetime-local" name="BookingTo" id="bookingTo"
@@ -216,6 +238,76 @@
 </div>
 
 <script>
+
+    // 🔥 Convert booked ranges from backend
+    var bookedRanges = [];
+
+    @if (bookedRanges != null)
+    {
+        foreach (var range in bookedRanges)
+        {
+            <text>
+                bookedRanges.push({
+                    from: new Date("@range.BookingFrom.ToString("yyyy-MM-ddTHH:mm:ss")"),
+                    to: new Date("@range.BookingTo.ToString("yyyy-MM-ddTHH:mm:ss")")
+                });
+            </text>
+        }
+    }
+
+    // 🔥 Disable already booked time ranges
+    function isTimeBlocked(date) {
+        for (var i = 0; i < bookedRanges.length; i++) {
+            if (date >= bookedRanges[i].from && date < bookedRanges[i].to) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // 🔥 Initialize Flatpickr (Booking From)
+    flatpickr("#bookingFrom", {
+        enableTime: true,
+        dateFormat: "Y-m-d H:i",
+        minDate: "@slot.AvailableFrom.ToString("yyyy-MM-ddTHH:mm")",
+        maxDate: "@slot.AvailableTo.ToString("yyyy-MM-ddTHH:mm")",
+        disable: [
+            function(date) {
+                return isTimeBlocked(date);
+            }
+        ],
+        onChange: function(selectedDates) {
+            calculatePrice();
+        }
+    });
+
+    // 🔥 Initialize Flatpickr (Booking To)
+    flatpickr("#bookingTo", {
+        enableTime: true,
+        dateFormat: "Y-m-d H:i",
+        minDate: "@slot.AvailableFrom.ToString("yyyy-MM-ddTHH:mm")",
+        maxDate: "@slot.AvailableTo.ToString("yyyy-MM-ddTHH:mm")",
+        disable: [
+            function(date) {
+                return isTimeBlocked(date);
+            }
+        ],
+        onChange: function(selectedDates) {
+            calculatePrice();
+        }
+    });
+    // 🔥 Auto-calc price immediately if extension mode
+@if (isExtension)
+{
+<text>
+    window.addEventListener("load", function () {
+        calculatePrice();
+    });
+</text>
+}
+
+    // ================== YOUR ORIGINAL PRICE LOGIC (UNCHANGED) ==================
+
     function calculatePrice() {
         var from = document.getElementById("bookingFrom").value;
         var to = document.getElementById("bookingTo").value;
@@ -261,4 +353,5 @@
             document.getElementById("payNote").style.display = "none";
         }, 3000);
     }
-</script>
+
+</script> 

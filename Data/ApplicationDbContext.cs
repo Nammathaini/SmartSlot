@@ -1,7 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Migrations;
 using SmartSlot.Models;
-using System.Diagnostics;
 
 namespace SmartSlot.Data
 {
@@ -15,7 +13,9 @@ namespace SmartSlot.Data
         public DbSet<ParkingSlot> ParkingSlots { get; set; }
         public DbSet<Booking> Bookings { get; set; }
         public DbSet<Review> Reviews { get; set; }
+        public DbSet<User> Users { get; set; }
 
-
+        // ✅ NEW: Slot availability notification requests
+        public DbSet<SlotNotifyRequest> SlotNotifyRequests { get; set; }
     }
 }

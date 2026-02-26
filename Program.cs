@@ -18,6 +18,11 @@ builder.Services.AddScoped<SmartSlot.Services.VerificationService>();
 builder.Services.AddHttpClient<SmartSlot.Services.ParkingAIService>();
 builder.Services.AddScoped<SmartSlot.Services.ParkingAIService>();
 
+// ✅ Register Brevo EmailService
+builder.Services.AddHttpClient<SmartSlot.Services.EmailService>();
+
+builder.Services.AddSession();
+
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -34,15 +39,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseStaticFiles();
 app.UseRouting();
+app.UseSession();
 app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
-
-app.MapControllerRoute(
-    name: "parking",
-    pattern: "{controller=Parking}/{action=Book}/{slotId?}");
+    pattern: "{controller=Auth}/{action=Index}/{id?}");
 
 if (app.Environment.IsProduction())
 {

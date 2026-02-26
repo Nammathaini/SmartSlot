@@ -1,0 +1,315 @@
+﻿@{
+    ViewData["Title"] = "Booked Parking Slots";
+    var lat = ViewBag.Lat;
+    var lon = ViewBag.Lon;
+    var radius = ViewBag.Radius;
+}
+
+<style>
+body {
+    background-image: url('https://i.pinimg.com/1200x/ea/3f/92/ea3f92fcdab7799f742c813cdb651463.jpg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-color: #000 !important;
+    color: white !important;
+}
+body::before {
+    content:'';
+    position:fixed;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.78);
+    z-index:0;
+}
+.container-box {
+    position:relative;
+    z-index:1;
+    max-width:1200px;
+    margin:40px auto;
+    background:rgba(26,26,26,0.95);
+    padding:30px;
+    border-radius:12px;
+    border:1px solid #333;
+}
+h2 { text-align:center; margin-bottom:25px; }
+
+table {
+    width:100%;
+    border-collapse:collapse;
+}
+th, td {
+    padding:10px;
+    border:1px solid #444;
+    text-align:center;
+}
+th { background:#2a2a2a; }
+
+.back-btn {
+    display:inline-block;
+    margin-bottom:20px;
+    padding:8px 15px;
+    background:#007bff;
+    color:white;
+    border-radius:6px;
+    text-decoration:none;
+}
+.status-badge {
+    padding:4px 8px;
+    border-radius:6px;
+    background:#dc3545;
+    font-weight:bold;
+}
+
+/* Animated Countdown */
+.countdown {
+    font-weight:bold;
+    animation:pulse 1s infinite alternate;
+}
+@@keyframes pulse {
+    from { opacity:0.6; }
+    to { opacity:1; }
+}
+.low-time { color:#ff4d4d; }
+
+/* Notify Me Button */
+.notify-btn {
+    padding: 6px 14px;
+    background: #f59e0b;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.notify-btn:hover { background: #d97706; }
+.notify-btn:disabled {
+    background: #555;
+    cursor: default;
+    color: #aaa;
+}
+.notify-btn.done {
+    background: #16a34a;
+    cursor: default;
+}
+
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a1a;
+    border: 1px solid #333;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-size: 14px;
+    z-index: 9999;
+    display: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+.toast.show { display: block; animation: fadeInUp 0.3s ease; }
+@@keyframes fadeInUp {
+    from { opacity:0; transform: translateX(-50%) translateY(10px); }
+    to   { opacity:1; transform: translateX(-50%) translateY(0); }
+}
+</style>
+
+<div class="container-box">
+    <a href="/Parking/Search" class="back-btn">⬅ Back to Search</a>
+    <h2>🔴 Booked Parking Slots</h2>
+
+    <select id="sortOption" onchange="applySort()" style="margin-bottom:15px;padding:6px;">
+        <option value="">Sort By</option>
+        <option value="price">Price (Low → High)</option>
+        <option value="distance">Distance (Near → Far)</option>
+        <option value="status">Slot Status</option>
+    </select>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Owner</th>
+                <th>Phone</th>
+                <th>Price</th>
+                <th>Vehicle</th>
+                <th>Available From</th>
+                <th>Available To</th>
+                <th>Booked From</th>
+                <th>Booked To</th>
+                <th>Time Remaining</th>
+                <th>Distance</th>
+                <th>Rating</th>
+                <th>Status</th>
+                <th>Notify</th>
+            </tr>
+        </thead>
+        <tbody id="bookedBody"></tbody>
+    </table>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+
+var allBookedSlots = [];
+var notifiedSlots = JSON.parse(localStorage.getItem('notifiedSlots') || '{}');
+
+function getDistanceKm(lat1, lon1, lat2, lon2) {
+    var R = 6371;
+    var dLat = (lat2 - lat1) * Math.PI / 180;
+    var dLon = (lon2 - lon1) * Math.PI / 180;
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+    return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+}
+
+function getSlotStatus(score) {
+    if (!score) return "—";
+    if (score >= 80) return "🥇 Premium";
+    if (score >= 70) return "🥈 Gold";
+    if (score >= 50) return "🥉 Silver";
+    if (score >= 30) return "🏠 Basic";
+    return "❌ Poor";
+}
+
+function showToast(msg, color) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.borderColor = color || '#333';
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+function notifyMe(slotId, bookingId, btnEl) {
+    btnEl.disabled = true;
+    btnEl.textContent = 'Registering...';
+
+    fetch('/Parking/NotifyMe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slotId: slotId, bookingId: bookingId })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            btnEl.textContent = '✓ Notified';
+            btnEl.classList.add('done');
+            notifiedSlots[slotId] = true;
+            localStorage.setItem('notifiedSlots', JSON.stringify(notifiedSlots));
+            showToast('✅ We will email you when this slot is free!', '#16a34a');
+        } else {
+            btnEl.disabled = false;
+            btnEl.textContent = '🔔 Notify Me';
+            showToast('❌ ' + (data.message || 'Failed. Please try again.'), '#dc2626');
+        }
+    })
+    .catch(() => {
+        btnEl.disabled = false;
+        btnEl.textContent = '🔔 Notify Me';
+        showToast('❌ Something went wrong.', '#dc2626');
+    });
+}
+
+function renderTable(slots) {
+    var body = document.getElementById("bookedBody");
+    body.innerHTML = "";
+
+    if (slots.length === 0) {
+        body.innerHTML = "<tr><td colspan='13'>No Booked Slots</td></tr>";
+        return;
+    }
+
+    slots.forEach(slot => {
+        var distance = getDistanceKm(@lat, @lon, slot.latitude, slot.longitude);
+        slot._distanceValue = distance;
+
+        var alreadyNotified = notifiedSlots[slot.id] ? true : false;
+        var notifyBtnHtml = alreadyNotified
+            ? `<button class="notify-btn done" disabled>✓ Notified</button>`
+            : `<button class="notify-btn" onclick="notifyMe(${slot.id}, ${slot.bookingId || 0}, this)">🔔 Notify Me</button>`;
+
+        body.innerHTML += `
+        <tr>
+            <td>${slot.ownerName}</td>
+            <td>${slot.ownerPhone ? slot.ownerPhone : "-"}</td>
+            <td>₹${slot.pricePerHour}/hr</td>
+            <td>${slot.vehicleType}</td>
+            <td>${new Date(slot.availableFrom).toLocaleString()}</td>
+            <td>${new Date(slot.availableTo).toLocaleString()}</td>
+            <td>${slot.bookingFrom ? new Date(slot.bookingFrom).toLocaleString() : "-"}</td>
+            <td>${slot.bookingTo ? new Date(slot.bookingTo).toLocaleString() : "-"}</td>
+            <td class="countdown" data-end="${slot.bookingTo}"></td>
+            <td>${distance.toFixed(2)} km</td>
+            <td>${slot.averageRating ? "⭐ " + slot.averageRating.toFixed(1) : "No reviews"}</td>
+            <td>${getSlotStatus(slot.parkingScore)}</td>
+            <td>${notifyBtnHtml}</td>
+        </tr>`;
+    });
+
+    startCountdowns();
+}
+
+function applySort() {
+    var option = document.getElementById("sortOption").value;
+    var sorted = [...allBookedSlots];
+
+    if (option === "price") sorted.sort((a,b) => a.pricePerHour - b.pricePerHour);
+    if (option === "distance") sorted.sort((a,b) => a._distanceValue - b._distanceValue);
+    if (option === "status") {
+        var rank = { "🥇 Premium":1,"🥈 Gold":2,"🥉 Silver":3,"🏠 Basic":4,"❌ Poor":5,"—":6 };
+        sorted.sort((a,b) => (rank[getSlotStatus(a.parkingScore)]||7) - (rank[getSlotStatus(b.parkingScore)]||7));
+    }
+
+    renderTable(sorted);
+}
+
+function loadData() {
+    fetch("/Parking/NearbySlots?lat=@lat&lon=@lon&radius=@radius")
+    .then(res => res.json())
+    .then(data => {
+        var booked = data.filter(s => s.isBooked);
+        allBookedSlots = booked.map(slot => {
+            slot._distanceValue = getDistanceKm(@lat, @lon, slot.latitude, slot.longitude);
+            return slot;
+        });
+        renderTable(allBookedSlots);
+    });
+}
+
+function startCountdowns() {
+    var elements = document.querySelectorAll(".countdown");
+
+    function update() {
+        elements.forEach(function(el) {
+            var endTime = new Date(el.getAttribute("data-end"));
+            var now = new Date();
+            var diff = endTime - now;
+
+            if (diff <= 0) {
+                el.innerHTML = "Expired";
+                return;
+            }
+
+            var hours = Math.floor(diff / (1000 * 60 * 60));
+            var minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            var seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            if (hours < 1) el.classList.add("low-time");
+
+            el.innerHTML = hours + "h " + minutes + "m " + seconds + "s";
+        });
+    }
+
+    update();
+    setInterval(update, 1000);
+}
+
+loadData();
+setInterval(loadData, 30000);
+</script>

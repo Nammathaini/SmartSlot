@@ -24,46 +24,32 @@
         box-shadow: 0 20px 60px rgba(0,0,0,0.4);
     }
 
-        .review-card h2 {
-            color: white;
-            font-size: 1.6rem;
-            margin-bottom: 8px;
-        }
+    .review-card h2 { color: white; font-size: 1.6rem; margin-bottom: 8px; }
+    .review-card p  { color: #aaa; margin-bottom: 30px; }
 
-        .review-card p {
-            color: #aaa;
-            margin-bottom: 30px;
-        }
-
-    /* Star Rating */
+    /* Star Rating - normal left to right order */
     .stars {
         display: flex;
         justify-content: center;
         gap: 10px;
-        margin-bottom: 30px;
-        flex-direction: row-reverse;
+        margin-bottom: 20px;
     }
 
-        .stars input {
-            display: none;
-        }
+    .stars span {
+        font-size: 48px;
+        color: #444;
+        cursor: pointer;
+        transition: color 0.2s, transform 0.15s;
+        user-select: none;
+    }
 
-        .stars label {
-            font-size: 48px;
-            color: #444;
-            cursor: pointer;
-            transition: color 0.2s, transform 0.1s;
-        }
+    .stars span.active {
+        color: #FFD700;
+    }
 
-            .stars label:hover,
-            .stars label:hover ~ label,
-            .stars input:checked ~ label {
-                color: #FFD700;
-            }
-
-            .stars label:hover {
-                transform: scale(1.2);
-            }
+    .stars span:hover {
+        transform: scale(1.2);
+    }
 
     .selected-rating {
         color: #FFD700;
@@ -85,11 +71,10 @@
         resize: none;
         outline: none;
         margin-bottom: 20px;
+        box-sizing: border-box;
     }
 
-        textarea::placeholder {
-            color: #888;
-        }
+    textarea::placeholder { color: #888; }
 
     .btn-submit {
         background: linear-gradient(135deg, #28a745, #20c997);
@@ -104,17 +89,17 @@
         transition: transform 0.2s, box-shadow 0.2s;
     }
 
-        .btn-submit:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
-        }
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+    }
 
-        .btn-submit:disabled {
-            background: #555;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
+    .btn-submit:disabled {
+        background: #555;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
 </style>
 
 <div class="review-card">
@@ -123,26 +108,17 @@
 
     <form method="post" asp-controller="Parking" asp-action="SubmitReview">
 
-        <input type="hidden" name="BookingId" value="@ViewBag.BookingId" />
+        <input type="hidden" name="BookingId"     value="@ViewBag.BookingId" />
         <input type="hidden" name="ParkingSlotId" value="@ViewBag.ParkingSlotId" />
-        <input type="hidden" name="Rating" id="ratingValue" value="" />
+        <input type="hidden" name="Rating"        id="ratingValue" value="" />
 
-        <!-- Stars (reverse order for CSS trick) -->
-        <div class="stars">
-            <label for="star1" title="1 star">★</label>
-            <input type="radio" id="star1" name="StarDisplay" value="1" />
-
-            <label for="star2" title="2 stars">★</label>
-            <input type="radio" id="star2" name="StarDisplay" value="2" />
-
-            <label for="star3" title="3 stars">★</label>
-            <input type="radio" id="star3" name="StarDisplay" value="3" />
-
-            <label for="star4" title="4 stars">★</label>
-            <input type="radio" id="star4" name="StarDisplay" value="4" />
-
-            <label for="star5" title="5 stars">★</label>
-            <input type="radio" id="star5" name="StarDisplay" value="5" />
+        <!-- Stars: 1 to 5 left to right -->
+        <div class="stars" id="starRow">
+            <span data-val="1">★</span>
+            <span data-val="2">★</span>
+            <span data-val="3">★</span>
+            <span data-val="4">★</span>
+            <span data-val="5">★</span>
         </div>
 
         <div class="selected-rating" id="ratingText">Click a star to rate</div>
@@ -157,14 +133,36 @@
 </div>
 
 <script>
-    var labels = ["", " Poor", " Fair", " Good", " Great", " Excellent!"];
+    var labels = ["", "Poor", "Fair", "Good", "Great", "Excellent!"];
+    var stars  = document.querySelectorAll('.stars span');
+    var selected = 0;
 
-    document.querySelectorAll('.stars input').forEach(function(input) {
-        input.addEventListener('change', function() {
-            var val = this.value;
-            document.getElementById('ratingValue').value = val;
-            document.getElementById('ratingText').innerText = labels[val] + " (" + val + "/5)";
+    stars.forEach(function(star) {
+        // Hover: highlight 1 to hovered star
+        star.addEventListener('mouseover', function() {
+            var hov = parseInt(this.getAttribute('data-val'));
+            stars.forEach(function(s) {
+                s.style.color = parseInt(s.getAttribute('data-val')) <= hov ? '#FFD700' : '#444';
+            });
+        });
+
+        // Mouse leave: restore to selected state
+        star.addEventListener('mouseleave', function() {
+            stars.forEach(function(s) {
+                s.style.color = parseInt(s.getAttribute('data-val')) <= selected ? '#FFD700' : '#444';
+            });
+        });
+
+        // Click: set selected rating
+        star.addEventListener('click', function() {
+            selected = parseInt(this.getAttribute('data-val'));
+            document.getElementById('ratingValue').value = selected;
+            document.getElementById('ratingText').innerText = labels[selected] + " (" + selected + "/5)";
             document.getElementById('submitBtn').disabled = false;
+
+            stars.forEach(function(s) {
+                s.style.color = parseInt(s.getAttribute('data-val')) <= selected ? '#FFD700' : '#444';
+            });
         });
     });
 </script>

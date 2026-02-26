@@ -1,0 +1,93 @@
+﻿@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SmartSlot - Welcome</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <style>
+            body {
+                margin:0;
+                font-family: 'Segoe UI', sans-serif;
+                background-image: url('https://i.pinimg.com/1200x/ea/3f/92/ea3f92fcdab7799f742c813cdb651463.jpg');
+                background-size: cover;
+                background-position: center;
+                background-attachment: fixed;
+            }
+
+            body::before {
+                content:'';
+                position:fixed;
+                width:100%;
+                height:100%;
+                background:rgba(0,0,0,0.75);
+                z-index:0;
+            }
+
+            .auth-container {
+                position:relative;
+                z-index:1;
+                height:100vh;
+                display:flex;
+                justify-content:center;
+                align-items:center;
+            }
+
+            .auth-card {
+                background:rgba(26,26,26,0.95);
+                padding:40px;
+                width:350px;
+                border-radius:12px;
+                text-align:center;
+                box-shadow:0 0 25px rgba(0,0,0,0.6);
+                border:1px solid #333;
+            }
+
+            h1 {
+                color:white;
+                margin-bottom:30px;
+            }
+
+            .btn {
+                display:block;
+                width:100%;
+                padding:12px;
+                margin:10px 0;
+                border:none;
+                border-radius:6px;
+                font-size:16px;
+                cursor:pointer;
+                text-decoration:none;
+            }
+
+            .signup-btn {
+                background:#28a745;
+                color:white;
+            }
+
+            .signin-btn {
+                background:#007bff;
+                color:white;
+            }
+
+            .btn:hover {
+                opacity:0.9;
+            }
+    </style>
+</head>
+<body>
+
+    <div class="auth-container">
+        <div class="auth-card">
+            <h1>SmartSlot</h1>
+
+            <a href="/Auth/Signup" class="btn signup-btn">Create an account</a>
+            <a href="/Auth/Signin" class="btn signin-btn">Login</a>
+        </div>
+    </div>
+
+</body>
+</html>

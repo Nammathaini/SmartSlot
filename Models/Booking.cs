@@ -13,6 +13,7 @@
 
     public bool ReviewSmsSent { get; set; } = false;
     public bool ReviewSubmitted { get; set; } = false;
-    
+    public bool OneHourAlertSent { get; set; } = false;
+
 
 }

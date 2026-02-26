@@ -1,0 +1,199 @@
+﻿@{
+    Layout = null;
+    var user = ViewBag.User as SmartSlot.Models.User;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Profile - SmartSlot</title>
+    <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+                font-family: 'Segoe UI', sans-serif;
+            }
+
+            body {
+                background: #0f0f0f;
+                color: white;
+                min-height: 100vh;
+            }
+
+            .topbar {
+                background: #1a1a1a;
+                border-bottom: 1px solid #222;
+                padding: 16px 24px;
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                position: sticky;
+                top: 0;
+            }
+
+            .back-btn {
+                background: rgba(255,255,255,0.08);
+                border: none;
+                color: white;
+                width: 38px;
+                height: 38px;
+                border-radius: 10px;
+                font-size: 18px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                text-decoration: none;
+            }
+
+                .back-btn:hover {
+                    background: rgba(255,255,255,0.15);
+                }
+
+            .topbar-title {
+                font-size: 20px;
+                font-weight: 700;
+            }
+
+            .page {
+                max-width: 500px;
+                margin: 0 auto;
+                padding: 36px 20px;
+            }
+
+            /* Avatar */
+            .avatar-wrap {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                margin-bottom: 36px;
+            }
+
+            .avatar {
+                width: 90px;
+                height: 90px;
+                background: linear-gradient(135deg, #2563eb, #1d4ed8);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 40px;
+                font-weight: 800;
+                color: white;
+                margin-bottom: 14px;
+                box-shadow: 0 0 0 4px rgba(37,99,235,0.2);
+            }
+
+            .avatar-name {
+                font-size: 22px;
+                font-weight: 700;
+            }
+
+            .avatar-tag {
+                font-size: 13px;
+                color: #22c55e;
+                margin-top: 4px;
+                font-weight: 500;
+            }
+
+            /* Info Cards */
+            .info-card {
+                background: #1a1a1a;
+                border: 1px solid #2a2a2a;
+                border-radius: 14px;
+                overflow: hidden;
+                margin-bottom: 16px;
+            }
+
+            .info-row {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                padding: 18px 20px;
+                border-bottom: 1px solid #222;
+            }
+
+                .info-row:last-child {
+                    border-bottom: none;
+                }
+
+            .info-icon {
+                font-size: 20px;
+                width: 36px;
+                text-align: center;
+                flex-shrink: 0;
+            }
+
+            .info-content {
+            }
+
+            .info-label {
+                font-size: 11px;
+                color: #666;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                font-weight: 600;
+            }
+
+            .info-value {
+                font-size: 15px;
+                color: #eee;
+                font-weight: 500;
+                margin-top: 2px;
+            }
+    </style>
+</head>
+<body>
+
+    <div class="topbar">
+        <a href="/Parking/Index" class="back-btn">←</a>
+        <span class="topbar-title">👤 Profile</span>
+    </div>
+
+    <div class="page">
+
+        @if (user != null)
+        {
+            <div class="avatar-wrap">
+                <div class="avatar">@user.Username.Substring(0, 1).ToUpper()</div>
+                <div class="avatar-name">@user.Username</div>
+                <div class="avatar-tag">✓ SmartSlot Member</div>
+            </div>
+
+            <div class="info-card">
+                <div class="info-row">
+                    <div class="info-icon">👤</div>
+                    <div class="info-content">
+                        <div class="info-label">Username</div>
+                        <div class="info-value">@user.Username</div>
+                    </div>
+                </div>
+                <div class="info-row">
+                    <div class="info-icon">📱</div>
+                    <div class="info-content">
+                        <div class="info-label">Phone Number</div>
+                        <div class="info-value">@user.PhoneNumber</div>
+                    </div>
+                </div>
+                <div class="info-row">
+                    <div class="info-icon">✉️</div>
+                    <div class="info-content">
+                        <div class="info-label">Email Address</div>
+                        <div class="info-value">@user.Email</div>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div style="text-align:center; color:#555; margin-top:60px;">
+                <div style="font-size:48px;">⚠️</div>
+                <p style="margin-top:12px;">Could not load profile. Please sign in again.</p>
+            </div>
+        }
+
+    </div>
+</body>
+</html>
