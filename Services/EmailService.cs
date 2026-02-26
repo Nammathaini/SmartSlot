@@ -56,6 +56,58 @@ namespace SmartSlot.Services
             await SendEmail(toEmail, ownerName, "Your Parking Slot is Now Live - SmartSlot", html);
         }
 
+        // ── NEW: Booking Confirmation ──
+        public async Task SendBookingConfirmationEmail(string toEmail, string customerName,
+            string ownerName, string ownerPhone, string vehicleType, string vehicleNumber,
+            double pricePerHour, double totalAmount, DateTime bookingFrom, DateTime bookingTo,
+            string paymentMode)
+        {
+            var html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>
+<style>
+  body{{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0;}}
+  .container{{max-width:520px;margin:30px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.1);}}
+  .header{{background:linear-gradient(135deg,#2563eb,#1d4ed8);padding:30px;text-align:center;}}
+  .header h1{{color:white;margin:0;font-size:24px;}}
+  .header p{{color:rgba(255,255,255,0.85);margin:6px 0 0;font-size:14px;}}
+  .body{{padding:28px 32px;}}
+  .body h2{{color:#111;font-size:18px;margin-bottom:6px;}}
+  .body p{{color:#555;font-size:14px;margin-bottom:20px;}}
+  .detail-row{{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f0f0f0;}}
+  .detail-row:last-child{{border-bottom:none;}}
+  .detail-label{{color:#888;font-size:13px;}}
+  .detail-value{{color:#111;font-size:14px;font-weight:600;}}
+  .badge{{display:inline-block;background:#dbeafe;color:#2563eb;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:20px;}}
+  .total-box{{background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:16px;text-align:center;margin:20px 0;}}
+  .total-box .amount{{font-size:28px;font-weight:800;color:#16a34a;}}
+  .total-box .label{{color:#555;font-size:13px;margin-top:4px;}}
+  .footer{{background:#f9f9f9;padding:18px 32px;text-align:center;color:#aaa;font-size:12px;border-top:1px solid #eee;}}
+</style></head>
+<body><div class='container'>
+  <div class='header'><h1>P SmartSlot</h1><p>Booking Confirmed!</p></div>
+  <div class='body'>
+    <span class='badge'>✅ Booking Confirmed</span>
+    <h2>Hi {customerName},</h2>
+    <p>Your parking slot has been successfully booked. Here are your booking details:</p>
+    <div class='detail-row'><span class='detail-label'>Owner Name</span><span class='detail-value'>{ownerName}</span></div>
+    <div class='detail-row'><span class='detail-label'>Owner Phone</span><span class='detail-value'>{ownerPhone}</span></div>
+    <div class='detail-row'><span class='detail-label'>Vehicle Type</span><span class='detail-value'>{vehicleType}</span></div>
+    <div class='detail-row'><span class='detail-label'>Your Vehicle No.</span><span class='detail-value'>{vehicleNumber}</span></div>
+    <div class='detail-row'><span class='detail-label'>Booking From</span><span class='detail-value'>{bookingFrom:dd MMM yyyy, hh:mm tt}</span></div>
+    <div class='detail-row'><span class='detail-label'>Booking To</span><span class='detail-value'>{bookingTo:dd MMM yyyy, hh:mm tt}</span></div>
+    <div class='detail-row'><span class='detail-label'>Rate</span><span class='detail-value'>Rs.{pricePerHour}/hr</span></div>
+    <div class='detail-row'><span class='detail-label'>Payment Mode</span><span class='detail-value'>{paymentMode}</span></div>
+    <div class='total-box'>
+      <div class='amount'>Rs.{totalAmount:F2}</div>
+      <div class='label'>Total Amount</div>
+    </div>
+    <p style='color:#888;font-size:12px;text-align:center;'>Please arrive on time. Contact the owner if you need assistance.</p>
+  </div>
+  <div class='footer'>You are receiving this because you booked a slot on SmartSlot.<br/>2025 SmartSlot. All rights reserved.</div>
+</div></body></html>";
+
+            await SendEmail(toEmail, customerName, "Booking Confirmed - SmartSlot", html);
+        }
+
         // ── Slot Available Notification ──
         public async Task SendSlotAvailableEmail(string toEmail, string customerName,
             string ownerName, string vehicleType, double pricePerHour, DateTime availableTo)
@@ -66,14 +118,15 @@ namespace SmartSlot.Services
 <style>
   body{{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0;}}
   .container{{max-width:520px;margin:30px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.1);}}
-  .header{{background:linear-gradient(135deg,#2563eb,#1d4ed8);padding:30px;text-align:center;}}
+  .header{{background:linear-gradient(135deg,#f59e0b,#d97706);padding:30px;text-align:center;}}
   .header h1{{color:white;margin:0;font-size:24px;}}
+  .header p{{color:rgba(255,255,255,0.85);margin:6px 0 0;font-size:14px;}}
   .body{{padding:28px 32px;}}
   .detail-row{{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f0f0f0;}}
   .detail-row:last-child{{border-bottom:none;}}
   .detail-label{{color:#888;font-size:13px;}}
   .detail-value{{color:#111;font-size:14px;font-weight:600;}}
-  .badge{{display:inline-block;background:#dbeafe;color:#2563eb;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:20px;}}
+  .badge{{display:inline-block;background:#fef3c7;color:#d97706;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:20px;}}
   .cta{{display:block;margin:24px auto 0;padding:12px 28px;background:#2563eb;color:white;text-decoration:none;border-radius:8px;font-weight:600;text-align:center;font-size:15px;}}
   .footer{{background:#f9f9f9;padding:18px 32px;text-align:center;color:#aaa;font-size:12px;border-top:1px solid #eee;}}
 </style></head>
@@ -95,7 +148,7 @@ namespace SmartSlot.Services
             await SendEmail(toEmail, customerName, "Parking Slot Now Available - SmartSlot", html);
         }
 
-        // ── NEW: Password Reset Link ──
+        // ── Password Reset Link ──
         public async Task SendPasswordResetEmail(string toEmail, string username, string resetLink)
         {
             var html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>

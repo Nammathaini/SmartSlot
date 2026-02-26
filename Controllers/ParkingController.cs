@@ -104,7 +104,7 @@ namespace SmartSlot.Controllers
             _context.ParkingSlots.Add(slot);
             _context.SaveChanges();
 
-            // ✅ Send confirmation email via Brevo
+            // ✅ Send slot added confirmation email
             try
             {
                 var userId = HttpContext.Session.GetString("UserId");
@@ -125,7 +125,7 @@ namespace SmartSlot.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"📧 Email failed: {ex.Message}");
+                Console.WriteLine($"📧 Slot added email failed: {ex.Message}");
             }
 
             return RedirectToAction("SlotAdded");
@@ -135,6 +135,82 @@ namespace SmartSlot.Controllers
         {
             if (HttpContext.Session.GetString("UserId") == null)
                 return RedirectToAction("Signin", "Auth", new { returnUrl = HttpContext.Request.Path });
+
+            return View();
+        }
+
+        // ================= CONFIRM BOOKING =================
+        [HttpPost]
+        public async Task<IActionResult> ConfirmBooking(
+            int ParkingSlotId,
+            string CustomerName,
+            string CustomerPhone,
+            string VehicleNumber,
+            DateTime BookingFrom,
+            DateTime BookingTo,
+            decimal totalAmount)
+        {
+            if (HttpContext.Session.GetString("UserId") == null)
+                return RedirectToAction("Signin", "Auth");
+
+            var slot = _context.ParkingSlots.Find(ParkingSlotId);
+            if (slot == null) return NotFound();
+
+            // Save booking
+            var booking = new Booking
+            {
+                ParkingSlotId = ParkingSlotId,
+                CustomerName = CustomerName,
+                CustomerPhone = CustomerPhone,
+                VehicleNumber = VehicleNumber,
+                BookingFrom = BookingFrom,
+                BookingTo = BookingTo,
+                ReviewSmsSent = false,
+                ReviewSubmitted = false,
+                OneHourAlertSent = false
+            };
+
+            _context.Bookings.Add(booking);
+            _context.SaveChanges();
+
+            // ✅ Send booking confirmation email to customer
+            try
+            {
+                var userId = HttpContext.Session.GetString("UserId");
+                var user = _context.Users.FirstOrDefault(u => u.Id.ToString() == userId);
+
+                if (user != null && !string.IsNullOrEmpty(user.Email))
+                {
+                    var istFrom = BookingFrom.AddHours(5.5);
+                    var istTo = BookingTo.AddHours(5.5);
+
+                    await _emailService.SendBookingConfirmationEmail(
+                        toEmail: user.Email,
+                        customerName: CustomerName,
+                        ownerName: slot.OwnerName,
+                        ownerPhone: slot.OwnerPhone,
+                        vehicleType: slot.VehicleType,
+                        vehicleNumber: VehicleNumber,
+                        pricePerHour: slot.PricePerHour,
+                        totalAmount: (double)totalAmount,
+                        bookingFrom: istFrom,
+                        bookingTo: istTo,
+                        paymentMode: slot.PaymentMode
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"📧 Booking email failed: {ex.Message}");
+            }
+
+            return RedirectToAction("BookingSuccess");
+        }
+
+        public IActionResult BookingSuccess()
+        {
+            if (HttpContext.Session.GetString("UserId") == null)
+                return RedirectToAction("Signin", "Auth");
 
             return View();
         }
@@ -154,7 +230,6 @@ namespace SmartSlot.Controllers
             if (string.IsNullOrEmpty(user.Email))
                 return Json(new { success = false, message = "No email found on your account." });
 
-            // Avoid duplicate requests
             var existing = _context.SlotNotifyRequests
                 .FirstOrDefault(n =>
                     n.ParkingSlotId == request.SlotId &&
@@ -255,7 +330,7 @@ namespace SmartSlot.Controllers
                             .Average() ?? 0,
                         bookingFrom = activeBooking?.BookingFrom,
                         bookingTo = activeBooking?.BookingTo,
-                        bookingId = activeBooking?.Id   // ✅ needed for NotifyMe
+                        bookingId = activeBooking?.Id
                     };
                 })
                 .ToList();
