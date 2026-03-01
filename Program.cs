@@ -18,6 +18,7 @@ builder.Services.AddScoped<SmartSlot.Services.VerificationService>();
 builder.Services.AddHttpClient<SmartSlot.Services.ParkingAIService>();
 builder.Services.AddScoped<SmartSlot.Services.ParkingAIService>();
 
+
 // ✅ Register Brevo EmailService
 builder.Services.AddHttpClient<SmartSlot.Services.EmailService>();
 

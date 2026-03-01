@@ -28,10 +28,9 @@ namespace SmartSlot.Services
                     using (var scope = _serviceProvider.CreateScope())
                     {
                         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                        var smsService = scope.ServiceProvider.GetRequiredService<SmsService>();
                         var emailService = scope.ServiceProvider.GetRequiredService<EmailService>();
 
-                        // ── Existing: alert + review SMS ──
+                        // ── Alert + Review Emails ──
                         var activeBookings = context.Bookings
                             .Where(b => !b.ReviewSmsSent || !b.OneHourAlertSent)
                             .ToList();
@@ -49,40 +48,45 @@ namespace SmartSlot.Services
                             {
                                 try
                                 {
-                                    await smsService.SendOneHourAlertSms(
-                                        booking.CustomerPhone,
+                                    await emailService.SendOneHourAlertEmail(
+                                        booking.CustomerEmail,
+                                        booking.CustomerName,
                                         booking.BookingTo
                                     );
                                     booking.OneHourAlertSent = true;
                                     context.Bookings.Update(booking);
                                     await context.SaveChangesAsync();
-                                    Console.WriteLine($"📨 1-hour alert SMS sent for Booking {booking.Id}");
+                                    Console.WriteLine($"📨 1-hour alert EMAIL sent for Booking {booking.Id}");
                                 }
                                 catch (Exception ex)
                                 {
-                                    Console.WriteLine($"❌ 1-hour Alert SMS Error: {ex.Message}");
+                                    Console.WriteLine($"❌ 1-hour Alert Email Error: {ex.Message}");
                                 }
                             }
 
-                            // ⭐ AFTER BOOKING ENDS → SEND REVIEW LINK
+                            // ⭐ AFTER BOOKING ENDS → SEND REVIEW EMAIL
                             if (!booking.ReviewSmsSent && booking.BookingTo <= istNow)
                             {
                                 try
                                 {
-                                    await smsService.SendReviewSms(booking.CustomerPhone, booking.Id);
+                                    await emailService.SendReviewEmail(
+                                        booking.CustomerEmail,
+                                        booking.CustomerName,
+                                        booking.Id
+                                    );
                                     booking.ReviewSmsSent = true;
                                     context.Bookings.Update(booking);
                                     await context.SaveChangesAsync();
-                                    Console.WriteLine($"📨 Review SMS sent for Booking {booking.Id}");
+                                    Console.WriteLine($"📨 Review EMAIL sent for Booking {booking.Id}");
                                 }
                                 catch (Exception ex)
                                 {
-                                    Console.WriteLine($"❌ Review SMS Error: {ex.Message}");
+                                    Console.WriteLine($"❌ Review Email Error: {ex.Message}");
                                 }
                             }
                         }
 
-                        // ── NEW: Slot availability notifications ──
+                        // ── Slot availability notifications ──
                         var pendingNotifications = context.SlotNotifyRequests
                             .Where(n => !n.NotificationSent)
                             .ToList();
@@ -91,14 +95,12 @@ namespace SmartSlot.Services
 
                         foreach (var notify in pendingNotifications)
                         {
-                            // Check if the booking they were waiting on has ended
                             var waitedBooking = context.Bookings
                                 .FirstOrDefault(b => b.Id == notify.BookingId);
 
                             if (waitedBooking == null || waitedBooking.BookingTo > istNow)
-                                continue; // Booking not ended yet
+                                continue;
 
-                            // Check no new active booking exists for this slot
                             var newActiveBooking = context.Bookings
                                 .Where(b =>
                                     b.ParkingSlotId == notify.ParkingSlotId &&
@@ -109,12 +111,10 @@ namespace SmartSlot.Services
 
                             if (newActiveBooking != null)
                             {
-                                // Slot is still booked by someone else — skip
                                 Console.WriteLine($"⏭ Slot {notify.ParkingSlotId} still booked, skipping notify.");
                                 continue;
                             }
 
-                            // Slot is FREE — send email notification
                             try
                             {
                                 var slot = context.ParkingSlots

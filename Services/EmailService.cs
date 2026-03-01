@@ -178,6 +178,77 @@ namespace SmartSlot.Services
 
             await SendEmail(toEmail, username, "Reset Your SmartSlot Password", html);
         }
+        // ⭐ REVIEW EMAIL — sent after booking ends
+        public async Task SendReviewEmail(string toEmail, string customerName, int bookingId)
+        {
+            var reviewLink = $"https://smartslot-fkc6.onrender.com/Parking/Review/{bookingId}";
+
+            var html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>
+<style>
+  body{{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0;}}
+  .container{{max-width:520px;margin:30px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.1);}}
+  .header{{background:linear-gradient(135deg,#7c3aed,#5b21b6);padding:30px;text-align:center;}}
+  .header h1{{color:white;margin:0;font-size:24px;}}
+  .header p{{color:rgba(255,255,255,0.85);margin:6px 0 0;font-size:14px;}}
+  .body{{padding:28px 32px;text-align:center;}}
+  .body h2{{color:#111;font-size:18px;margin-bottom:8px;}}
+  .body p{{color:#555;font-size:14px;line-height:1.6;margin-bottom:20px;}}
+  .stars{{font-size:32px;margin:16px 0;}}
+  .cta{{display:inline-block;padding:14px 32px;background:#7c3aed;color:white;text-decoration:none;border-radius:8px;font-weight:700;font-size:16px;}}
+  .footer{{background:#f9f9f9;padding:18px 32px;text-align:center;color:#aaa;font-size:12px;border-top:1px solid #eee;}}
+</style></head>
+<body><div class='container'>
+  <div class='header'><h1>P SmartSlot</h1><p>How was your parking experience?</p></div>
+  <div class='body'>
+    <div class='stars'>⭐⭐⭐⭐⭐</div>
+    <h2>Hi {customerName},</h2>
+    <p>Your parking session has ended. We'd love to hear your feedback! It only takes 10 seconds.</p>
+    <a href='{reviewLink}' class='cta'>Rate Your Experience →</a>
+    <p style='color:#aaa;font-size:12px;margin-top:20px;'>Thank you for choosing SmartSlot!</p>
+  </div>
+  <div class='footer'>2025 SmartSlot. All rights reserved.</div>
+</div></body></html>";
+
+            await SendEmail(toEmail, customerName, "How was your SmartSlot experience? ⭐", html);
+        }
+
+        // 🔔 1-HOUR ALERT EMAIL — sent 1 hour before booking ends
+        public async Task SendOneHourAlertEmail(string toEmail, string customerName, DateTime bookingTo)
+        {
+            string formattedTime = bookingTo.ToString("hh:mm tt");
+
+            var html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>
+<style>
+  body{{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0;}}
+  .container{{max-width:520px;margin:30px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.1);}}
+  .header{{background:linear-gradient(135deg,#dc2626,#b91c1c);padding:30px;text-align:center;}}
+  .header h1{{color:white;margin:0;font-size:24px;}}
+  .header p{{color:rgba(255,255,255,0.85);margin:6px 0 0;font-size:14px;}}
+  .body{{padding:28px 32px;text-align:center;}}
+  .body h2{{color:#111;font-size:18px;margin-bottom:8px;}}
+  .body p{{color:#555;font-size:14px;line-height:1.6;}}
+  .time-box{{background:#fef2f2;border:2px solid #fca5a5;border-radius:10px;padding:20px;margin:20px 0;}}
+  .time-box .time{{font-size:32px;font-weight:800;color:#dc2626;}}
+  .time-box .label{{color:#888;font-size:13px;margin-top:4px;}}
+  .warning{{background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:14px;color:#c2410c;font-size:13px;margin-top:16px;}}
+  .footer{{background:#f9f9f9;padding:18px 32px;text-align:center;color:#aaa;font-size:12px;border-top:1px solid #eee;}}
+</style></head>
+<body><div class='container'>
+  <div class='header'><h1>P SmartSlot</h1><p>⚠ Parking Expiry Reminder</p></div>
+  <div class='body'>
+    <h2>Hi {customerName},</h2>
+    <p>Your parking slot is expiring soon. Please make sure to clear the slot on time.</p>
+    <div class='time-box'>
+      <div class='time'>{formattedTime}</div>
+      <div class='label'>Your parking ends at</div>
+    </div>
+    <div class='warning'>⚠ Failure to clear the slot on time may result in a penalty.</div>
+  </div>
+  <div class='footer'>2025 SmartSlot. All rights reserved.</div>
+</div></body></html>";
+
+            await SendEmail(toEmail, customerName, "⚠ Your SmartSlot parking ends in 1 hour!", html);
+        }
 
         // ── Shared send helper ──
         private async Task SendEmail(string toEmail, string toName, string subject, string html)

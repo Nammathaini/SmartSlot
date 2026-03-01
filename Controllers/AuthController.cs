@@ -85,7 +85,7 @@ namespace SmartSlot.Controllers
             catch (Exception ex)
             {
                 Console.WriteLine($"OTP SMS failed: {ex.Message}");
-                ViewBag.Error = "Failed to send OTP. Please check your phone number.";
+                ViewBag.Error = ex.Message; // 🔥 Show real error
                 return View();
             }
 

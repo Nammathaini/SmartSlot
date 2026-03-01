@@ -5,6 +5,7 @@
 
     public string CustomerName { get; set; }
     public string CustomerPhone { get; set; }
+    public string CustomerEmail { get; set; }  // ← ADD THIS
 
     public string VehicleNumber { get; set; }
 
@@ -14,6 +15,4 @@
     public bool ReviewSmsSent { get; set; } = false;
     public bool ReviewSubmitted { get; set; } = false;
     public bool OneHourAlertSent { get; set; } = false;
-
-
 }

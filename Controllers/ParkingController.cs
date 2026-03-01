@@ -33,14 +33,12 @@ namespace SmartSlot.Controllers
             _emailService = emailService;
         }
 
-        // ================= HOME =================
         public IActionResult Index()
         {
             ViewBag.Username = HttpContext.Session.GetString("Username");
             return View();
         }
 
-        // ================= DASHBOARD =================
         public IActionResult Dashboard()
         {
             if (HttpContext.Session.GetString("UserId") == null)
@@ -69,7 +67,6 @@ namespace SmartSlot.Controllers
             return View();
         }
 
-        // ================= PROFILE =================
         public IActionResult Profile()
         {
             if (HttpContext.Session.GetString("UserId") == null)
@@ -84,7 +81,6 @@ namespace SmartSlot.Controllers
             return View();
         }
 
-        // ================= ADD SLOT =================
         [HttpGet]
         public IActionResult AddSlot()
         {
@@ -104,7 +100,6 @@ namespace SmartSlot.Controllers
             _context.ParkingSlots.Add(slot);
             _context.SaveChanges();
 
-            // ✅ Send slot added confirmation email
             try
             {
                 var userId = HttpContext.Session.GetString("UserId");
@@ -139,7 +134,6 @@ namespace SmartSlot.Controllers
             return View();
         }
 
-        // ================= CONFIRM BOOKING =================
         [HttpPost]
         public async Task<IActionResult> ConfirmBooking(
             int ParkingSlotId,
@@ -156,12 +150,15 @@ namespace SmartSlot.Controllers
             var slot = _context.ParkingSlots.Find(ParkingSlotId);
             if (slot == null) return NotFound();
 
-            // Save booking
+            var userId = HttpContext.Session.GetString("UserId");
+            var user = _context.Users.FirstOrDefault(u => u.Id.ToString() == userId);
+
             var booking = new Booking
             {
                 ParkingSlotId = ParkingSlotId,
                 CustomerName = CustomerName,
                 CustomerPhone = CustomerPhone,
+                CustomerEmail = user?.Email ?? "",
                 VehicleNumber = VehicleNumber,
                 BookingFrom = BookingFrom,
                 BookingTo = BookingTo,
@@ -173,12 +170,8 @@ namespace SmartSlot.Controllers
             _context.Bookings.Add(booking);
             _context.SaveChanges();
 
-            // ✅ Send booking confirmation email to customer
             try
             {
-                var userId = HttpContext.Session.GetString("UserId");
-                var user = _context.Users.FirstOrDefault(u => u.Id.ToString() == userId);
-
                 if (user != null && !string.IsNullOrEmpty(user.Email))
                 {
                     var istFrom = BookingFrom.AddHours(5.5);
@@ -215,7 +208,6 @@ namespace SmartSlot.Controllers
             return View();
         }
 
-        // ================= NOTIFY ME =================
         [HttpPost]
         public IActionResult NotifyMe([FromBody] NotifyMeRequest request)
         {
@@ -255,7 +247,6 @@ namespace SmartSlot.Controllers
             return Json(new { success = true });
         }
 
-        // ================= AI ANALYSIS =================
         [HttpPost]
         public async Task<JsonResult> AnalyzeParking(IFormFile image)
         {
@@ -273,7 +264,6 @@ namespace SmartSlot.Controllers
             return Json(new { score, badge, details });
         }
 
-        // ================= SEARCH =================
         public IActionResult Search()
         {
             if (HttpContext.Session.GetString("UserId") == null)
@@ -338,7 +328,6 @@ namespace SmartSlot.Controllers
             return Json(nearbySlots);
         }
 
-        // ================= BOOKING =================
         [Route("Parking/Book/{id}")]
         public IActionResult Book(int id)
         {
@@ -358,7 +347,6 @@ namespace SmartSlot.Controllers
             return View();
         }
 
-        // ================= EXTEND =================
         [Route("Parking/Extend/{bookingId}")]
         public IActionResult Extend(int bookingId)
         {
@@ -397,7 +385,6 @@ namespace SmartSlot.Controllers
             return View("Book");
         }
 
-        // ================= SLOT LIST PAGES =================
         [HttpGet]
         public IActionResult AvailableSlots(double lat, double lon, double radius = 3)
         {
@@ -418,7 +405,6 @@ namespace SmartSlot.Controllers
             return View();
         }
 
-        // ================= DEBUG =================
         [HttpGet]
         public IActionResult DebugTest()
         {
@@ -426,7 +412,6 @@ namespace SmartSlot.Controllers
         }
     }
 
-    // DTO for NotifyMe request body
     public class NotifyMeRequest
     {
         public int SlotId { get; set; }
