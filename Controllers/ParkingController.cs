@@ -199,13 +199,14 @@ namespace SmartSlot.Controllers
 
             return RedirectToAction("BookingSuccess");
         }
+
         [HttpPost]
         public async Task<IActionResult> ConfirmExtension(
-    int ExistingBookingId,
-    int ParkingSlotId,
-    DateTime BookingFrom,
-    DateTime BookingTo,
-    decimal totalAmount)
+            int ExistingBookingId,
+            int ParkingSlotId,
+            DateTime BookingFrom,
+            DateTime BookingTo,
+            decimal totalAmount)
         {
             if (HttpContext.Session.GetString("UserId") == null)
                 return RedirectToAction("Signin", "Auth");
@@ -233,12 +234,11 @@ namespace SmartSlot.Controllers
 
             // ✅ Update existing booking
             booking.BookingTo = BookingTo;
-            booking.OneHourAlertSent = false;  // ← reset so alert fires again
-            booking.ReviewSmsSent = false;     // ← reset so review email fires after new end time
+            booking.OneHourAlertSent = false;
+            booking.ReviewSmsSent = false;
             _context.Bookings.Update(booking);
             _context.SaveChanges();
 
-            // ✅ Send extension confirmation email
             try
             {
                 var userId = HttpContext.Session.GetString("UserId");
@@ -276,6 +276,54 @@ namespace SmartSlot.Controllers
             if (HttpContext.Session.GetString("UserId") == null)
                 return RedirectToAction("Signin", "Auth");
 
+            return View();
+        }
+
+        // ================= REVIEW =================
+        [HttpGet]
+        [Route("Parking/Review/{bookingId}")]
+        public IActionResult Review(int bookingId)
+        {
+            var booking = _context.Bookings.FirstOrDefault(b => b.Id == bookingId);
+            if (booking == null) return NotFound();
+
+            if (booking.ReviewSubmitted)
+                return Content("✅ You have already submitted a review. Thank you!");
+
+            ViewBag.BookingId = booking.Id;
+            ViewBag.ParkingSlotId = booking.ParkingSlotId;
+            return View();
+        }
+
+        [HttpPost]
+        public IActionResult SubmitReview(int BookingId, int ParkingSlotId, int Rating, string Comment)
+        {
+            var booking = _context.Bookings.FirstOrDefault(b => b.Id == BookingId);
+            if (booking == null) return NotFound();
+
+            if (booking.ReviewSubmitted)
+                return Content("✅ You have already submitted a review. Thank you!");
+
+            var review = new Review
+            {
+                ParkingSlotId = ParkingSlotId,
+                BookingId = BookingId,
+                Rating = Rating,
+                Comment = Comment,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Reviews.Add(review);
+            booking.ReviewSubmitted = true;
+            _context.Bookings.Update(booking);
+            _context.SaveChanges();
+
+            return RedirectToAction("ReviewSuccess");
+        }
+
+        [HttpGet]
+        public IActionResult ReviewSuccess()
+        {
             return View();
         }
 
