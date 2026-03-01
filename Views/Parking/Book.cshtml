@@ -4,6 +4,7 @@
     var bookedRanges = ViewBag.BookedRanges as List<dynamic>;
     bool isExtension = ViewBag.ExtensionMode != null && (bool)ViewBag.ExtensionMode;
     DateTime? extensionStart = ViewBag.ExtensionStart as DateTime?;
+    string extensionStartStr = extensionStart != null ? extensionStart.Value.ToString("yyyy-MM-ddTHH:mm") : "";
 }
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
@@ -182,7 +183,6 @@
 
             @if (!isExtension)
             {
-                <!-- Normal booking — show name/phone/vehicle fields -->
                 <label>Your Name</label>
                 <input type="text" name="CustomerName" required />
 
@@ -199,29 +199,40 @@
             }
 
             <label>Booking From</label>
-         <input type="datetime-local"
-       name="BookingFrom"
-       id="bookingFrom"
-       value="@(isExtension && extensionStart != null ? extensionStart.Value.ToString("yyyy-MM-ddTHH:mm") : ViewBag.IstNow)"
-       min="@(isExtension ? slot.AvailableFrom.ToString("yyyy-MM-ddTHH:mm") : ViewBag.IstNow)"
-                   max="@slot.AvailableTo.ToString("yyyy-MM-ddTHH:mm")"
-                   class="@(isExtension ? "readonly-field" : "")"
-                   @(isExtension ? "readonly" : "")
-                   onchange="calculatePrice()"
-                   required />
-
             @if (isExtension)
             {
+                <!-- Extension: completely locked field -->
+                <input type="datetime-local"
+                       name="BookingFrom"
+                       id="bookingFrom"
+                       value="@extensionStartStr"
+                       min="@extensionStartStr"
+                       max="@extensionStartStr"
+                       class="readonly-field"
+                       readonly
+                       required />
                 <p style="color:#17a2b8; font-size:0.8rem; margin-top:4px;">
                     ⏰ This is your previous booking end time — your extension starts here
                 </p>
+            }
+            else
+            {
+                <!-- Normal booking: starts from current IST time -->
+                <input type="datetime-local"
+                       name="BookingFrom"
+                       id="bookingFrom"
+                       value="@ViewBag.IstNow"
+                       min="@ViewBag.IstNow"
+                       max="@slot.AvailableTo.ToString("yyyy-MM-ddTHH:mm")"
+                       onchange="calculatePrice()"
+                       required />
             }
 
             <label>@(isExtension ? "Extend To" : "Booking To")</label>
             <input type="datetime-local"
                    name="BookingTo"
                    id="bookingTo"
-                   min="@(isExtension && extensionStart != null ? extensionStart.Value.ToString("yyyy-MM-ddTHH:mm") : slot.AvailableFrom.ToString("yyyy-MM-ddTHH:mm"))"
+                   min="@(isExtension ? extensionStartStr : ViewBag.IstNow)"
                    max="@slot.AvailableTo.ToString("yyyy-MM-ddTHH:mm")"
                    onchange="calculatePrice()"
                    required />
@@ -264,10 +275,10 @@
         foreach (var range in bookedRanges)
         {
             <text>
-                bookedRanges.push({
-                    from: new Date("@range.BookingFrom.ToString("yyyy-MM-ddTHH:mm:ss")"),
-                    to: new Date("@range.BookingTo.ToString("yyyy-MM-ddTHH:mm:ss")")
-                });
+            bookedRanges.push({
+                from: new Date("@range.BookingFrom.ToString("yyyy-MM-ddTHH:mm:ss")"),
+                to: new Date("@range.BookingTo.ToString("yyyy-MM-ddTHH:mm:ss")")
+            });
             </text>
         }
     }
@@ -284,10 +295,12 @@
     @if (!isExtension)
     {
         <text>
+        // Normal booking — Flatpickr on BookingFrom starting from current IST time
         flatpickr("#bookingFrom", {
             enableTime: true,
             dateFormat: "Y-m-d H:i",
-            minDate: "@slot.AvailableFrom.ToString("yyyy-MM-ddTHH:mm")",
+            minDate: "@ViewBag.IstNow",
+            defaultDate: "@ViewBag.IstNow",
             maxDate: "@slot.AvailableTo.ToString("yyyy-MM-ddTHH:mm")",
             disable: [function(date) { return isTimeBlocked(date); }],
             onChange: function() { calculatePrice(); }
@@ -295,11 +308,11 @@
         </text>
     }
 
-   flatpickr("#bookingFrom", {
-    enableTime: true,
-    dateFormat: "Y-m-d H:i",
-    minDate: "@ViewBag.IstNow",
-    defaultDate: "@ViewBag.IstNow",
+    // Flatpickr on BookingTo
+    flatpickr("#bookingTo", {
+        enableTime: true,
+        dateFormat: "Y-m-d H:i",
+        minDate: "@(isExtension ? extensionStartStr : ViewBag.IstNow)",
         maxDate: "@slot.AvailableTo.ToString("yyyy-MM-ddTHH:mm")",
         disable: [function(date) { return isTimeBlocked(date); }],
         onChange: function() { calculatePrice(); }
