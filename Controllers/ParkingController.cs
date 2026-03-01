@@ -174,8 +174,7 @@ namespace SmartSlot.Controllers
             {
                 if (user != null && !string.IsNullOrEmpty(user.Email))
                 {
-                    var istFrom = BookingFrom.AddHours(5.5);
-                    var istTo = BookingTo.AddHours(5.5);
+                    
 
                     await _emailService.SendBookingConfirmationEmail(
                         toEmail: user.Email,
@@ -246,7 +245,7 @@ namespace SmartSlot.Controllers
 
                 if (user != null && !string.IsNullOrEmpty(user.Email))
                 {
-                    var istTo = BookingTo.AddHours(5.5);
+                    
 
                     await _emailService.SendBookingConfirmationEmail(
                         toEmail: user.Email,
