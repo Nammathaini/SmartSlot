@@ -3,23 +3,129 @@
 }
 
 <style>
-    body { background-color: #000 !important; color: white !important; }
-    .navbar { background-color: #111 !important; }
-    .navbar-brand { color: white !important; }
-</style>
-
-<div style="text-align:center; background:#000; min-height:100vh; padding-top:100px;">
-    <h2 style="color:white;">&#9989; Booking Confirmed!</h2>
-    <p style="color:#ccc;">Your parking slot has been successfully booked.</p>
-
-    @if (TempData["Error"] != null)
-    {
-        <div style="background:#1a0000; border:1px solid red; padding:15px; margin:20px auto;
-                    max-width:800px; border-radius:8px; text-align:left; word-break:break-all;">
-            <p style="color:red; font-weight:bold;">&#9888; Debug Info:</p>
-            <p style="color:#ff6666; font-size:0.85rem;">@TempData["Error"]</p>
-        </div>
+    body {
+        background-image: url('/images/parking-bg.jpg');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        background-color: #000 !important;
+        color: white !important;
     }
 
-    <a href="/Parking/Search" style="color:#28a745; font-size:1.1rem;">&#128269; Find More Parking</a>
+    body::before {
+        content: '';
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.78);
+        z-index: 0;
+    }
+
+    .navbar { background-color: #111 !important; position: relative; z-index: 2; }
+    .navbar-brand { color: white !important; }
+
+    .page-wrapper {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        z-index: 1;
+    }
+
+    .success-card {
+        background: rgba(26, 26, 26, 0.92);
+        border: 1px solid #28a745;
+        border-radius: 20px;
+        padding: 50px 40px;
+        max-width: 480px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+
+    .checkmark {
+        font-size: 80px;
+        margin-bottom: 20px;
+        animation: pop 0.5s ease;
+    }
+
+    @keyframes pop {
+        0%   { transform: scale(0); opacity: 0; }
+        80%  { transform: scale(1.2); }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    .success-card h2 {
+        color: #28a745;
+        font-size: 2rem;
+        font-weight: 800;
+        margin-bottom: 12px;
+    }
+
+    .success-card p {
+        color: #ccc;
+        font-size: 1rem;
+        margin-bottom: 30px;
+    }
+
+    .btn-find {
+        display: inline-block;
+        padding: 14px 36px;
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        border-radius: 30px;
+        text-decoration: none;
+        font-weight: bold;
+        font-size: 1rem;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn-find:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(40,167,69,0.4);
+        color: white;
+        text-decoration: none;
+    }
+
+    .btn-dashboard {
+        display: inline-block;
+        padding: 12px 28px;
+        background: transparent;
+        color: #aaa;
+        border: 1px solid #444;
+        border-radius: 30px;
+        text-decoration: none;
+        font-size: 0.95rem;
+        margin-top: 12px;
+        transition: border-color 0.2s, color 0.2s;
+    }
+
+    .btn-dashboard:hover {
+        border-color: #888;
+        color: white;
+        text-decoration: none;
+    }
+</style>
+
+<div class="page-wrapper">
+    <div class="success-card">
+        <div class="checkmark">✅</div>
+        <h2>Booking Confirmed!</h2>
+        <p>Your parking slot has been successfully booked.<br/>A confirmation email has been sent to you.</p>
+
+        @if (TempData["Error"] != null)
+        {
+            <div style="background:#1a0000; border:1px solid red; padding:15px; margin-bottom:20px;
+                        border-radius:8px; text-align:left; word-break:break-all;">
+                <p style="color:red; font-weight:bold;">⚠ Debug Info:</p>
+                <p style="color:#ff6666; font-size:0.85rem;">@TempData["Error"]</p>
+            </div>
+        }
+
+        <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+            <a href="/Parking/Search" class="btn-find">🔍 Find More Parking</a>
+            <a href="/Parking/Dashboard" class="btn-dashboard">📋 Go to Dashboard</a>
+        </div>
+    </div>
 </div>

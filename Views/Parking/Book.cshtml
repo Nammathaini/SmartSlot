@@ -3,7 +3,7 @@
     var slot = ViewBag.Slot as SmartSlot.Models.ParkingSlot;
     var bookedRanges = ViewBag.BookedRanges as List<dynamic>;
     bool isExtension = ViewBag.ExtensionMode != null && (bool)ViewBag.ExtensionMode;
-DateTime? extensionStart = ViewBag.ExtensionStart as DateTime?;
+    DateTime? extensionStart = ViewBag.ExtensionStart as DateTime?;
 }
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
@@ -116,22 +116,23 @@ DateTime? extensionStart = ViewBag.ExtensionStart as DateTime?;
     }
 
     .upi-pay-btn:hover { opacity: 0.9; color: white; text-decoration: none; }
+
+    .readonly-field {
+        background-color: #1a1a1a !important;
+        color: #888 !important;
+        cursor: not-allowed;
+    }
 </style>
 
 <div class="page-wrapper">
-    <h2>&#9989; Book Parking Slot</h2>
+    <h2>&#9989; @(isExtension ? "Extend Parking Slot" : "Book Parking Slot")</h2>
+
     @if (isExtension)
-{
-    <div style="
-        background:#17a2b8;
-        padding:12px;
-        margin-bottom:20px;
-        border-radius:8px;
-        text-align:center;
-        font-weight:bold;">
-        🔄 Extension Mode Active — Extending Your Previous Booking
-    </div>
-}
+    {
+        <div style="background:#17a2b8;padding:12px;margin-bottom:20px;border-radius:8px;text-align:center;font-weight:bold;">
+            🔄 Extension Mode — Select your new end time below
+        </div>
+    }
 
     <!-- Slot Details -->
     <div class="card">
@@ -174,39 +175,56 @@ DateTime? extensionStart = ViewBag.ExtensionStart as DateTime?;
     <!-- Booking Form -->
     <div class="card">
         <form method="post" action="@(isExtension ? "/Parking/ConfirmExtension" : "/Parking/ConfirmBooking")">
-            <input type="hidden" name="ExistingBookingId" value="@(ViewBag.ExistingBookingId ?? 0)" />
+
             <input type="hidden" name="ParkingSlotId" value="@slot.Id" />
             <input type="hidden" name="totalAmount" id="totalAmountField" value="0" />
+            <input type="hidden" name="ExistingBookingId" value="@(ViewBag.ExistingBookingId ?? 0)" />
 
-            <label>Your Name</label>
-            <input type="text" name="CustomerName" required />
-            <label>Customer Phone Number</label>
-<input type="tel"
-       name="CustomerPhone"
-       placeholder="Enter your  phone number"
-       maxlength="10"
-       pattern="[0-9]{10}"
-       required />
+            @if (!isExtension)
+            {
+                <!-- Normal booking — show name/phone/vehicle fields -->
+                <label>Your Name</label>
+                <input type="text" name="CustomerName" required />
 
-            <label>Vehicle Number</label>
-            <input type="text" name="VehicleNumber" placeholder="TN01AB1234" required />
+                <label>Customer Phone Number</label>
+                <input type="tel"
+                       name="CustomerPhone"
+                       placeholder="Enter your phone number"
+                       maxlength="10"
+                       pattern="[0-9]{10}"
+                       required />
+
+                <label>Vehicle Number</label>
+                <input type="text" name="VehicleNumber" placeholder="TN01AB1234" required />
+            }
 
             <label>Booking From</label>
-       <input type="datetime-local"
+         <input type="datetime-local"
        name="BookingFrom"
        id="bookingFrom"
-       value="@(isExtension && extensionStart != null ? extensionStart.Value.ToString("yyyy-MM-ddTHH:mm") : "")"
-       min="@slot.AvailableFrom.ToString("yyyy-MM-ddTHH:mm")"
-       max="@slot.AvailableTo.ToString("yyyy-MM-ddTHH:mm")"
-       @(isExtension ? "readonly" : "")
-       onchange="calculatePrice()"
-       required />
-
-            <label>Booking To</label>
-            <input type="datetime-local" name="BookingTo" id="bookingTo"
-                   min="@slot.AvailableFrom.ToString("yyyy-MM-ddTHH:mm")"
+       value="@(isExtension && extensionStart != null ? extensionStart.Value.ToString("yyyy-MM-ddTHH:mm") : ViewBag.IstNow)"
+       min="@(isExtension ? slot.AvailableFrom.ToString("yyyy-MM-ddTHH:mm") : ViewBag.IstNow)"
                    max="@slot.AvailableTo.ToString("yyyy-MM-ddTHH:mm")"
-                   onchange="calculatePrice()" required />
+                   class="@(isExtension ? "readonly-field" : "")"
+                   @(isExtension ? "readonly" : "")
+                   onchange="calculatePrice()"
+                   required />
+
+            @if (isExtension)
+            {
+                <p style="color:#17a2b8; font-size:0.8rem; margin-top:4px;">
+                    ⏰ This is your previous booking end time — your extension starts here
+                </p>
+            }
+
+            <label>@(isExtension ? "Extend To" : "Booking To")</label>
+            <input type="datetime-local"
+                   name="BookingTo"
+                   id="bookingTo"
+                   min="@(isExtension && extensionStart != null ? extensionStart.Value.ToString("yyyy-MM-ddTHH:mm") : slot.AvailableFrom.ToString("yyyy-MM-ddTHH:mm"))"
+                   max="@slot.AvailableTo.ToString("yyyy-MM-ddTHH:mm")"
+                   onchange="calculatePrice()"
+                   required />
 
             <!-- Price Calculation Box -->
             <div class="price-box" id="priceBox" style="display:none;">
@@ -220,18 +238,18 @@ DateTime? extensionStart = ViewBag.ExtensionStart as DateTime?;
                 <div id="payNote" style="background:#2a2a2a; border:1px solid #ffc107;
                      border-radius:8px; padding:12px; margin-top:20px; text-align:center;">
                     <p style="color:#ffc107; margin:0; font-size:0.9rem;">
-                        &#9888; Please complete UPI payment first then click Confirm Booking
+                        &#9888; Please complete UPI payment first then click Confirm
                     </p>
                 </div>
                 <button type="submit" class="btn-submit" id="confirmBtn"
                         style="display:none; background-color:#28a745;">
-                    &#9989; Confirm Booking (Payment Done)
+                    &#9989; @(isExtension ? "Confirm Extension (Payment Done)" : "Confirm Booking (Payment Done)")
                 </button>
             }
             else
             {
                 <button type="submit" class="btn-submit">
-                    &#9989; Confirm Booking
+                    &#9989; @(isExtension ? "Confirm Extension" : "Confirm Booking")
                 </button>
             }
         </form>
@@ -239,8 +257,6 @@ DateTime? extensionStart = ViewBag.ExtensionStart as DateTime?;
 </div>
 
 <script>
-
-    // 🔥 Convert booked ranges from backend
     var bookedRanges = [];
 
     @if (bookedRanges != null)
@@ -256,7 +272,6 @@ DateTime? extensionStart = ViewBag.ExtensionStart as DateTime?;
         }
     }
 
-    // 🔥 Disable already booked time ranges
     function isTimeBlocked(date) {
         for (var i = 0; i < bookedRanges.length; i++) {
             if (date >= bookedRanges[i].from && date < bookedRanges[i].to) {
@@ -266,48 +281,37 @@ DateTime? extensionStart = ViewBag.ExtensionStart as DateTime?;
         return false;
     }
 
-    // 🔥 Initialize Flatpickr (Booking From)
-    flatpickr("#bookingFrom", {
-        enableTime: true,
-        dateFormat: "Y-m-d H:i",
-        minDate: "@slot.AvailableFrom.ToString("yyyy-MM-ddTHH:mm")",
-        maxDate: "@slot.AvailableTo.ToString("yyyy-MM-ddTHH:mm")",
-        disable: [
-            function(date) {
-                return isTimeBlocked(date);
-            }
-        ],
-        onChange: function(selectedDates) {
-            calculatePrice();
-        }
-    });
+    @if (!isExtension)
+    {
+        <text>
+        flatpickr("#bookingFrom", {
+            enableTime: true,
+            dateFormat: "Y-m-d H:i",
+            minDate: "@slot.AvailableFrom.ToString("yyyy-MM-ddTHH:mm")",
+            maxDate: "@slot.AvailableTo.ToString("yyyy-MM-ddTHH:mm")",
+            disable: [function(date) { return isTimeBlocked(date); }],
+            onChange: function() { calculatePrice(); }
+        });
+        </text>
+    }
 
-    // 🔥 Initialize Flatpickr (Booking To)
     flatpickr("#bookingTo", {
         enableTime: true,
         dateFormat: "Y-m-d H:i",
-        minDate: "@slot.AvailableFrom.ToString("yyyy-MM-ddTHH:mm")",
+       minDate: "@(isExtension && extensionStart != null ? extensionStart.Value.ToString("yyyy-MM-ddTHH:mm") : ViewBag.IstNow)",
         maxDate: "@slot.AvailableTo.ToString("yyyy-MM-ddTHH:mm")",
-        disable: [
-            function(date) {
-                return isTimeBlocked(date);
-            }
-        ],
-        onChange: function(selectedDates) {
-            calculatePrice();
-        }
+        disable: [function(date) { return isTimeBlocked(date); }],
+        onChange: function() { calculatePrice(); }
     });
-    // 🔥 Auto-calc price immediately if extension mode
-@if (isExtension)
-{
-<text>
-    window.addEventListener("load", function () {
-        calculatePrice();
-    });
-</text>
-}
 
-    // ================== YOUR ORIGINAL PRICE LOGIC (UNCHANGED) ==================
+    @if (isExtension)
+    {
+        <text>
+        window.addEventListener("load", function () {
+            calculatePrice();
+        });
+        </text>
+    }
 
     function calculatePrice() {
         var from = document.getElementById("bookingFrom").value;
@@ -354,5 +358,4 @@ DateTime? extensionStart = ViewBag.ExtensionStart as DateTime?;
             document.getElementById("payNote").style.display = "none";
         }, 3000);
     }
-
-</script> 
+</script>

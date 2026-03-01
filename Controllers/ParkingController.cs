@@ -448,6 +448,7 @@ namespace SmartSlot.Controllers
         }
 
         [Route("Parking/Book/{id}")]
+        [Route("Parking/Book/{id}")]
         public IActionResult Book(int id)
         {
             if (HttpContext.Session.GetString("UserId") == null)
@@ -461,8 +462,11 @@ namespace SmartSlot.Controllers
                 .Select(b => new { BookingFrom = b.BookingFrom, BookingTo = b.BookingTo })
                 .ToList();
 
+            var istNow = DateTime.UtcNow.AddHours(5.5); // ← ADD THIS
+
             ViewBag.Slot = slot;
             ViewBag.BookedRanges = bookedRanges;
+            ViewBag.IstNow = istNow.ToString("yyyy-MM-ddTHH:mm"); // ← ADD THIS
             return View();
         }
 
@@ -539,4 +543,4 @@ namespace SmartSlot.Controllers
         public int SlotId { get; set; }
         public int BookingId { get; set; }
     }
-}
+}   
