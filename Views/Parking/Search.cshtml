@@ -64,17 +64,10 @@
         min-height:24px;
     }
 
-    /* Searching spinner */
-    .searching {
-        color: #f59e0b;
-        animation: blink 1s infinite alternate;
-    }
-    @@keyframes blink {
-        from { opacity: 0.5; }
-        to   { opacity: 1; }
-    }
+    .searching { color: #f59e0b; animation: blink 1s infinite alternate; }
+    @@keyframes blink { from { opacity: 0.5; } to { opacity: 1; } }
 
-    .found-msg  { color: #4ade80; }
+    .found-msg    { color: #4ade80; }
     .notfound-msg { color: #f87171; }
 
     #map { height:500px; margin:20px; border-radius:10px; z-index:1; position:relative; }
@@ -114,6 +107,44 @@
     table { width:100%; border-collapse:collapse; }
     th, td { padding:8px; border:1px solid #444; text-align:center; }
     th { background:#2a2a2a; }
+
+    .time-filter-box {
+        margin: 16px auto;
+        background: rgba(26,26,26,0.95);
+        border: 1px solid #444;
+        border-radius: 12px;
+        padding: 20px;
+        max-width: 560px;
+    }
+
+    .time-filter-box label { color:#ccc; font-size:13px; display:block; margin-bottom:4px; }
+
+    .time-filter-box input[type="datetime-local"] {
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid #555;
+        background: #2a2a2a;
+        color: white;
+        font-size: 14px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .proceed-btn {
+        margin-top: 14px;
+        padding: 12px 30px;
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: bold;
+        cursor: pointer;
+        width: 100%;
+        transition: transform 0.2s;
+    }
+
+    .proceed-btn:hover { transform: translateY(-2px); }
 </style>
 
 <h2>🔍 Find Parking Near Me</h2>
@@ -124,6 +155,26 @@
     <div class="search-row">
         <input type="text" id="searchAddress" placeholder="Search your area / address" />
         <button onclick="searchByAddress()">🔍 Search (3 km)</button>
+    </div>
+
+    <!-- Time Filter Box -->
+    <div class="time-filter-box">
+        <p style="color:#f59e0b; font-weight:bold; margin-bottom:14px; font-size:15px;">
+            🗓 When do you need parking?
+        </p>
+        <div style="display:flex; gap:16px; flex-wrap:wrap; justify-content:center;">
+            <div style="flex:1; min-width:200px;">
+                <label>Parking From</label>
+                <input type="datetime-local" id="filterFrom" />
+            </div>
+            <div style="flex:1; min-width:200px;">
+                <label>Parking To</label>
+                <input type="datetime-local" id="filterTo" />
+            </div>
+        </div>
+        <button class="proceed-btn" onclick="proceedSearch()">
+            🚀 Proceed — Find Available Slots
+        </button>
     </div>
 
     <p id="status"></p>
@@ -145,6 +196,7 @@
 
 <div id="availableBox" class="slots-section">
     <h4>🟢 Available Slots</h4>
+    <div id="filterSummary" style="color:#f59e0b; font-size:13px; margin-bottom:10px;"></div>
     <table>
         <thead>
             <tr>
@@ -159,6 +211,7 @@
 
 <div id="bookedBox" class="slots-section">
     <h4>🔴 Booked Slots</h4>
+    <div id="filterSummaryBooked" style="color:#f59e0b; font-size:13px; margin-bottom:10px;"></div>
     <table>
         <thead>
             <tr>
@@ -185,6 +238,8 @@ var searchCircle = null;
 var availableSlots = [];
 var bookedSlots = [];
 var userLat, userLon;
+var filterFromVal = null;
+var filterToVal = null;
 
 var greenIcon = L.icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
@@ -231,20 +286,29 @@ function resetUI() {
     if (searchCircle) { map.removeLayer(searchCircle); searchCircle = null; }
 }
 
+// ── Set location only, don't search yet ──
 function useLiveLocation() {
     setStatus("📡 Getting your location...", "searching");
     navigator.geolocation.getCurrentPosition(function(pos) {
-        performSearch(pos.coords.latitude, pos.coords.longitude);
+        userLat = pos.coords.latitude;
+        userLon = pos.coords.longitude;
+        map.setView([userLat, userLon], 14);
+        markerLayer.clearLayers();
+        markerLayer.addLayer(
+            L.marker([userLat, userLon]).bindPopup("📍 You are here!").openPopup()
+        );
+        setStatus("✅ Location set! Now select your parking time and click Proceed.", "found-msg");
     }, function() {
         setStatus("❌ Location access denied.", "notfound-msg");
     });
 }
 
+// ── Set location from address only, don't search yet ──
 function searchByAddress() {
     var address = document.getElementById("searchAddress").value.trim();
     if (!address) return;
 
-    setStatus("🔍 Searching for <b>" + address + "</b>...", "searching");
+    setStatus("🔍 Finding <b>" + address + "</b>...", "searching");
 
     fetch("https://nominatim.openstreetmap.org/search?q=" +
         encodeURIComponent(address) + "&format=json&limit=1")
@@ -254,10 +318,41 @@ function searchByAddress() {
             setStatus("❌ Location not found.", "notfound-msg");
             return;
         }
-        performSearch(parseFloat(data[0].lat), parseFloat(data[0].lon));
+        userLat = parseFloat(data[0].lat);
+        userLon = parseFloat(data[0].lon);
+        map.setView([userLat, userLon], 14);
+        markerLayer.clearLayers();
+        markerLayer.addLayer(
+            L.marker([userLat, userLon]).bindPopup("📍 " + address).openPopup()
+        );
+        setStatus("✅ Location set! Now select your parking time and click Proceed.", "found-msg");
     });
 }
 
+// ── Proceed button — validate and search ──
+function proceedSearch() {
+    filterFromVal = document.getElementById("filterFrom").value;
+    filterToVal   = document.getElementById("filterTo").value;
+
+    if (!filterFromVal || !filterToVal) {
+        alert("Please select both Parking From and Parking To times!");
+        return;
+    }
+
+    if (new Date(filterToVal) <= new Date(filterFromVal)) {
+        alert("Parking To time must be after Parking From time!");
+        return;
+    }
+
+    if (!userLat || !userLon) {
+        alert("Please use live location or search an address first!");
+        return;
+    }
+
+    performSearch(userLat, userLon);
+}
+
+// ── Main search ──
 function performSearch(lat, lon) {
     resetUI();
     userLat = lat;
@@ -265,19 +360,23 @@ function performSearch(lat, lon) {
 
     map.setView([lat, lon], 14);
 
-    // User marker
     markerLayer.addLayer(
         L.marker([lat, lon]).bindPopup("📍 You are here!").openPopup()
     );
 
-    // 3km blue circle
     searchCircle = L.circle([lat, lon], {
         color: 'blue', fillColor: '#3f51b5', fillOpacity: 0.15, radius: 3000
     }).addTo(map);
 
     setStatus("⏳ Searching for parking slots nearby...", "searching");
 
-    fetch("/Parking/NearbySlots?lat=" + lat + "&lon=" + lon + "&radius=3")
+    var url = "/Parking/NearbySlots?lat=" + lat + "&lon=" + lon + "&radius=3";
+    if (filterFromVal && filterToVal) {
+        url += "&fromTime=" + encodeURIComponent(filterFromVal) +
+               "&toTime="   + encodeURIComponent(filterToVal);
+    }
+
+    fetch(url)
     .then(res => res.json())
     .then(slots => {
 
@@ -289,7 +388,6 @@ function performSearch(lat, lon) {
         availableSlots = slots.filter(s => !s.isBooked);
         bookedSlots    = slots.filter(s =>  s.isBooked);
 
-        // ✅ Add ALL markers to map immediately
         var coordCount = {};
 
         availableSlots.forEach(function(slot) {
@@ -309,8 +407,7 @@ function performSearch(lat, lon) {
                 .bindPopup(
                     "<b>" + slot.ownerName + "</b><br>" +
                     "₹" + slot.pricePerHour + "/hr<br>" +
-                    slot.vehicleType + "<br>" +
-                    "🟢 Available<br>" +
+                    slot.vehicleType + "<br>🟢 Available<br>" +
                     dist + " km away"
                 )
             );
@@ -333,17 +430,20 @@ function performSearch(lat, lon) {
                 .bindPopup(
                     "<b>" + slot.ownerName + "</b><br>" +
                     "₹" + slot.pricePerHour + "/hr<br>" +
-                    slot.vehicleType + "<br>" +
-                    "🔴 Booked<br>" +
+                    slot.vehicleType + "<br>🔴 Booked<br>" +
                     dist + " km away"
                 )
             );
         });
 
-        // ✅ Status message
+        var filterMsg = filterFromVal && filterToVal
+            ? " for <b>" + new Date(filterFromVal).toLocaleString() +
+              "</b> → <b>" + new Date(filterToVal).toLocaleString() + "</b>"
+            : "";
+
         setStatus(
             "✅ Found <b>" + availableSlots.length + " available</b> and <b>" +
-            bookedSlots.length + " booked</b> slot(s) nearby.",
+            bookedSlots.length + " booked</b> slot(s) nearby" + filterMsg + ".",
             "found-msg"
         );
 
@@ -354,10 +454,17 @@ function performSearch(lat, lon) {
     });
 }
 
-function showAvailable() {
+function goToAvailable() {
     if (!userLat || !userLon) return;
+
     document.getElementById("bookedBox").style.display    = "none";
     document.getElementById("availableBox").style.display = "block";
+
+    if (filterFromVal && filterToVal) {
+        document.getElementById("filterSummary").innerHTML =
+            "📅 Showing slots free from <b>" + new Date(filterFromVal).toLocaleString() +
+            "</b> to <b>" + new Date(filterToVal).toLocaleString() + "</b>";
+    }
 
     var body = document.getElementById("availableTableBody");
     body.innerHTML = "";
@@ -378,13 +485,20 @@ function showAvailable() {
     });
 
     if (!availableSlots.length)
-        body.innerHTML = "<tr><td colspan='9'>No available slots nearby</td></tr>";
+        body.innerHTML = "<tr><td colspan='9' style='color:#f87171;'>No available slots for your selected time</td></tr>";
 }
 
-function showBooked() {
+function goToBooked() {
     if (!userLat || !userLon) return;
+
     document.getElementById("availableBox").style.display = "none";
     document.getElementById("bookedBox").style.display    = "block";
+
+    if (filterFromVal && filterToVal) {
+        document.getElementById("filterSummaryBooked").innerHTML =
+            "📅 Showing slots booked during <b>" + new Date(filterFromVal).toLocaleString() +
+            "</b> to <b>" + new Date(filterToVal).toLocaleString() + "</b>";
+    }
 
     var body = document.getElementById("bookedTableBody");
     body.innerHTML = "";
@@ -406,22 +520,12 @@ function showBooked() {
     });
 
     if (!bookedSlots.length)
-        body.innerHTML = "<tr><td colspan='10'>No booked slots nearby</td></tr>";
-}
-
-function goToAvailable() {
-    if (!userLat || !userLon) return;
-    window.location.href = "/Parking/AvailableSlots?lat=" + userLat + "&lon=" + userLon + "&radius=3";
-}
-
-function goToBooked() {
-    if (!userLat || !userLon) return;
-    window.location.href = "/Parking/BookedSlots?lat=" + userLat + "&lon=" + userLon + "&radius=3";
+        body.innerHTML = "<tr><td colspan='10' style='color:#4ade80;'>No booked slots for your selected time</td></tr>";
 }
 
 // Auto refresh every 60 seconds
 setInterval(function() {
-    if (!userLat || !userLon) return;
+    if (!userLat || !userLon || !filterFromVal || !filterToVal) return;
     performSearch(userLat, userLon);
 }, 60000);
 

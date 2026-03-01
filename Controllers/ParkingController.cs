@@ -391,7 +391,7 @@ namespace SmartSlot.Controllers
         }
 
         [HttpGet]
-        public JsonResult NearbySlots(double lat, double lon, double radius = 6)
+        public JsonResult NearbySlots(double lat, double lon, double radius = 3, string fromTime = null, string toTime = null)
         {
             if (HttpContext.Session.GetString("UserId") == null)
                 return Json(new { error = "Unauthorized" });
@@ -399,11 +399,40 @@ namespace SmartSlot.Controllers
             var istNow = DateTime.UtcNow.AddHours(5.5);
             var allSlots = _context.ParkingSlots.ToList();
 
+            DateTime? filterFrom = null;
+            DateTime? filterTo = null;
+
+            if (!string.IsNullOrEmpty(fromTime)) DateTime.TryParse(fromTime, out var f);
+            if (!string.IsNullOrEmpty(toTime)) DateTime.TryParse(toTime, out var t);
+
+            if (!string.IsNullOrEmpty(fromTime)) filterFrom = DateTime.Parse(fromTime);
+            if (!string.IsNullOrEmpty(toTime)) filterTo = DateTime.Parse(toTime);
+
             var nearbySlots = allSlots
                 .Where(slot => _distanceService.GetDistance(lat, lon, slot.Latitude, slot.Longitude) <= radius)
                 .Select(slot =>
                 {
-                    var activeBooking = _context.Bookings
+                    // Check if slot is booked during customer's requested time
+                    bool isBooked;
+
+                    if (filterFrom.HasValue && filterTo.HasValue)
+                    {
+                        // Filter mode — check if any booking overlaps with customer's time
+                        isBooked = _context.Bookings.Any(b =>
+                            b.ParkingSlotId == slot.Id &&
+                            b.BookingFrom < filterTo.Value &&
+                            b.BookingTo > filterFrom.Value);
+                    }
+                    else
+                    {
+                        // Default mode — check current active booking
+                        var activeBooking = _context.Bookings
+                            .Where(b => b.ParkingSlotId == slot.Id && b.BookingFrom <= istNow && b.BookingTo > istNow)
+                            .FirstOrDefault();
+                        isBooked = activeBooking != null;
+                    }
+
+                    var activeBookingInfo = _context.Bookings
                         .Where(b => b.ParkingSlotId == slot.Id && b.BookingFrom <= istNow && b.BookingTo > istNow)
                         .OrderByDescending(b => b.BookingFrom)
                         .FirstOrDefault();
@@ -429,16 +458,16 @@ namespace SmartSlot.Controllers
                         vehicleType = slot.VehicleType,
                         availableFrom = displayAvailableFrom,
                         availableTo = slot.AvailableTo,
-                        isBooked = activeBooking != null,
+                        isBooked = isBooked,
                         parkingScore = slot.ParkingScore,
                         parkingBadge = slot.ParkingBadge,
                         averageRating = _context.Reviews
                             .Where(r => r.ParkingSlotId == slot.Id)
                             .Select(r => (double?)r.Rating)
                             .Average() ?? 0,
-                        bookingFrom = activeBooking?.BookingFrom,
-                        bookingTo = activeBooking?.BookingTo,
-                        bookingId = activeBooking?.Id
+                        bookingFrom = activeBookingInfo?.BookingFrom,
+                        bookingTo = activeBookingInfo?.BookingTo,
+                        bookingId = activeBookingInfo?.Id
                     };
                 })
                 .ToList();
