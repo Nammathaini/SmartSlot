@@ -173,7 +173,8 @@ DateTime? extensionStart = ViewBag.ExtensionStart as DateTime?;
 
     <!-- Booking Form -->
     <div class="card">
-        <form method="post" action="/Parking/ConfirmBooking">
+        <form method="post" action="@(isExtension ? "/Parking/ConfirmExtension" : "/Parking/ConfirmBooking")">
+            <input type="hidden" name="ExistingBookingId" value="@(ViewBag.ExistingBookingId ?? 0)" />
             <input type="hidden" name="ParkingSlotId" value="@slot.Id" />
             <input type="hidden" name="totalAmount" id="totalAmountField" value="0" />
 

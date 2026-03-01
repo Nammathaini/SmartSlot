@@ -199,6 +199,77 @@ namespace SmartSlot.Controllers
 
             return RedirectToAction("BookingSuccess");
         }
+        [HttpPost]
+        public async Task<IActionResult> ConfirmExtension(
+    int ExistingBookingId,
+    int ParkingSlotId,
+    DateTime BookingFrom,
+    DateTime BookingTo,
+    decimal totalAmount)
+        {
+            if (HttpContext.Session.GetString("UserId") == null)
+                return RedirectToAction("Signin", "Auth");
+
+            var booking = _context.Bookings.FirstOrDefault(b => b.Id == ExistingBookingId);
+            if (booking == null) return NotFound();
+
+            var slot = _context.ParkingSlots.Find(ParkingSlotId);
+            if (slot == null) return NotFound();
+
+            // Check no conflict with other bookings
+            var conflict = _context.Bookings
+                .Where(b =>
+                    b.ParkingSlotId == ParkingSlotId &&
+                    b.Id != ExistingBookingId &&
+                    b.BookingFrom < BookingTo &&
+                    b.BookingTo > booking.BookingTo)
+                .FirstOrDefault();
+
+            if (conflict != null)
+            {
+                TempData["ExtensionError"] = "Sorry, this slot is already reserved after your booking.";
+                return RedirectToAction("Search");
+            }
+
+            // ✅ Update existing booking
+            booking.BookingTo = BookingTo;
+            booking.OneHourAlertSent = false;  // ← reset so alert fires again
+            booking.ReviewSmsSent = false;     // ← reset so review email fires after new end time
+            _context.Bookings.Update(booking);
+            _context.SaveChanges();
+
+            // ✅ Send extension confirmation email
+            try
+            {
+                var userId = HttpContext.Session.GetString("UserId");
+                var user = _context.Users.FirstOrDefault(u => u.Id.ToString() == userId);
+
+                if (user != null && !string.IsNullOrEmpty(user.Email))
+                {
+                    var istTo = BookingTo.AddHours(5.5);
+
+                    await _emailService.SendBookingConfirmationEmail(
+                        toEmail: user.Email,
+                        customerName: booking.CustomerName,
+                        ownerName: slot.OwnerName,
+                        ownerPhone: slot.OwnerPhone,
+                        vehicleType: slot.VehicleType,
+                        vehicleNumber: booking.VehicleNumber,
+                        pricePerHour: slot.PricePerHour,
+                        totalAmount: (double)totalAmount,
+                        bookingFrom: booking.BookingFrom.AddHours(5.5),
+                        bookingTo: istTo,
+                        paymentMode: slot.PaymentMode
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"📧 Extension email failed: {ex.Message}");
+            }
+
+            return RedirectToAction("BookingSuccess");
+        }
 
         public IActionResult BookingSuccess()
         {
@@ -382,6 +453,9 @@ namespace SmartSlot.Controllers
             ViewBag.PreviousEndTime = booking.BookingTo;
             ViewBag.Slot = slot;
             ViewBag.BookedRanges = bookedRanges;
+            ViewBag.ExistingBookingId = booking.Id;
+            ViewBag.ExtensionMode = true;
+            ViewBag.ExtensionStart = booking.BookingTo;
             return View("Book");
         }
 
