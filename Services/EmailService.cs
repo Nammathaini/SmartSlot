@@ -56,7 +56,7 @@ namespace SmartSlot.Services
             await SendEmail(toEmail, ownerName, "Your Parking Slot is Now Live - SmartSlot", html);
         }
 
-        // ── NEW: Booking Confirmation ──
+        // ── Booking Confirmation ──
         public async Task SendBookingConfirmationEmail(string toEmail, string customerName,
             string ownerName, string ownerPhone, string vehicleType, string vehicleNumber,
             double pricePerHour, double totalAmount, DateTime bookingFrom, DateTime bookingTo,
@@ -148,7 +148,7 @@ namespace SmartSlot.Services
             await SendEmail(toEmail, customerName, "Parking Slot Now Available - SmartSlot", html);
         }
 
-        // ── Password Reset Link ──
+        // ── Password Reset ──
         public async Task SendPasswordResetEmail(string toEmail, string username, string resetLink)
         {
             var html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>
@@ -178,7 +178,8 @@ namespace SmartSlot.Services
 
             await SendEmail(toEmail, username, "Reset Your SmartSlot Password", html);
         }
-        // ⭐ REVIEW EMAIL — sent after booking ends
+
+        // ── Review Email ──
         public async Task SendReviewEmail(string toEmail, string customerName, int bookingId)
         {
             var reviewLink = $"https://smartslot-fkc6.onrender.com/Parking/Review/{bookingId}";
@@ -212,10 +213,11 @@ namespace SmartSlot.Services
             await SendEmail(toEmail, customerName, "How was your SmartSlot experience? ⭐", html);
         }
 
-        // 🔔 1-HOUR ALERT EMAIL — sent 1 hour before booking ends
-        public async Task SendOneHourAlertEmail(string toEmail, string customerName, DateTime bookingTo)
+        // ── 1-Hour Alert Email ──  ← UPDATED with bookingId + extend button
+        public async Task SendOneHourAlertEmail(string toEmail, string customerName, DateTime bookingTo, int bookingId)
         {
             string formattedTime = bookingTo.ToString("hh:mm tt");
+            var extendLink = $"https://smartslot-fkc6.onrender.com/Parking/Extend/{bookingId}";
 
             var html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>
 <style>
@@ -231,6 +233,7 @@ namespace SmartSlot.Services
   .time-box .time{{font-size:32px;font-weight:800;color:#dc2626;}}
   .time-box .label{{color:#888;font-size:13px;margin-top:4px;}}
   .warning{{background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:14px;color:#c2410c;font-size:13px;margin-top:16px;}}
+  .extend-btn{{display:block;margin:16px auto 0;padding:12px 28px;background:#2563eb;color:white;text-decoration:none;border-radius:8px;font-weight:700;font-size:15px;text-align:center;}}
   .footer{{background:#f9f9f9;padding:18px 32px;text-align:center;color:#aaa;font-size:12px;border-top:1px solid #eee;}}
 </style></head>
 <body><div class='container'>
@@ -243,11 +246,12 @@ namespace SmartSlot.Services
       <div class='label'>Your parking ends at</div>
     </div>
     <div class='warning'>⚠ Failure to clear the slot on time may result in a penalty.</div>
+    <a href='{extendLink}' class='extend-btn'>🔄 Extend My Booking →</a>
   </div>
   <div class='footer'>2025 SmartSlot. All rights reserved.</div>
 </div></body></html>";
 
-            await SendEmail(toEmail, customerName, "⚠ Your SmartSlot parking ends in 1 hour!", html);
+            await SendEmail(toEmail, customerName, "⚠ Your SmartSlot parking ends in 30 mins!", html);
         }
 
         // ── Shared send helper ──

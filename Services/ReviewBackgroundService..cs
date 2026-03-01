@@ -43,16 +43,17 @@ namespace SmartSlot.Services
 
                             // 🔔 1 HOUR BEFORE END ALERT
                             if (!booking.OneHourAlertSent &&
-                                istNow >= booking.BookingTo.AddHours(-1) &&
+                                istNow >= booking.BookingTo.AddHours(-30) &&
                                 istNow < booking.BookingTo)
                             {
                                 try
                                 {
                                     await emailService.SendOneHourAlertEmail(
-                                        booking.CustomerEmail,
-                                        booking.CustomerName,
-                                        booking.BookingTo
-                                    );
+     booking.CustomerEmail,
+     booking.CustomerName,
+     booking.BookingTo,
+     booking.Id  // ← add this
+ );
                                     booking.OneHourAlertSent = true;
                                     context.Bookings.Update(booking);
                                     await context.SaveChangesAsync();
