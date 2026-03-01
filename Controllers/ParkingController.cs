@@ -174,21 +174,21 @@ namespace SmartSlot.Controllers
             {
                 if (user != null && !string.IsNullOrEmpty(user.Email))
                 {
-                    
+
 
                     await _emailService.SendBookingConfirmationEmail(
-                        toEmail: user.Email,
-                        customerName: CustomerName,
-                        ownerName: slot.OwnerName,
-                        ownerPhone: slot.OwnerPhone,
-                        vehicleType: slot.VehicleType,
-                        vehicleNumber: VehicleNumber,
-                        pricePerHour: slot.PricePerHour,
-                        totalAmount: (double)totalAmount,
-                        bookingFrom: istFrom,
-                        bookingTo: istTo,
-                        paymentMode: slot.PaymentMode
-                    );
+    toEmail: user.Email,
+    customerName: booking.CustomerName,
+    ownerName: slot.OwnerName,
+    ownerPhone: slot.OwnerPhone,
+    vehicleType: slot.VehicleType,
+    vehicleNumber: booking.VehicleNumber,
+    pricePerHour: slot.PricePerHour,
+    totalAmount: (double)totalAmount,
+    bookingFrom: booking.BookingFrom,
+    bookingTo: BookingTo,
+    paymentMode: slot.PaymentMode
+);
                 }
             }
             catch (Exception ex)
@@ -245,21 +245,21 @@ namespace SmartSlot.Controllers
 
                 if (user != null && !string.IsNullOrEmpty(user.Email))
                 {
-                    
+
 
                     await _emailService.SendBookingConfirmationEmail(
-                        toEmail: user.Email,
-                        customerName: booking.CustomerName,
-                        ownerName: slot.OwnerName,
-                        ownerPhone: slot.OwnerPhone,
-                        vehicleType: slot.VehicleType,
-                        vehicleNumber: booking.VehicleNumber,
-                        pricePerHour: slot.PricePerHour,
-                        totalAmount: (double)totalAmount,
-                        bookingFrom: booking.BookingFrom.AddHours(5.5),
-                        bookingTo: istTo,
-                        paymentMode: slot.PaymentMode
-                    );
+    toEmail: user.Email,
+    customerName: booking.CustomerName,
+    ownerName: slot.OwnerName,
+    ownerPhone: slot.OwnerPhone,
+    vehicleType: slot.VehicleType,
+    vehicleNumber: booking.VehicleNumber,
+    pricePerHour: slot.PricePerHour,
+    totalAmount: (double)totalAmount,
+    bookingFrom: booking.BookingFrom,
+    bookingTo: BookingTo,
+    paymentMode: slot.PaymentMode
+);
                 }
             }
             catch (Exception ex)

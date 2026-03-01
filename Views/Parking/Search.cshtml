@@ -76,6 +76,7 @@
         display:none;
         text-align:center;
         margin-top:20px;
+        margin-bottom:30px;
         z-index:1;
         position:relative;
     }
@@ -92,21 +93,6 @@
 
     .available-btn { background:#28a745; color:white; }
     .booked-btn    { background:#dc3545; color:white; }
-
-    .slots-section {
-        display:none;
-        margin:20px;
-        background:rgba(26,26,26,0.95);
-        border:1px solid #333;
-        border-radius:10px;
-        padding:15px;
-        z-index:1;
-        position:relative;
-    }
-
-    table { width:100%; border-collapse:collapse; }
-    th, td { padding:8px; border:1px solid #444; text-align:center; }
-    th { background:#2a2a2a; }
 
     .time-filter-box {
         margin: 16px auto;
@@ -194,37 +180,6 @@
     <button class="booked-btn"    onclick="goToBooked()">🔴 Booked Slots</button>
 </div>
 
-<div id="availableBox" class="slots-section">
-    <h4>🟢 Available Slots</h4>
-    <div id="filterSummary" style="color:#f59e0b; font-size:13px; margin-bottom:10px;"></div>
-    <table>
-        <thead>
-            <tr>
-                <th>Owner</th><th>Price</th><th>Vehicle</th>
-                <th>Available From</th><th>Available To</th>
-                <th>Distance</th><th>Rating</th><th>Slot Status</th><th>Action</th>
-            </tr>
-        </thead>
-        <tbody id="availableTableBody"></tbody>
-    </table>
-</div>
-
-<div id="bookedBox" class="slots-section">
-    <h4>🔴 Booked Slots</h4>
-    <div id="filterSummaryBooked" style="color:#f59e0b; font-size:13px; margin-bottom:10px;"></div>
-    <table>
-        <thead>
-            <tr>
-                <th>Owner</th><th>Price</th><th>Vehicle</th>
-                <th>Available From</th><th>Available To</th>
-                <th>Booked From</th><th>Booked To</th>
-                <th>Distance</th><th>Rating</th><th>Slot Status</th>
-            </tr>
-        </thead>
-        <tbody id="bookedTableBody"></tbody>
-    </table>
-</div>
-
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -280,13 +235,10 @@ function setStatus(msg, type) {
 
 function resetUI() {
     document.getElementById("toggleSection").style.display = "none";
-    document.getElementById("availableBox").style.display  = "none";
-    document.getElementById("bookedBox").style.display     = "none";
     markerLayer.clearLayers();
     if (searchCircle) { map.removeLayer(searchCircle); searchCircle = null; }
 }
 
-// ── Set location only, don't search yet ──
 function useLiveLocation() {
     setStatus("📡 Getting your location...", "searching");
     navigator.geolocation.getCurrentPosition(function(pos) {
@@ -303,7 +255,6 @@ function useLiveLocation() {
     });
 }
 
-// ── Set location from address only, don't search yet ──
 function searchByAddress() {
     var address = document.getElementById("searchAddress").value.trim();
     if (!address) return;
@@ -329,7 +280,6 @@ function searchByAddress() {
     });
 }
 
-// ── Proceed button — validate and search ──
 function proceedSearch() {
     filterFromVal = document.getElementById("filterFrom").value;
     filterToVal   = document.getElementById("filterTo").value;
@@ -352,7 +302,6 @@ function proceedSearch() {
     performSearch(userLat, userLon);
 }
 
-// ── Main search ──
 function performSearch(lat, lon) {
     resetUI();
     userLat = lat;
@@ -379,7 +328,6 @@ function performSearch(lat, lon) {
     fetch(url)
     .then(res => res.json())
     .then(slots => {
-
         if (!slots || !slots.length) {
             setStatus("😕 No parking slots found within 3 km.", "notfound-msg");
             return;
@@ -454,73 +402,25 @@ function performSearch(lat, lon) {
     });
 }
 
+// ── Navigate to separate pages with filter times ──
 function goToAvailable() {
     if (!userLat || !userLon) return;
-
-    document.getElementById("bookedBox").style.display    = "none";
-    document.getElementById("availableBox").style.display = "block";
-
+    var url = "/Parking/AvailableSlots?lat=" + userLat + "&lon=" + userLon + "&radius=3";
     if (filterFromVal && filterToVal) {
-        document.getElementById("filterSummary").innerHTML =
-            "📅 Showing slots free from <b>" + new Date(filterFromVal).toLocaleString() +
-            "</b> to <b>" + new Date(filterToVal).toLocaleString() + "</b>";
+        url += "&fromTime=" + encodeURIComponent(filterFromVal) +
+               "&toTime="   + encodeURIComponent(filterToVal);
     }
-
-    var body = document.getElementById("availableTableBody");
-    body.innerHTML = "";
-
-    availableSlots.forEach(function(slot) {
-        var dist = getDistanceKm(userLat, userLon, slot.latitude, slot.longitude);
-        body.innerHTML += "<tr>" +
-            "<td>" + slot.ownerName + "</td>" +
-            "<td>₹" + slot.pricePerHour + "/hr</td>" +
-            "<td>" + slot.vehicleType + "</td>" +
-            "<td>" + new Date(slot.availableFrom).toLocaleString() + "</td>" +
-            "<td>" + new Date(slot.availableTo).toLocaleString() + "</td>" +
-            "<td>" + dist + " km</td>" +
-            "<td>" + (slot.averageRating ? "⭐ " + slot.averageRating.toFixed(1) : "No reviews") + "</td>" +
-            "<td>" + getSlotStatus(slot.parkingScore) + "</td>" +
-            "<td><a href='/Verification/Upload/" + slot.id + "' style='background:#28a745;color:white;padding:5px 10px;border-radius:5px;text-decoration:none;'>Verify & Book</a></td>" +
-        "</tr>";
-    });
-
-    if (!availableSlots.length)
-        body.innerHTML = "<tr><td colspan='9' style='color:#f87171;'>No available slots for your selected time</td></tr>";
+    window.location.href = url;
 }
 
 function goToBooked() {
     if (!userLat || !userLon) return;
-
-    document.getElementById("availableBox").style.display = "none";
-    document.getElementById("bookedBox").style.display    = "block";
-
+    var url = "/Parking/BookedSlots?lat=" + userLat + "&lon=" + userLon + "&radius=3";
     if (filterFromVal && filterToVal) {
-        document.getElementById("filterSummaryBooked").innerHTML =
-            "📅 Showing slots booked during <b>" + new Date(filterFromVal).toLocaleString() +
-            "</b> to <b>" + new Date(filterToVal).toLocaleString() + "</b>";
+        url += "&fromTime=" + encodeURIComponent(filterFromVal) +
+               "&toTime="   + encodeURIComponent(filterToVal);
     }
-
-    var body = document.getElementById("bookedTableBody");
-    body.innerHTML = "";
-
-    bookedSlots.forEach(function(slot) {
-        var dist = getDistanceKm(userLat, userLon, slot.latitude, slot.longitude);
-        body.innerHTML += "<tr>" +
-            "<td>" + slot.ownerName + "</td>" +
-            "<td>₹" + slot.pricePerHour + "/hr</td>" +
-            "<td>" + slot.vehicleType + "</td>" +
-            "<td>" + new Date(slot.availableFrom).toLocaleString() + "</td>" +
-            "<td>" + new Date(slot.availableTo).toLocaleString() + "</td>" +
-            "<td>" + (slot.bookingFrom ? new Date(slot.bookingFrom).toLocaleString() : "-") + "</td>" +
-            "<td>" + (slot.bookingTo   ? new Date(slot.bookingTo).toLocaleString()   : "-") + "</td>" +
-            "<td>" + dist + " km</td>" +
-            "<td>" + (slot.averageRating ? "⭐ " + slot.averageRating.toFixed(1) : "No reviews") + "</td>" +
-            "<td>" + getSlotStatus(slot.parkingScore) + "</td>" +
-        "</tr>";
-    });
-
-    if (!bookedSlots.length)
-        body.innerHTML = "<tr><td colspan='10' style='color:#4ade80;'>No booked slots for your selected time</td></tr>";
+    window.location.href = url;
 }
 
 // Auto refresh every 60 seconds
