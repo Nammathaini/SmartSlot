@@ -295,10 +295,11 @@
         </text>
     }
 
-    flatpickr("#bookingTo", {
-        enableTime: true,
-        dateFormat: "Y-m-d H:i",
-       minDate: "@(isExtension && extensionStart != null ? extensionStart.Value.ToString("yyyy-MM-ddTHH:mm") : ViewBag.IstNow)",
+   flatpickr("#bookingFrom", {
+    enableTime: true,
+    dateFormat: "Y-m-d H:i",
+    minDate: "@ViewBag.IstNow",
+    defaultDate: "@ViewBag.IstNow",
         maxDate: "@slot.AvailableTo.ToString("yyyy-MM-ddTHH:mm")",
         disable: [function(date) { return isTimeBlocked(date); }],
         onChange: function() { calculatePrice(); }

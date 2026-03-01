@@ -446,9 +446,9 @@ namespace SmartSlot.Controllers
 
             return Json(nearbySlots);
         }
-
+        [HttpGet]
         [Route("Parking/Book/{id}")]
-        [Route("Parking/Book/{id}")]
+        
         public IActionResult Book(int id)
         {
             if (HttpContext.Session.GetString("UserId") == null)
