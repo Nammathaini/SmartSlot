@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SmartSlot.Data;
@@ -11,9 +12,11 @@ using SmartSlot.Data;
 namespace SmartSlot.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260304154553_AddExitVerificationSystem")]
+    partial class AddExitVerificationSystem
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -169,9 +172,6 @@ namespace SmartSlot.Migrations
                     b.Property<string>("QrToken")
                         .HasColumnType("text");
 
-                    b.Property<string>("UpiQrImagePath")
-                        .HasColumnType("text");
-
                     b.Property<string>("VehicleType")
                         .IsRequired()
                         .HasColumnType("text");
@@ -235,9 +235,6 @@ namespace SmartSlot.Migrations
 
                     b.Property<int>("ParkingSlotId")
                         .HasColumnType("integer");
-
-                    b.Property<DateTime?>("SentAt")
-                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 

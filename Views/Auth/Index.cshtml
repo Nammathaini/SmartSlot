@@ -1,93 +1,144 @@
 ﻿@{
     Layout = null;
 }
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>SmartSlot - Welcome</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>SmartSlot — Smart Parking</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-            body {
-                margin:0;
-                font-family: 'Segoe UI', sans-serif;
-                background-image: url('https://i.pinimg.com/1200x/ea/3f/92/ea3f92fcdab7799f742c813cdb651463.jpg');
-                background-size: cover;
-                background-position: center;
-                background-attachment: fixed;
-            }
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+        :root{
+            --primary:#2563EB;--primary-dim:#1d4ed8;
+            --green:#10b981;--dark:#0F172A;
+            --text:#f1f5f9;--text-dim:rgba(241,245,249,0.45);
+            --border:rgba(255,255,255,0.08);
+        }
+        html,body{height:100%;}
+        body{
+            font-family:'Inter',sans-serif;
+            background:linear-gradient(135deg,#0F172A 0%,#111827 55%,#1E293B 100%);
+            background-attachment:fixed;
+            color:var(--text);
+            display:flex;align-items:center;justify-content:center;
+            min-height:100vh;padding:20px;
+            position:relative;overflow:hidden;
+        }
+        /* Noise */
+        body::before{
+            content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0.025;
+            background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            background-size:128px 128px;
+        }
+        /* Ambient orbs */
+        .orb1{position:fixed;width:600px;height:600px;border-radius:50%;z-index:0;pointer-events:none;background:radial-gradient(circle,rgba(37,99,235,0.09) 0%,transparent 65%);top:-150px;right:-100px;}
+        .orb2{position:fixed;width:500px;height:500px;border-radius:50%;z-index:0;pointer-events:none;background:radial-gradient(circle,rgba(16,185,129,0.06) 0%,transparent 65%);bottom:-100px;left:-80px;}
 
-            body::before {
-                content:'';
-                position:fixed;
-                width:100%;
-                height:100%;
-                background:rgba(0,0,0,0.75);
-                z-index:0;
-            }
+        .card{
+            position:relative;z-index:1;
+            width:100%;max-width:400px;
+            background:rgba(30,41,59,0.65);
+            backdrop-filter:blur(20px);
+            -webkit-backdrop-filter:blur(20px);
+            border:1px solid rgba(255,255,255,0.09);
+            border-radius:24px;
+            padding:52px 44px;
+            text-align:center;
+            box-shadow:0 24px 80px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.08);
+            animation:cardIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
+        }
+        @@keyframes cardIn{from{opacity:0;transform:translateY(24px) scale(0.97);}to{opacity:1;transform:translateY(0) scale(1);}}
 
-            .auth-container {
-                position:relative;
-                z-index:1;
-                height:100vh;
-                display:flex;
-                justify-content:center;
-                align-items:center;
-            }
+        .logo-wrap{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:36px;}
+        .logo-mark{
+            width:44px;height:44px;
+            background:linear-gradient(135deg,#3B82F6,#2563EB);
+            border-radius:13px;
+            display:flex;align-items:center;justify-content:center;
+            font-family:'Poppins',sans-serif;font-weight:800;font-size:22px;color:#fff;
+            box-shadow:0 8px 24px rgba(37,99,235,0.4);
+            filter:drop-shadow(0 0 8px rgba(59,130,246,0.5));
+            animation:popIn 0.5s 0.2s ease both;
+        }
+        @@keyframes popIn{0%{transform:scale(0.6);opacity:0;}70%{transform:scale(1.08);}100%{transform:scale(1);opacity:1;}}
+        .logo-text{font-family:'Poppins',sans-serif;font-size:26px;font-weight:800;animation:fadeUp 0.5s 0.3s ease both;}
+        .logo-text span{color:var(--primary);}
 
-            .auth-card {
-                background:rgba(26,26,26,0.95);
-                padding:40px;
-                width:350px;
-                border-radius:12px;
-                text-align:center;
-                box-shadow:0 0 25px rgba(0,0,0,0.6);
-                border:1px solid #333;
-            }
+        .tagline{font-size:14px;color:var(--text-dim);margin-bottom:40px;line-height:1.6;animation:fadeUp 0.5s 0.35s ease both;}
+        .tagline strong{color:var(--text);font-weight:500;}
 
-            h1 {
-                color:white;
-                margin-bottom:30px;
-            }
+        .btn-signup{
+            display:flex;align-items:center;justify-content:center;gap:8px;
+            width:100%;padding:15px;margin-bottom:12px;
+            background:linear-gradient(90deg,#3B82F6,#2563EB);
+            color:#fff;border:none;border-radius:13px;
+            font-family:'Inter',sans-serif;font-size:15px;font-weight:600;
+            cursor:pointer;text-decoration:none;
+            transition:all 0.2s;
+            box-shadow:0 6px 20px rgba(37,99,235,0.4);
+            animation:fadeUp 0.5s 0.45s ease both;
+        }
+        .btn-signup:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(37,99,235,0.5);color:#fff;}
+        .btn-signup:active{transform:translateY(0);}
 
-            .btn {
-                display:block;
-                width:100%;
-                padding:12px;
-                margin:10px 0;
-                border:none;
-                border-radius:6px;
-                font-size:16px;
-                cursor:pointer;
-                text-decoration:none;
-            }
+        .btn-signin{
+            display:flex;align-items:center;justify-content:center;gap:8px;
+            width:100%;padding:14px;
+            background:rgba(255,255,255,0.05);
+            color:var(--text);
+            border:1px solid rgba(255,255,255,0.1);
+            border-radius:13px;
+            font-family:'Inter',sans-serif;font-size:15px;font-weight:500;
+            cursor:pointer;text-decoration:none;
+            transition:all 0.2s;
+            animation:fadeUp 0.5s 0.5s ease both;
+        }
+        .btn-signin:hover{background:rgba(255,255,255,0.09);border-color:rgba(255,255,255,0.18);color:var(--text);transform:translateY(-1px);}
 
-            .signup-btn {
-                background:#28a745;
-                color:white;
-            }
+        .divider{
+            display:flex;align-items:center;gap:12px;
+            margin:20px 0;animation:fadeUp 0.5s 0.42s ease both;
+        }
+        .divider-line{flex:1;height:1px;background:var(--border);}
+        .divider-text{font-size:11px;color:var(--text-dim);letter-spacing:0.5px;}
 
-            .signin-btn {
-                background:#007bff;
-                color:white;
-            }
+        .features{
+            display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+            margin-top:32px;animation:fadeUp 0.5s 0.55s ease both;
+        }
+        .feat{
+            padding:14px 10px;
+            background:rgba(255,255,255,0.02);
+            border:1px solid var(--border);
+            border-radius:12px;text-align:center;
+        }
+        .feat-icon{font-size:20px;margin-bottom:6px;}
+        .feat-label{font-size:10px;color:var(--text-dim);font-weight:500;}
 
-            .btn:hover {
-                opacity:0.9;
-            }
+        @@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
     </style>
 </head>
 <body>
-
-    <div class="auth-container">
-        <div class="auth-card">
-            <h1>SmartSlot</h1>
-
-            <a href="/Auth/Signup" class="btn signup-btn">Create an account</a>
-            <a href="/Auth/Signin" class="btn signin-btn">Login</a>
-        </div>
+<div class="orb1"></div>
+<div class="orb2"></div>
+<div class="card">
+    <div class="logo-wrap">
+        <div class="logo-mark">P</div>
+        <div class="logo-text">Smart<span>Slot</span></div>
     </div>
+    <p class="tagline">Find and list <strong>parking spaces</strong><br/>near you in seconds.</p>
 
+    <a href="/Auth/Signup" class="btn-signup">🚀 Create an Account</a>
+    <div class="divider"><div class="divider-line"></div><span class="divider-text">OR</span><div class="divider-line"></div></div>
+    <a href="/Auth/Signin" class="btn-signin">🔑 Sign In</a>
+
+    <div class="features">
+        <div class="feat"><div class="feat-icon">🗺️</div><div class="feat-label">Live Map</div></div>
+        <div class="feat"><div class="feat-icon">⚡</div><div class="feat-label">Instant Book</div></div>
+        <div class="feat"><div class="feat-icon">🤖</div><div class="feat-label">AI Scoring and Verification</div></div>
+    </div>
+</div>
 </body>
 </html>

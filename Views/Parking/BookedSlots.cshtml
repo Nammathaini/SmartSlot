@@ -1,362 +1,301 @@
 ﻿@{
-    ViewData["Title"] = "Booked Parking Slots";
-    var lat = ViewBag.Lat;
-    var lon = ViewBag.Lon;
-    var radius = ViewBag.Radius;
+    ViewData["Title"] = "Booked Slots";
+    Layout = "_Layout";
+    var lat      = ViewBag.Lat;
+    var lon      = ViewBag.Lon;
+    var radius   = ViewBag.Radius;
     var fromTime = ViewBag.FromTime as string;
-    var toTime = ViewBag.ToTime as string;
+    var toTime   = ViewBag.ToTime   as string;
 }
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Booked Slots — SmartSlot</title>
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-    <style>
-        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
-        :root{
-            --red:#ff5252;--amber:#ffab40;--green:#00e676;
-            --dark:#080c10;--surface:#0d1117;
-            --border:rgba(255,255,255,0.08);
-        }
-        body{font-family:'DM Sans',sans-serif;background:var(--dark);color:white;min-height:100vh;}
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 
-        .topbar{
-            position:sticky;top:0;z-index:10;
-            background:rgba(8,12,16,0.95);backdrop-filter:blur(12px);
-            border-bottom:1px solid var(--border);
-            padding:16px 20px;display:flex;align-items:center;gap:14px;
-        }
-        .back-btn{
-            width:38px;height:38px;background:rgba(255,255,255,0.04);
-            border:1px solid var(--border);border-radius:10px;
-            color:white;font-size:18px;display:flex;align-items:center;justify-content:center;
-            text-decoration:none;transition:all 0.2s;flex-shrink:0;
-        }
-        .back-btn:hover{background:rgba(255,255,255,0.1);color:white;}
-        .topbar-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;}
-        .topbar-count{
-            margin-left:auto;font-size:12px;color:rgba(255,255,255,0.4);
-            background:rgba(255,255,255,0.04);border:1px solid var(--border);
-            padding:4px 10px;border-radius:100px;
-        }
-
-        .toolbar{max-width:800px;margin:0 auto;padding:14px 20px;display:flex;gap:10px;flex-wrap:wrap;}
-        .sort-select{
-            background:var(--surface);border:1px solid var(--border);
-            border-radius:10px;color:white;font-size:13px;padding:8px 14px;
-            cursor:pointer;outline:none;
-        }
-        .filter-pill{
-            display:flex;align-items:center;gap:6px;
-            background:rgba(255,171,64,0.08);border:1px solid rgba(255,171,64,0.2);
-            padding:6px 12px;border-radius:100px;font-size:12px;color:#ffab40;
-        }
-
-        .page{max-width:800px;margin:0 auto;padding:0 20px 60px;}
-        .slots-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;}
-
-        /* Card */
-        .slot-card{
-            background:var(--surface);border:1px solid var(--border);
-            border-radius:16px;padding:20px;
-            animation:fadeUp 0.4s ease both;transition:all 0.25s;
-        }
-        .slot-card:hover{border-color:rgba(255,82,82,0.2);transform:translateY(-2px);}
-
-        .card-header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px;}
-        .card-owner{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;}
-        .card-vehicle{font-size:12px;color:rgba(255,255,255,0.4);margin-top:3px;}
-        .card-price{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--red);white-space:nowrap;}
-        .card-price span{font-size:12px;font-weight:400;color:rgba(255,255,255,0.4);}
-
-        .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
-        .meta-item{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:10px 12px;}
-        .meta-lbl{font-size:10px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.5px;}
-        .meta-val{font-size:12px;font-weight:500;margin-top:3px;}
-        .meta-val.red{color:var(--red);}
-        .meta-val.amber{color:var(--amber);}
-
-        /* Countdown */
-        .countdown-box{
-            background:rgba(255,82,82,0.06);border:1px solid rgba(255,82,82,0.15);
-            border-radius:10px;padding:10px 14px;
-            display:flex;align-items:center;justify-content:space-between;
-            margin-bottom:14px;
-        }
-        .countdown-lbl{font-size:11px;color:rgba(255,255,255,0.4);}
-        .countdown-val{
-            font-family:'Syne',sans-serif;font-size:15px;font-weight:700;
-            color:var(--red);
-        }
-        .countdown-val.amber{color:var(--amber);}
-
-        .card-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;}
-        .card-rating{font-size:13px;color:rgba(255,255,255,0.4);}
-
-        .copy-btn{
-            display:flex;align-items:center;gap:5px;
-            padding:7px 12px;background:rgba(255,255,255,0.04);
-            border:1px solid var(--border);border-radius:8px;
-            color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;
-            transition:all 0.15s;
-        }
-        .copy-btn:hover{background:rgba(255,255,255,0.08);color:white;}
-        .copy-btn.copied{background:rgba(0,230,118,0.08);border-color:rgba(0,230,118,0.2);color:var(--green);}
-
-        .notify-btn{
-            display:flex;align-items:center;gap:6px;
-            padding:9px 14px;
-            background:rgba(255,171,64,0.08);border:1px solid rgba(255,171,64,0.2);
-            color:var(--amber);font-size:12px;font-weight:600;
-            border-radius:10px;cursor:pointer;transition:all 0.2s;
-        }
-        .notify-btn:hover{background:rgba(255,171,64,0.14);}
-        .notify-btn.done{background:rgba(0,230,118,0.08);border-color:rgba(0,230,118,0.2);color:var(--green);cursor:default;}
-        .notify-btn:disabled{opacity:0.5;cursor:not-allowed;}
-
-        /* Skeleton */
-        .skeleton-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;}
-        .skel-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;}
-        .skel{
-            background:linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.08) 50%,rgba(255,255,255,0.04) 75%);
-            background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px;
-        }
-        @@keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
-
-        .empty-state{
-            grid-column:1/-1;text-align:center;padding:60px 20px;
-            background:var(--surface);border:1px dashed var(--border);border-radius:16px;
-        }
-        .empty-icon{font-size:48px;margin-bottom:12px;opacity:0.4;}
-        .empty-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:8px;}
-        .empty-sub{font-size:14px;color:rgba(255,255,255,0.3);}
-
-        /* Toast */
-        .toast{
-            position:fixed;bottom:24px;left:50%;
-            transform:translateX(-50%) translateY(20px);
-            background:var(--surface);border:1px solid var(--border);
-            color:white;padding:12px 20px;border-radius:12px;
-            font-size:14px;z-index:9999;opacity:0;transition:all 0.3s;
-            pointer-events:none;white-space:nowrap;
-        }
-        .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-
-        @@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
-        @@media(max-width:500px){.slots-grid,.skeleton-grid{grid-template-columns:1fr;}}
-    </style>
-</head>
-<body>
-
-<div class="topbar">
-    <a href="/Parking/Search" class="back-btn">←</a>
-    <span class="topbar-title">🔴 Booked Slots</span>
-    <span class="topbar-count" id="slotCount">Loading...</span>
-</div>
-
-<div class="toolbar">
-    <select class="sort-select" id="sortOption" onchange="applySort()">
-        <option value="">Sort By</option>
-        <option value="price">Price: Low → High</option>
-        <option value="distance">Distance: Near → Far</option>
-        <option value="endtime">Ends Soonest</option>
-    </select>
-    @if (!string.IsNullOrEmpty(fromTime) && !string.IsNullOrEmpty(toTime))
-    {
-        <div class="filter-pill">📅 @DateTime.Parse(fromTime).ToString("dd MMM, hh:mm tt") → @DateTime.Parse(toTime).ToString("hh:mm tt")</div>
+<style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+        --blue:#2563EB;--blue-light:#3B82F6;--blue-glow:rgba(37,99,235,0.35);
+        --glass:rgba(20,30,48,0.72);--border:rgba(255,255,255,0.08);
+        --text:#F1F5F9;--muted:#94A3B8;--green:#10b981;--red:#ef4444;--orange:#F97316;
     }
-</div>
+    .orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0;}
+    .orb1{top:-10%;right:-8%;width:480px;height:480px;background:radial-gradient(circle,rgba(239,68,68,0.05) 0%,transparent 70%);}
+    .orb2{bottom:-10%;left:-8%;width:420px;height:420px;background:radial-gradient(circle,rgba(37,99,235,0.06) 0%,transparent 70%);}
+    .main{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:36px 24px 80px;}
+    .page-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:28px;flex-wrap:wrap;animation:fadeUp 0.45s ease both;}
+    .page-top-left h1{font-family:'Poppins',sans-serif;font-weight:700;font-size:1.55rem;letter-spacing:-0.4px;margin-bottom:6px;}
+    .page-top-left h1 em{font-style:normal;color:var(--red);}
+    .filter-badge{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;font-size:0.78rem;color:#f87171;font-weight:500;}
+    .back-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;background:rgba(20,30,48,0.75);border:1px solid var(--border);border-radius:10px;color:var(--muted);text-decoration:none;font-size:0.83rem;font-weight:500;transition:all 0.2s;flex-shrink:0;}
+    .back-btn:hover{color:var(--text);border-color:rgba(255,255,255,0.16);}
+    .controls{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap;animation:fadeUp 0.45s ease 0.1s both;}
+    .sort-select{padding:9px 13px;background:rgba(20,30,48,0.75);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:'Inter',sans-serif;font-size:0.83rem;outline:none;cursor:pointer;}
+    #countLabel{font-size:0.8rem;color:var(--muted);}
+    .table-card{background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:18px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,0.3);animation:fadeUp 0.45s ease 0.15s both;}
+    .t-wrap{overflow-x:auto;}
+    table{width:100%;border-collapse:collapse;}
+    thead th{padding:13px 16px;background:rgba(15,23,42,0.7);font-family:'Inter',sans-serif;font-weight:600;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.55px;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;}
+    tbody td{padding:13px 16px;font-size:0.87rem;color:var(--text);border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:middle;}
+    tbody tr:last-child td{border-bottom:none;}
+    tbody tr:hover{background:rgba(255,255,255,0.025);}
+    .owner{font-weight:600;}
+    .price{font-family:'Poppins',sans-serif;font-weight:700;color:var(--orange);}
+    .dist-val{color:var(--muted);font-size:0.82rem;}
+    .date-val{color:var(--muted);font-size:0.79rem;}
+    .booked-until{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.22);border-radius:20px;font-size:0.75rem;font-weight:600;color:#f87171;}
 
-<div class="page">
-    <div class="skeleton-grid" id="skeletonGrid">
-        @for (int i = 0; i < 3; i++)
-        {
-            <div class="skel-card">
-                <div style="display:flex;justify-content:space-between;margin-bottom:14px;">
-                    <div><div class="skel" style="height:18px;width:140px;"></div><div class="skel" style="height:12px;width:80px;margin-top:6px;"></div></div>
-                    <div class="skel" style="height:24px;width:70px;border-radius:8px;"></div>
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-                    <div class="skel" style="height:52px;border-radius:10px;"></div>
-                    <div class="skel" style="height:52px;border-radius:10px;"></div>
-                    <div class="skel" style="height:52px;border-radius:10px;"></div>
-                    <div class="skel" style="height:52px;border-radius:10px;"></div>
-                </div>
-                <div class="skel" style="height:38px;border-radius:10px;margin-bottom:14px;"></div>
-                <div style="display:flex;justify-content:space-between;">
-                    <div class="skel" style="height:14px;width:80px;"></div>
-                    <div class="skel" style="height:32px;width:100px;border-radius:10px;"></div>
-                </div>
-            </div>
-        }
+    /* Time remaining */
+    .time-remaining{display:flex;flex-direction:column;gap:5px;min-width:130px;}
+    .tr-bar-wrap{height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;}
+    .tr-bar{height:100%;border-radius:3px;transition:background 1s;}
+    .tr-label{font-size:0.72rem;font-weight:700;letter-spacing:0.2px;}
+    .tr-label.urgent{color:#f87171;animation:blink 1s ease infinite;}
+    .tr-label.soon{color:var(--orange);}
+    .tr-label.ok{color:#facc15;}
+    .tr-label.plenty{color:var(--green);}
+    @@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.4;}}
+
+    /* Notify Me button */
+    .btn-notify{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:8px;border:1px solid;cursor:pointer;font-family:'Inter',sans-serif;font-size:0.78rem;font-weight:600;transition:all 0.2s;white-space:nowrap;}
+    .btn-notify.idle{background:rgba(37,99,235,0.1);border-color:rgba(37,99,235,0.3);color:var(--blue-light);}
+    .btn-notify.idle:hover{background:rgba(37,99,235,0.2);transform:translateY(-1px);}
+    .btn-notify.loading{background:rgba(148,163,184,0.08);border-color:rgba(148,163,184,0.15);color:var(--muted);cursor:not-allowed;}
+    .btn-notify.done{background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.25);color:var(--green);cursor:default;}
+
+    /* Toast */
+    #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);padding:13px 22px;border-radius:12px;font-size:0.875rem;font-weight:600;backdrop-filter:blur(16px);box-shadow:0 8px 32px rgba(0,0,0,0.4);transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1),opacity 0.3s;opacity:0;z-index:9999;pointer-events:none;}
+    #toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+    #toast.success{background:rgba(16,185,129,0.18);border:1px solid rgba(16,185,129,0.3);color:#6ee7b7;}
+    #toast.error{background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.25);color:#fca5a5;}
+
+    .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:0.72rem;font-weight:600;}
+    .b-premium{background:rgba(234,179,8,0.15);color:#EAB308;border:1px solid rgba(234,179,8,0.2);}
+    .b-gold{background:rgba(249,115,22,0.12);color:#F97316;border:1px solid rgba(249,115,22,0.2);}
+    .b-silver{background:rgba(148,163,184,0.12);color:#94A3B8;border:1px solid rgba(148,163,184,0.2);}
+    .b-basic{background:rgba(59,130,246,0.1);color:var(--blue-light);border:1px solid rgba(59,130,246,0.2);}
+    .b-na{color:var(--muted);font-size:0.8rem;}
+    .empty td{text-align:center;padding:44px;color:var(--muted);font-size:0.9rem;}
+    @@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+</style>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div id="toast"></div>
+
+<div class="main">
+    <div class="page-top">
+        <div class="page-top-left">
+            <h1>&#128308; <em>Booked</em> Parking Slots</h1>
+            @if (!string.IsNullOrEmpty(fromTime) && !string.IsNullOrEmpty(toTime))
+            {
+                <div class="filter-badge">&#128197; @DateTime.Parse(fromTime).ToString("dd MMM, hh:mm tt") &nbsp;&#8594;&nbsp; @DateTime.Parse(toTime).ToString("dd MMM, hh:mm tt")</div>
+            }
+        </div>
+        <a href="/Parking/Search" class="back-btn">&#8592; Back to Search</a>
     </div>
-    <div class="slots-grid" id="slotsGrid" style="display:none;"></div>
-</div>
 
-<div class="toast" id="toast"></div>
+    <div class="controls">
+        <select id="sortSel" class="sort-select" onchange="applySort()">
+            <option value="">Sort By</option>
+            <option value="price">Price: Low to High</option>
+            <option value="dist">Distance: Near to Far</option>
+            <option value="rating">Rating: High to Low</option>
+            <option value="time">Time Remaining: Least First</option>
+            <option value="badge">Slot Status</option>
+        </select>
+        <span id="countLabel"></span>
+    </div>
+
+    <div class="table-card">
+        <div class="t-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Owner</th>
+                        <th>Phone</th>
+                        <th>Price / hr</th>
+                        <th>Vehicle</th>
+                        <th>Booked Until</th>
+                        <th>Time Remaining</th>
+                        <th>Available From</th>
+                        <th>Available To</th>
+                        <th>Distance</th>
+                        <th>Rating</th>
+                        <th>Status</th>
+                        <th>Notify Me</th>
+                    </tr>
+                </thead>
+                <tbody id="slotBody">
+                    <tr class="empty"><td colspan="12">&#9203; Loading booked slots&#8230;</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
 <script>
 var allSlots = [];
-var notifiedSlots = {};
-var fromTime = "@fromTime";
-var toTime = "@toTime";
+var fFrom = "@fromTime", fTo = "@toTime";
+var myLat = @lat, myLon = @lon;
+var notifiedSlots = {}; // remember which slots this session
 
-function getDistanceKm(lat1,lon1,lat2,lon2){
-    var R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
-    var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
-    return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+function km(a,b,c,d){var R=6371,dL=(c-a)*Math.PI/180,dO=(d-b)*Math.PI/180,x=Math.sin(dL/2)*Math.sin(dL/2)+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dO/2)*Math.sin(dO/2);return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
+
+function badgeHtml(b){
+    if(!b||b==='—') return '<span class="b-na">—</span>';
+    var cls='b-basic';
+    if(b.includes('Premium')) cls='b-premium';
+    else if(b.includes('Gold')) cls='b-gold';
+    else if(b.includes('Silver')) cls='b-silver';
+    return '<span class="badge '+cls+'">'+b+'</span>';
 }
 
-function showToast(msg,type){
-    var t=document.getElementById('toast');
-    t.textContent=msg;t.className='toast show';
-    if(type==='success')t.style.borderColor='rgba(0,230,118,0.3)';
-    else if(type==='error')t.style.borderColor='rgba(255,82,82,0.3)';
-    else t.style.borderColor='rgba(255,255,255,0.08)';
-    clearTimeout(window._toast);
-    window._toast=setTimeout(function(){t.className='toast';},3500);
+function fmtDate(iso){
+    if(!iso) return '—';
+    return new Date(iso).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true});
 }
 
-function copyPhone(phone,btn){
-    navigator.clipboard.writeText(phone).then(function(){
-        btn.className='copy-btn copied';
-        btn.innerHTML='✓ Copied';
-        setTimeout(function(){
-            btn.className='copy-btn';
-            btn.innerHTML='📋 '+phone;
-        },2000);
+function timeRemainingHtml(bookingToIso, slotId) {
+    if (!bookingToIso) return '<span class="b-na">—</span>';
+    var endMs  = new Date(bookingToIso).getTime();
+    var diffMs = endMs - Date.now();
+    if (diffMs <= 0) return '<span style="color:var(--green);font-size:0.75rem;font-weight:600;">&#10003; Ending now</span>';
+    var totalMins = diffMs / 60000;
+    var hrs  = Math.floor(totalMins / 60);
+    var mins = Math.floor(totalMins % 60);
+    var pct  = Math.min(100, (diffMs / (24*3600000)) * 100);
+    var barColor, cls;
+    if      (totalMins <= 15)  { barColor='#ef4444'; cls='urgent'; }
+    else if (totalMins <= 60)  { barColor='#F97316'; cls='soon';   }
+    else if (totalMins <= 180) { barColor='#facc15'; cls='ok';     }
+    else                       { barColor='#10b981'; cls='plenty'; }
+    var lbl = hrs > 0 ? hrs+'h '+mins+'m remaining' : mins+'m remaining';
+    return '<div class="time-remaining" id="tr_'+slotId+'" data-end="'+endMs+'">'
+         + '<div class="tr-bar-wrap"><div class="tr-bar" style="width:'+pct+'%;background:'+barColor+'"></div></div>'
+         + '<span class="tr-label '+cls+'">&#9203; '+lbl+'</span>'
+         + '</div>';
+}
+
+function notifyBtnHtml(slotId, bookingId) {
+    if (notifiedSlots[slotId])
+        return '<button class="btn-notify done" disabled>&#10003; Notified</button>';
+    return '<button class="btn-notify idle" onclick="notifyMe('+slotId+','+bookingId+',this)">&#128276; Notify Me</button>';
+}
+
+function render(slots) {
+    document.getElementById('countLabel').textContent = slots.length+' slot'+(slots.length!==1?'s':'')+' currently booked';
+    var body = document.getElementById('slotBody');
+    if (!slots.length) { body.innerHTML='<tr class="empty"><td colspan="12">No slots are currently booked in your area</td></tr>'; return; }
+    body.innerHTML = slots.map(function(s){
+        var rating = s.averageRating ? '&#11088; '+s.averageRating.toFixed(1) : '<span style="color:var(--muted);font-size:0.8rem">—</span>';
+        var bid = s.bookingId || 0;
+        return '<tr>'
+            +'<td class="owner">'+s.ownerName+'</td>'
+            +'<td style="color:var(--muted)">'+(s.ownerPhone||'—')+'</td>'
+            +'<td class="price">&#8377;'+s.pricePerHour+'</td>'
+            +'<td>'+s.vehicleType+'</td>'
+            +'<td><span class="booked-until">&#128308; '+fmtDate(s.bookingTo)+'</span></td>'
+            +'<td>'+timeRemainingHtml(s.bookingTo, s.id)+'</td>'
+            +'<td class="date-val">'+fmtDate(s.availableFrom)+'</td>'
+            +'<td class="date-val">'+fmtDate(s.availableTo)+'</td>'
+            +'<td class="dist-val">'+s._dist.toFixed(2)+' km</td>'
+            +'<td>'+rating+'</td>'
+            +'<td>'+badgeHtml(s.parkingBadge)+'</td>'
+            +'<td>'+notifyBtnHtml(s.id, bid)+'</td>'
+            +'</tr>';
+    }).join('');
+}
+
+// Live second-by-second countdown ticker
+function tickCountdowns() {
+    document.querySelectorAll('.time-remaining').forEach(function(el){
+        var endMs  = parseInt(el.getAttribute('data-end'));
+        var diffMs = endMs - Date.now();
+        var bar    = el.querySelector('.tr-bar');
+        var lbl    = el.querySelector('.tr-label');
+        if (diffMs <= 0) { el.innerHTML='<span style="color:var(--green);font-size:0.75rem;font-weight:600;">&#10003; Ending now</span>'; return; }
+        var totalMins = diffMs / 60000;
+        var hrs  = Math.floor(totalMins/60);
+        var mins = Math.floor(totalMins%60);
+        var secs = Math.floor((diffMs%60000)/1000);
+        var pct  = Math.min(100,(diffMs/(24*3600000))*100);
+        var barColor, cls;
+        if      (totalMins<=15)  { barColor='#ef4444'; cls='urgent'; }
+        else if (totalMins<=60)  { barColor='#F97316'; cls='soon';   }
+        else if (totalMins<=180) { barColor='#facc15'; cls='ok';     }
+        else                     { barColor='#10b981'; cls='plenty'; }
+        if (bar) { bar.style.width=pct+'%'; bar.style.background=barColor; }
+        if (lbl) {
+            lbl.className = 'tr-label '+cls;
+            // Show seconds only when under 1 hour
+            lbl.textContent = totalMins<=60
+                ? '⏱ '+(hrs>0?hrs+'h ':'')+mins+'m '+secs+'s'
+                : '⏳ '+hrs+'h '+mins+'m remaining';
+        }
     });
 }
+setInterval(tickCountdowns, 1000);
 
-function notifyMe(slotId,bookingId,btn){
-    btn.disabled=true;btn.textContent='Registering...';
-    fetch('/Parking/NotifyMe',{
+// Notify Me — POST to controller
+function notifyMe(slotId, bookingId, btn) {
+    btn.className   = 'btn-notify loading';
+    btn.disabled    = true;
+    btn.textContent = '⏳ Registering…';
+    fetch('/Parking/NotifyMe', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({slotId:slotId,bookingId:bookingId})
+        body: JSON.stringify({ slotId: slotId, bookingId: bookingId })
     })
-    .then(r=>r.json())
+    .then(function(r){ return r.json(); })
     .then(function(d){
-        if(d.success){
-            btn.className='notify-btn done';btn.innerHTML='✓ Will Notify';
-            notifiedSlots[slotId]=true;
-            showToast('✅ We will email you when this slot is free!','success');
+        if (d.success) {
+            notifiedSlots[slotId] = true;
+            btn.className = 'btn-notify done';
+            btn.disabled  = true;
+            btn.innerHTML = '&#10003; Notified';
+            showToast('&#128276; We\'ll email you when this slot is free!', 'success');
         } else {
-            btn.disabled=false;btn.innerHTML='🔔 Notify Me';
-            showToast('❌ '+(d.message||'Failed'),'error');
+            btn.className = 'btn-notify idle';
+            btn.disabled  = false;
+            btn.innerHTML = '&#128276; Notify Me';
+            showToast('&#9888; '+(d.message||'Could not register. Please try again.'), 'error');
         }
     })
-    .catch(function(){btn.disabled=false;btn.innerHTML='🔔 Notify Me';showToast('❌ Something went wrong.','error');});
-}
-
-function formatCountdown(endTimeStr){
-    var diff=new Date(endTimeStr)-new Date();
-    if(diff<=0)return{text:'Expired',cls:''};
-    var h=Math.floor(diff/3600000),m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000);
-    var cls=h<1?'amber':'';
-    return{text:h+'h '+m+'m '+s+'s',cls:cls};
-}
-
-function renderSlots(slots){
-    document.getElementById('skeletonGrid').style.display='none';
-    var grid=document.getElementById('slotsGrid');
-    grid.style.display='grid';grid.innerHTML='';
-    document.getElementById('slotCount').textContent=slots.length+' slot'+(slots.length!==1?'s':'');
-
-    if(slots.length===0){
-        grid.innerHTML='<div class="empty-state"><div class="empty-icon">🅿️</div><div class="empty-title">No booked slots here</div><div class="empty-sub">All parking slots in this area are currently available.</div></div>';
-        return;
-    }
-
-    slots.forEach(function(slot,i){
-        var dist=slot._distanceValue;
-        var alreadyNotified=notifiedSlots[slot.id]||false;
-        var notifyHtml=alreadyNotified
-            ?'<button class="notify-btn done" disabled>✓ Will Notify</button>'
-            :'<button class="notify-btn" onclick="notifyMe('+slot.id+','+(slot.bookingId||0)+',this)">🔔 Notify Me</button>';
-
-        var cd=slot.bookingTo?formatCountdown(slot.bookingTo):{text:'—',cls:''};
-
-        var card=document.createElement('div');
-        card.className='slot-card';
-        card.style.animationDelay=(i*0.05)+'s';
-        card.innerHTML=`
-        <div class="card-header">
-            <div>
-                <div class="card-owner">${slot.ownerName}</div>
-                <div class="card-vehicle">🚗 ${slot.vehicleType}</div>
-            </div>
-            <div class="card-price">₹${slot.pricePerHour}<span>/hr</span></div>
-        </div>
-        <div class="meta-grid">
-            <div class="meta-item">
-                <div class="meta-lbl">Distance</div>
-                <div class="meta-val">📍 ${dist.toFixed(2)} km</div>
-            </div>
-            <div class="meta-item">
-                <div class="meta-lbl">Rating</div>
-                <div class="meta-val">${slot.averageRating?'⭐ '+slot.averageRating.toFixed(1):'No reviews'}</div>
-            </div>
-            <div class="meta-item">
-                <div class="meta-lbl">Booked From</div>
-                <div class="meta-val">${slot.bookingFrom?new Date(slot.bookingFrom).toLocaleString('en-IN',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}):'—'}</div>
-            </div>
-            <div class="meta-item">
-                <div class="meta-lbl">Booked To</div>
-                <div class="meta-val red">${slot.bookingTo?new Date(slot.bookingTo).toLocaleString('en-IN',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}):'—'}</div>
-            </div>
-        </div>
-        <div class="countdown-box">
-            <div class="countdown-lbl">⏱ Time Remaining</div>
-            <div class="countdown-val ${cd.cls}" data-end="${slot.bookingTo}">${cd.text}</div>
-        </div>
-        <div class="card-footer">
-            ${slot.ownerPhone?`<button class="copy-btn" onclick="copyPhone('${slot.ownerPhone}',this)">📋 ${slot.ownerPhone}</button>`:'<span></span>'}
-            ${notifyHtml}
-        </div>`;
-        grid.appendChild(card);
+    .catch(function(){
+        btn.className = 'btn-notify idle';
+        btn.disabled  = false;
+        btn.innerHTML = '&#128276; Notify Me';
+        showToast('&#9888; Network error. Please try again.', 'error');
     });
-
-    startCountdowns();
 }
 
-function startCountdowns(){
-    function tick(){
-        document.querySelectorAll('.countdown-val[data-end]').forEach(function(el){
-            var cd=formatCountdown(el.getAttribute('data-end'));
-            el.textContent=cd.text;
-            el.className='countdown-val'+(cd.cls?' '+cd.cls:'');
-        });
-    }
-    tick();
-    clearInterval(window._cdTimer);
-    window._cdTimer=setInterval(tick,1000);
+function showToast(msg, type) {
+    var t = document.getElementById('toast');
+    t.innerHTML = msg; t.className = 'show '+type;
+    clearTimeout(window._tt);
+    window._tt = setTimeout(function(){ t.className = type; }, 3500);
 }
 
-function applySort(){
-    var opt=document.getElementById('sortOption').value;
-    var sorted=[...allSlots];
-    if(opt==='price')sorted.sort((a,b)=>a.pricePerHour-b.pricePerHour);
-    if(opt==='distance')sorted.sort((a,b)=>a._distanceValue-b._distanceValue);
-    if(opt==='endtime')sorted.sort((a,b)=>new Date(a.bookingTo)-new Date(b.bookingTo));
-    renderSlots(sorted);
+function applySort() {
+    var v = document.getElementById('sortSel').value;
+    var s = [...allSlots];
+    if (v==='price')  s.sort((a,b)=>a.pricePerHour-b.pricePerHour);
+    if (v==='dist')   s.sort((a,b)=>a._dist-b._dist);
+    if (v==='rating') s.sort((a,b)=>(b.averageRating||0)-(a.averageRating||0));
+    if (v==='time')   s.sort((a,b)=>new Date(a.bookingTo||0)-new Date(b.bookingTo||0));
+    if (v==='badge')  { var r={'Premium':1,'Gold':2,'Silver':3,'Basic':4,'Poor':5}; s.sort((a,b)=>(r[a.parkingBadge]||6)-(r[b.parkingBadge]||6)); }
+    render(s);
 }
 
-function loadData(){
-    var url="/Parking/NearbySlots?lat=@lat&lon=@lon&radius=@radius";
-    if(fromTime&&toTime)url+="&fromTime="+encodeURIComponent(fromTime)+"&toTime="+encodeURIComponent(toTime);
+function load() {
+    var url = '/Parking/NearbySlots?lat=@lat&lon=@lon&radius=@radius';
+    if (fFrom&&fTo) url += '&fromTime='+encodeURIComponent(fFrom)+'&toTime='+encodeURIComponent(fTo);
     fetch(url).then(r=>r.json()).then(function(data){
-        var booked=data.filter(s=>s.isBooked);
-        allSlots=booked.map(function(s){s._distanceValue=getDistanceKm(@lat,@lon,s.latitude,s.longitude);return s;});
-        renderSlots(allSlots);
-    }).catch(function(){showToast('⚠️ Failed to load','error');});
+        allSlots = data.filter(s=>s.isBooked).map(function(s){ s._dist=km(myLat,myLon,s.latitude,s.longitude); return s; });
+        render(allSlots);
+    }).catch(function(){
+        document.getElementById('slotBody').innerHTML='<tr class="empty"><td colspan="12">Failed to load. Please refresh.</td></tr>';
+    });
 }
-
-loadData();
-setInterval(loadData,30000);
+load();
+setInterval(load, 30000);
 </script>
-</body>
-</html>

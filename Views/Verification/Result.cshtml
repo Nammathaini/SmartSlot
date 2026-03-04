@@ -2,240 +2,169 @@
 
 @{
     ViewData["Title"] = "Verification Result";
+    Layout = "_Layout";
     bool verified = Model.PlateMatch && Model.NameMatch;
 }
 
 <style>
-    body {
-        background-image: url('https://i.pinimg.com/1200x/ea/3f/92/ea3f92fcdab7799f742c813cdb651463.jpg');
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-        background-color: #000 !important;
-        color: white !important;
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+        --green:#10b981;--red:#ef4444;--blue:#2563EB;
+        --glass:rgba(20,30,48,0.72);--border:rgba(255,255,255,0.09);
+        --text:#F1F5F9;--muted:#94A3B8;
     }
-
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.80);
-            z-index: 0;
-        }
-
-    .navbar {
-        background-color: #111 !important;
-        position: relative;
-        z-index: 2;
+    .main{
+        position:relative;z-index:1;
+        min-height:100vh;
+        display:flex;flex-direction:column;
+        align-items:center;justify-content:center;
+        padding:40px 20px;
     }
-
-    .page-wrapper {
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 40px 20px;
-        position: relative;
-        z-index: 1;
+    .verify-card{
+        background:var(--glass);
+        backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+        border:2px solid @(verified ? "rgba(16,185,129,0.45)" : "rgba(239,68,68,0.45)");
+        border-radius:20px;padding:36px;
+        width:100%;max-width:520px;
+        text-align:center;
+        box-shadow:0 20px 60px rgba(0,0,0,0.4);
+        animation:fadeUp 0.45s ease both;
     }
+    @@keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
 
-    .card {
-        background-color: rgba(26, 26, 26, 0.95);
-        border: 2px solid @(verified ? "#28a745" : "#dc3545");
-        border-radius: 12px;
-        padding: 35px;
-        width: 100%;
-        max-width: 520px;
-        text-align: center;
+    .result-icon{font-size:3.2rem;margin-bottom:12px;line-height:1;}
+    .status-badge{
+        display:inline-block;padding:7px 22px;border-radius:20px;
+        font-weight:700;font-size:1rem;letter-spacing:0.3px;
+        background:@(verified ? "rgba(16,185,129,0.18)" : "rgba(239,68,68,0.18)");
+        color:@(verified ? "#34d399" : "#f87171");
+        border:1px solid @(verified ? "rgba(16,185,129,0.35)" : "rgba(239,68,68,0.35)");
+        margin-bottom:22px;
     }
-
-    .result-icon {
-        font-size: 4rem;
-        margin-bottom: 15px;
+    .card-title{color:var(--text);font-family:'Poppins',sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:20px;}
+    .check-row{
+        display:flex;justify-content:space-between;align-items:center;
+        padding:12px 14px;border-radius:10px;
+        background:rgba(15,23,42,0.5);
+        border:1px solid var(--border);
+        margin-bottom:8px;
     }
-
-    .status-badge {
-        display: inline-block;
-        padding: 8px 20px;
-        border-radius: 20px;
-        font-weight: bold;
-        font-size: 1.1rem;
-        background: @(verified ? "#28a745" : "#dc3545");
-        color: white;
-        margin-bottom: 20px;
+    .check-row p{color:var(--muted);margin:0;font-size:0.85rem;}
+    .check-row b{font-size:0.85rem;}
+    .result-box{
+        margin-top:18px;padding:15px;border-radius:12px;
+        background:@(verified ? "rgba(16,185,129,0.08)" : "rgba(239,68,68,0.08)");
+        border:1px solid @(verified ? "rgba(16,185,129,0.25)" : "rgba(239,68,68,0.25)");
+        text-align:left;
     }
-
-    .check-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 12px;
-        border-radius: 8px;
-        background: rgba(0,0,0,0.3);
-        margin-bottom: 10px;
+    .result-box .main-msg{
+        color:@(verified ? "#34d399" : "#f87171");
+        font-weight:700;margin:0 0 5px 0;font-size:0.9rem;
     }
-
-        .check-row p {
-            color: #ccc;
-            margin: 0;
-            font-size: 0.9rem;
-        }
-
-    .btn-proceed {
-        display: block;
-        width: 100%;
-        padding: 14px;
-        background: #28a745;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 1.1rem;
-        font-weight: bold;
-        text-decoration: none;
-        margin-top: 20px;
-        cursor: pointer;
+    .result-box .sub-msg{color:var(--muted);font-size:0.8rem;margin:0;}
+    .btn-proceed{
+        display:block;width:100%;padding:14px;
+        background:linear-gradient(90deg,#10b981,#059669);
+        color:#fff;border:none;border-radius:12px;
+        font-size:1rem;font-weight:700;text-decoration:none;
+        margin-top:18px;cursor:pointer;
+        box-shadow:0 6px 20px rgba(16,185,129,0.3);
+        transition:all 0.2s;
     }
-
-    .btn-disabled {
-        display: block;
-        width: 100%;
-        padding: 14px;
-        background: #555;
-        color: #888;
-        border: none;
-        border-radius: 8px;
-        font-size: 1.1rem;
-        font-weight: bold;
-        margin-top: 20px;
-        cursor: not-allowed;
+    .btn-proceed:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(16,185,129,0.4);color:#fff;}
+    .btn-disabled{
+        display:block;width:100%;padding:14px;
+        background:rgba(255,255,255,0.04);color:rgba(148,163,184,0.4);
+        border:1px solid var(--border);border-radius:12px;
+        font-size:1rem;font-weight:700;margin-top:18px;cursor:not-allowed;
     }
-
-    .btn-retry {
-        display: block;
-        width: 100%;
-        padding: 14px;
-        background: #007bff;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 1.1rem;
-        font-weight: bold;
-        text-decoration: none;
-        margin-top: 10px;
-        cursor: pointer;
+    .btn-retry{
+        display:block;width:100%;padding:14px;
+        background:linear-gradient(90deg,#3B82F6,#2563EB);
+        color:#fff;border:none;border-radius:12px;
+        font-size:1rem;font-weight:700;text-decoration:none;
+        margin-top:10px;cursor:pointer;
+        box-shadow:0 6px 16px rgba(37,99,235,0.3);
+        transition:all 0.2s;
     }
+    .btn-retry:hover{transform:translateY(-2px);color:#fff;}
+    .divider{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);margin:18px 0;}
 </style>
 
-<div class="page-wrapper">
-    <div class="card">
-
-        <div class="result-icon">@(verified ? "✅" : "❌")</div>
+<div class="main">
+    <div class="verify-card">
+        <div class="result-icon">@(verified ? "&#9989;" : "&#10060;")</div>
         <div class="status-badge">
             @(verified ? "Identity Verified" : "Verification Failed")
         </div>
 
-        <h3 style="color:white; margin-bottom:20px;">Verification Report</h3>
+        <div class="card-title">Verification Report</div>
 
         <div class="check-row">
-            <p>🚗 Plate from RC</p>
-            <b style="color:white;">@Model.ExtractedPlateFromRC</b>
+            <p>&#128664; Plate from RC</p>
+            <b style="color:var(--text);">@Model.ExtractedPlateFromRC</b>
         </div>
-
         <div class="check-row">
-            <p>📸 Plate from Vehicle Photo</p>
-            <b style="color:white;">@Model.ExtractedPlateFromVehicle</b>
+            <p>&#128247; Plate from Vehicle Photo</p>
+            <b style="color:var(--text);">@Model.ExtractedPlateFromVehicle</b>
         </div>
-
         <div class="check-row">
             <p>Plate Match</p>
-            <b style="color:@(Model.PlateMatch ? "#28a745" : "#dc3545")">
-                @(Model.PlateMatch ? "✅ Match" : "❌ Mismatch")
+            <b style="color:@(Model.PlateMatch ? "#34d399" : "#f87171")">
+                @(Model.PlateMatch ? "&#9989; Match" : "&#10060; Mismatch")
             </b>
         </div>
 
-        <div class="check-row">
-            <p>👤 Name from RC</p>
-            <b style="color:white;">@Model.ExtractedNameFromRC</b>
-        </div>
+        <div class="divider"></div>
 
         <div class="check-row">
-            <p>🪪 Name from DL</p>
-            <b style="color:white;">@Model.ExtractedNameFromDL</b>
+            <p>&#128100; Name from RC</p>
+            <b style="color:var(--text);">@Model.ExtractedNameFromRC</b>
         </div>
-
+        <div class="check-row">
+            <p>&#129514; Name from DL</p>
+            <b style="color:var(--text);">@Model.ExtractedNameFromDL</b>
+        </div>
         <div class="check-row">
             <p>Name Match</p>
-            <b style="color:@(Model.NameMatch ? "#28a745" : "#dc3545")">
-                @(Model.NameMatch ? "✅ Match" : "❌ Mismatch")
+            <b style="color:@(Model.NameMatch ? "#34d399" : "#f87171")">
+                @(Model.NameMatch ? "&#9989; Match" : "&#10060; Mismatch")
             </b>
         </div>
 
-        <!-- Result Message Box -->
-        <div style="
-            margin-top: 20px;
-            padding: 15px;
-            border-radius: 8px;
-            background: @(verified ? "rgba(40,167,69,0.15)" : "rgba(220,53,69,0.15)");
-            border: 1px solid @(verified ? "#28a745" : "#dc3545");">
-
+        <div class="result-box">
             @if (verified)
             {
-                <p style="color:#28a745; font-weight:bold; margin:0;">
-                    ✅ Both plate and name verified successfully!
-                </p>
-                <p style="color:#aaa; font-size:0.85rem; margin:5px 0 0 0;">
-                    You can now proceed to book this parking slot.
-                </p>
+                <p class="main-msg">&#9989; Both plate and name verified successfully!</p>
+                <p class="sub-msg">You can now proceed to book this parking slot.</p>
             }
             else if (!Model.PlateMatch && !Model.NameMatch)
             {
-                <p style="color:#dc3545; font-weight:bold; margin:0;">
-                    ❌ Both plate number and name did not match.
-                </p>
-                <p style="color:#aaa; font-size:0.85rem; margin:5px 0 0 0;">
-                    Please upload clear, valid RC, DL and vehicle photos.
-                </p>
+                <p class="main-msg">&#10060; Both plate number and name did not match.</p>
+                <p class="sub-msg">Please upload clear, valid RC, DL and vehicle photos.</p>
             }
             else if (!Model.PlateMatch)
             {
-                <p style="color:#dc3545; font-weight:bold; margin:0;">
-                    ⚠️ Vehicle plate number did not match.
-                </p>
-                <p style="color:#aaa; font-size:0.85rem; margin:5px 0 0 0;">
-                    Please upload a clearer vehicle photo showing the number plate.
-                </p>
+                <p class="main-msg">&#9888; Vehicle plate number did not match.</p>
+                <p class="sub-msg">Please upload a clearer vehicle photo showing the number plate.</p>
             }
             else if (!Model.NameMatch)
             {
-                <p style="color:#dc3545; font-weight:bold; margin:0;">
-                    ⚠️ Name on RC did not match Driving License.
-                </p>
-                <p style="color:#aaa; font-size:0.85rem; margin:5px 0 0 0;">
-                    Please upload clearer RC and DL photos.
-                </p>
+                <p class="main-msg">&#9888; Name on RC did not match Driving License.</p>
+                <p class="sub-msg">Please upload clearer RC and DL photos.</p>
             }
         </div>
 
-        <!-- Confirm Booking Button -->
         @if (verified)
         {
             <a href="/Parking/Book/@TempData["SlotId"]" class="btn-proceed">
-                ✅ Confirm Booking
+                &#9989; Confirm Booking
             </a>
         }
         else
         {
-            <button class="btn-disabled" disabled>
-                🔒 Confirm Booking
-            </button>
-            <a href="javascript:history.back()" class="btn-retry">
-                🔄 Re-upload Documents
-            </a>
+            <button class="btn-disabled" disabled>&#128274; Confirm Booking</button>
+            <a href="javascript:history.back()" class="btn-retry">&#8635; Re-upload Documents</a>
         }
-
     </div>
 </div>

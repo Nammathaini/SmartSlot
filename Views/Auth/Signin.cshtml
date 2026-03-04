@@ -7,122 +7,113 @@
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Sign In — SmartSlot</title>
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
         :root{
-            --green:#00e676;--blue:#2979ff;--red:#ff5252;
-            --dark:#080c10;--surface:#0d1117;
-            --card:rgba(255,255,255,0.04);--border:rgba(255,255,255,0.08);
+            --primary:#2563EB;--primary-dim:#1d4ed8;
+            --green:#10b981;--red:#ef4444;
+            --dark:#0F172A;--border:rgba(255,255,255,0.08);
+            --text:#f1f5f9;--text-dim:rgba(241,245,249,0.45);
         }
         html,body{height:100%;}
         body{
-            font-family:'DM Sans',sans-serif;
-            background:var(--dark);color:white;
+            font-family:'Inter',sans-serif;
+            background:linear-gradient(135deg,#0F172A 0%,#111827 55%,#1E293B 100%);
+            background-attachment:fixed;
+            color:var(--text);
             display:flex;align-items:center;justify-content:center;
-            min-height:100vh;padding:20px;
+            min-height:100vh;padding:20px;position:relative;overflow:hidden;
         }
-        .bg{
-            position:fixed;inset:0;z-index:0;
-            background:url('https://i.pinimg.com/1200x/ea/3f/92/ea3f92fcdab7799f742c813cdb651463.jpg') center/cover no-repeat;
+        body::before{
+            content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0.025;
+            background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            background-size:128px 128px;
         }
-        .bg::after{
-            content:'';position:absolute;inset:0;
-            background:linear-gradient(135deg,rgba(5,8,15,0.97),rgba(5,8,15,0.88),rgba(0,10,5,0.95));
-        }
-        .glow{
-            position:fixed;width:500px;height:500px;border-radius:50%;z-index:0;pointer-events:none;
-            background:radial-gradient(circle,rgba(41,121,255,0.07) 0%,transparent 70%);
-            top:-100px;right:-100px;
-        }
+        .orb{position:fixed;border-radius:50%;z-index:0;pointer-events:none;}
+        .orb1{width:700px;height:700px;background:radial-gradient(circle,rgba(37,99,235,0.08) 0%,transparent 65%);top:-200px;right:-150px;}
+        .orb2{width:500px;height:500px;background:radial-gradient(circle,rgba(16,185,129,0.05) 0%,transparent 65%);bottom:-100px;left:-100px;}
         .card{
-            position:relative;z-index:1;
-            width:100%;max-width:380px;
-            background:rgba(13,17,23,0.95);
-            border:1px solid var(--border);
-            border-radius:20px;padding:40px 36px;
-            animation:fadeUp 0.5s ease both;
+            position:relative;z-index:1;width:100%;max-width:400px;
+            background:rgba(30,41,59,0.65);
+            backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+            border:1px solid rgba(255,255,255,0.09);
+            border-radius:24px;padding:44px 40px;
+            box-shadow:0 24px 80px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.08);
+            animation:cardIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
         }
-        @@keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
-        .logo{
-            display:flex;align-items:center;gap:10px;
-            margin-bottom:32px;justify-content:center;
+        @@keyframes cardIn{from{opacity:0;transform:translateY(24px) scale(0.97);}to{opacity:1;transform:translateY(0) scale(1);}}
+        .logo{display:flex;align-items:center;gap:10px;margin-bottom:32px;justify-content:center;}
+        .logo-mark{width:38px;height:38px;background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;font-family:'Poppins',sans-serif;font-weight:700;font-size:19px;border-radius:11px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(37,99,235,0.4);filter:drop-shadow(0 0 6px rgba(59,130,246,0.4));}
+        .logo-text{font-family:'Poppins',sans-serif;font-size:22px;font-weight:800;}
+        .logo-text span{color:var(--primary);}
+        h2{font-family:'Poppins',sans-serif;font-size:26px;font-weight:700;margin-bottom:6px;text-align:center;animation:fadeUp 0.4s 0.1s ease both;}
+        .subtitle{font-size:13px;color:var(--text-dim);text-align:center;margin-bottom:30px;animation:fadeUp 0.4s 0.15s ease both;}
+        .alert{padding:11px 14px;border-radius:10px;font-size:13px;margin-bottom:18px;}
+        .alert-error{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#fca5a5;}
+        .alert-success{background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);color:#6ee7b7;}
+        .field{margin-bottom:16px;animation:fadeUp 0.4s ease both;}
+        .field:nth-child(1){animation-delay:0.2s;}
+        .field:nth-child(2){animation-delay:0.25s;}
+        .field label{display:block;font-size:10px;font-weight:600;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:7px;}
+
+        /* Password field with toggle */
+        .pw-wrap{position:relative;display:flex;align-items:center;}
+        .pw-wrap input{
+            width:100%;padding:13px 44px 13px 15px;
+            background:#1F2937;border:1px solid rgba(255,255,255,0.06);
+            border-radius:10px;color:var(--text);
+            font-family:'Inter',sans-serif;font-size:14px;
+            transition:border-color 0.2s,box-shadow 0.2s;outline:none;
         }
-        .logo-p{
-            width:36px;height:36px;background:var(--blue);
-            color:#000;font-family:'Syne',sans-serif;font-weight:800;font-size:18px;
-            border-radius:10px;display:flex;align-items:center;justify-content:center;
+        .pw-wrap input:focus{border-color:#3B82F6;box-shadow:0 0 0 3px rgba(59,130,246,0.2);}
+        .pw-wrap input::placeholder{color:var(--text-dim);}
+        .pw-toggle{
+            position:absolute;right:12px;
+            background:none;border:none;cursor:pointer;
+            color:var(--text-dim);padding:4px;
+            display:flex;align-items:center;justify-content:center;
+            transition:color 0.2s;
         }
-        .logo-text{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;}
-        .logo-text span{color:var(--blue);}
-        h2{
-            font-family:'Syne',sans-serif;font-size:24px;font-weight:800;
-            margin-bottom:6px;text-align:center;
+        .pw-toggle:hover{color:var(--text);}
+        .pw-toggle svg{width:18px;height:18px;pointer-events:none;}
+
+        /* Regular input (non-password) */
+        .field input:not(.pw-wrap input){
+            width:100%;padding:13px 15px;
+            background:#1F2937;border:1px solid rgba(255,255,255,0.06);
+            border-radius:10px;color:var(--text);
+            font-family:'Inter',sans-serif;font-size:14px;
+            transition:border-color 0.2s,box-shadow 0.2s;outline:none;
         }
-        .subtitle{font-size:13px;color:rgba(255,255,255,0.4);text-align:center;margin-bottom:28px;}
-        .alert{
-            padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:16px;
-        }
-        .alert-error{background:rgba(255,82,82,0.1);border:1px solid rgba(255,82,82,0.2);color:#ff8a80;}
-        .alert-success{background:rgba(0,230,118,0.08);border:1px solid rgba(0,230,118,0.2);color:var(--green);}
-        .field{position:relative;margin-bottom:14px;}
-        .field label{
-            display:block;font-size:11px;font-weight:600;
-            color:rgba(255,255,255,0.4);letter-spacing:0.8px;
-            text-transform:uppercase;margin-bottom:6px;
-        }
-        .field input{
-            width:100%;padding:12px 14px;
-            background:rgba(255,255,255,0.04);
-            border:1px solid var(--border);
-            border-radius:10px;color:white;
-            font-family:'DM Sans',sans-serif;font-size:14px;
-            transition:border-color 0.2s,background 0.2s;
-            outline:none;
-        }
-        .field input:focus{
-            border-color:var(--blue);
-            background:rgba(41,121,255,0.05);
-        }
-        .forgot{text-align:right;margin-top:6px;margin-bottom:4px;}
-        .forgot a{font-size:12px;color:rgba(255,255,255,0.35);text-decoration:none;transition:color 0.2s;}
-        .forgot a:hover{color:var(--blue);}
-        .btn-submit{
-            width:100%;padding:13px;margin-top:8px;
-            background:var(--blue);color:white;
-            border:none;border-radius:12px;
-            font-family:'Syne',sans-serif;font-size:15px;font-weight:700;
-            cursor:pointer;transition:all 0.2s;
-            box-shadow:0 4px 20px rgba(41,121,255,0.25);
-        }
-        .btn-submit:hover{background:#1565c0;transform:translateY(-1px);box-shadow:0 8px 28px rgba(41,121,255,0.35);}
+        .field input:not(.pw-wrap input):focus{border-color:#3B82F6;box-shadow:0 0 0 3px rgba(59,130,246,0.2);}
+        .field input:not(.pw-wrap input)::placeholder{color:var(--text-dim);}
+
+        .forgot{text-align:right;margin-top:7px;margin-bottom:6px;}
+        .forgot a{font-size:12px;color:var(--text-dim);text-decoration:none;transition:color 0.2s;}
+        .forgot a:hover{color:var(--primary);}
+        .btn-submit{width:100%;padding:14px;margin-top:10px;background:linear-gradient(90deg,#3B82F6,#2563EB);color:#fff;border:none;border-radius:12px;font-family:'Inter',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;box-shadow:0 6px 20px rgba(37,99,235,0.35);animation:fadeUp 0.4s 0.3s ease both;}
+        .btn-submit:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(37,99,235,0.45);}
         .btn-submit:active{transform:translateY(0);}
-        .switch{text-align:center;margin-top:22px;font-size:13px;color:rgba(255,255,255,0.4);}
+        .divider{height:1px;background:var(--border);margin:22px 0;}
+        .switch{text-align:center;font-size:13px;color:var(--text-dim);animation:fadeUp 0.4s 0.35s ease both;}
         .switch a{color:var(--green);text-decoration:none;font-weight:500;}
         .switch a:hover{text-decoration:underline;}
-        .divider{height:1px;background:var(--border);margin:20px 0;}
+        @@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
     </style>
 </head>
 <body>
-<div class="bg"></div>
-<div class="glow"></div>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
 <div class="card">
     <div class="logo">
-        <div class="logo-p">P</div>
+        <div class="logo-mark">P</div>
         <div class="logo-text">Smart<span>Slot</span></div>
     </div>
     <h2>Welcome back</h2>
     <p class="subtitle">Sign in to your account to continue</p>
-
-    @if (ViewBag.Error != null)
-    {
-        <div class="alert alert-error">⚠ @ViewBag.Error</div>
-    }
-    @if (TempData["Success"] != null)
-    {
-        <div class="alert alert-success">✓ @TempData["Success"]</div>
-    }
-
+    @if(ViewBag.Error!=null){<div class="alert alert-error">&#9888; @ViewBag.Error</div>}
+    @if(TempData["Success"]!=null){<div class="alert alert-success">&#10003; @TempData["Success"]</div>}
     <form method="post">
         <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl"/>
         <div class="field">
@@ -131,14 +122,35 @@
         </div>
         <div class="field">
             <label>Password</label>
-            <input type="password" name="password" placeholder="Enter your password" required autocomplete="current-password"/>
+            <div class="pw-wrap">
+                <input type="password" name="password" id="signinPassword" placeholder="Enter your password" required autocomplete="current-password"/>
+                <button type="button" class="pw-toggle" onclick="togglePw('signinPassword', this)" title="Show/hide password">
+                    <!-- Eye icon -->
+                    <svg id="signinPasswordIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                </button>
+            </div>
         </div>
         <div class="forgot"><a href="/Auth/ForgotPassword">Forgot password?</a></div>
-        <button type="submit" class="btn-submit">Sign In →</button>
+        <button type="submit" class="btn-submit">Sign In &#8594;</button>
     </form>
-
     <div class="divider"></div>
     <div class="switch">Don't have an account? <a href="/Auth/Signup">Create one</a></div>
 </div>
+<script>
+function togglePw(inputId, btn) {
+    var input = document.getElementById(inputId);
+    var isHidden = input.type === 'password';
+    input.type = isHidden ? 'text' : 'password';
+    // Swap icon: eye vs eye-off
+    btn.querySelector('svg').innerHTML = isHidden
+        ? '<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>'
+        : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+    btn.title = isHidden ? 'Hide password' : 'Show password';
+    btn.style.color = isHidden ? 'var(--text)' : 'var(--text-dim)';
+}
+</script>
 </body>
 </html>

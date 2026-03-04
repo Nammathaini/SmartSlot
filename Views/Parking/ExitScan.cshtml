@@ -1,0 +1,312 @@
+﻿@{
+    ViewData["Title"] = "Exit Scan — SmartSlot";
+    Layout = null;
+    var token = ViewBag.Token as string ?? "";
+    var bookingId = ViewBag.BookingId as int? ?? 0;
+    var customerEmail = ViewBag.CustomerEmail as string ?? "";
+    var error = ViewBag.Error as string ?? "";
+    var slotOwner = ViewBag.SlotOwner as string ?? "";
+    var bookingTo = ViewBag.BookingTo as string ?? "";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Exit Scan — SmartSlot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <style>
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+        :root{
+            --blue:#2563EB;--blue-light:#3B82F6;--green:#10b981;--red:#ef4444;
+            --surface:rgba(30,41,59,0.75);--border:rgba(255,255,255,0.08);
+            --text:#F1F5F9;--muted:#94A3B8;
+        }
+        body{
+            font-family:'Inter',sans-serif;
+            background:linear-gradient(135deg,#0F172A 0%,#111827 50%,#1E293B 100%);
+            min-height:100vh;color:var(--text);position:relative;
+            display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+            padding:36px 20px 60px;
+        }
+        body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opacity:0.025;
+            background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+        .page{position:relative;z-index:1;width:100%;max-width:400px;}
+        .logo{font-family:'Poppins',sans-serif;font-size:22px;font-weight:800;text-align:center;margin-bottom:4px;}
+        .logo span{color:#3B82F6;}
+        .subtitle{text-align:center;color:var(--muted);font-size:13px;margin-bottom:24px;}
+
+        /* Owner chip */
+        .owner-chip{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:20px;padding:10px 18px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:40px;font-size:13px;color:var(--muted);}
+        .owner-chip strong{color:var(--text);}
+
+        .card{background:var(--surface);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:20px;padding:24px;margin-bottom:14px;box-shadow:0 16px 50px rgba(0,0,0,0.3);}
+        .card-title{font-family:'Poppins',sans-serif;font-size:14px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;color:var(--text);}
+
+        /* Camera viewfinder */
+        .viewfinder-wrap{position:relative;width:100%;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:1/1;margin-bottom:12px;display:none;}
+        #cameraVideo{width:100%;height:100%;object-fit:cover;display:block;}
+        #cameraCanvas{display:none;}
+        .scan-line{position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#10b981,transparent);animation:scanMove 2s ease-in-out infinite;z-index:2;}
+        @@keyframes scanMove{0%{top:0%;}50%{top:95%;}100%{top:0%;}}
+        .viewfinder-corner{position:absolute;width:22px;height:22px;z-index:3;}
+        .viewfinder-corner.tl{top:10px;left:10px;border-top:3px solid #10b981;border-left:3px solid #10b981;border-radius:4px 0 0 0;}
+        .viewfinder-corner.tr{top:10px;right:10px;border-top:3px solid #10b981;border-right:3px solid #10b981;border-radius:0 4px 0 0;}
+        .viewfinder-corner.bl{bottom:10px;left:10px;border-bottom:3px solid #10b981;border-left:3px solid #10b981;border-radius:0 0 0 4px;}
+        .viewfinder-corner.br{bottom:10px;right:10px;border-bottom:3px solid #10b981;border-right:3px solid #10b981;border-radius:0 0 4px 0;}
+        #scanStatus{text-align:center;font-size:13px;color:var(--muted);padding:4px 0 10px;}
+
+        /* Buttons */
+        .btn{width:100%;padding:13px;border:none;border-radius:11px;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;}
+        .btn-primary{background:linear-gradient(90deg,#3B82F6,#2563EB);color:#fff;box-shadow:0 4px 14px rgba(37,99,235,0.35);}
+        .btn-primary:hover{transform:translateY(-1px);}
+        .btn-green{background:linear-gradient(90deg,#10b981,#059669);color:#fff;box-shadow:0 4px 14px rgba(16,185,129,0.3);}
+        .btn-green:hover{transform:translateY(-1px);}
+        .btn-outline{background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--text);}
+        .btn-outline:hover{background:rgba(255,255,255,0.08);}
+        .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none!important;}
+
+        .divider{display:flex;align-items:center;gap:10px;margin:4px 0 14px;}
+        .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
+        .divider span{font-size:12px;color:var(--muted);}
+
+        /* Upload area */
+        .upload-area{border:2px dashed rgba(255,255,255,0.1);border-radius:12px;padding:18px;text-align:center;cursor:pointer;transition:all 0.2s;background:rgba(255,255,255,0.02);}
+        .upload-area:hover{border-color:rgba(59,130,246,0.4);background:rgba(59,130,246,0.04);}
+        .upload-area p{font-size:12px;color:var(--muted);margin-top:6px;}
+
+        /* QR scanned → exit button section */
+        .exit-section{display:none;margin-top:14px;padding:20px;border-radius:14px;background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);text-align:center;}
+        .exit-section .scan-ok{font-size:36px;margin-bottom:10px;}
+        .exit-section h3{font-family:'Poppins',sans-serif;font-size:16px;font-weight:700;margin-bottom:6px;color:#10b981;}
+        .exit-section p{font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;}
+
+        /* Result states */
+        .result-box{display:none;padding:20px;border-radius:14px;text-align:center;margin-top:14px;}
+        .result-box.success{background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);}
+        .result-box.error{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);}
+        .result-icon{font-size:40px;margin-bottom:10px;}
+        .result-title{font-family:'Poppins',sans-serif;font-size:17px;font-weight:700;margin-bottom:6px;}
+        .result-sub{font-size:13px;color:var(--muted);}
+
+        /* Server error */
+        .server-error{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:12px;padding:14px;color:#fca5a5;font-size:13px;text-align:center;margin-bottom:16px;}
+
+        /* Info note */
+        .info-note{background:rgba(37,99,235,0.07);border:1px solid rgba(37,99,235,0.18);border-radius:10px;padding:12px 14px;font-size:12px;color:#93c5fd;line-height:1.7;}
+
+        .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.2);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:6px;}
+        @@keyframes spin{to{transform:rotate(360deg);}}
+    </style>
+</head>
+<body>
+<div class="page">
+    <div class="logo">🅿️ Smart<span>Slot</span></div>
+    <div class="subtitle">Exit Verification</div>
+
+    @if(!string.IsNullOrEmpty(error)){
+        <div class="server-error">⚠ @error</div>
+    }
+
+    @if(!string.IsNullOrEmpty(slotOwner)){
+        <div class="owner-chip">🅿️ <strong>@slotOwner</strong>'s slot @if(!string.IsNullOrEmpty(bookingTo)){ <span>· Ended @bookingTo</span> }</div>
+    }
+
+    <!-- SCAN CARD -->
+    <div class="card" id="scanCard">
+        <div class="card-title">📷 Scan QR with Camera</div>
+
+        <div class="viewfinder-wrap" id="viewfinderWrap">
+            <video id="cameraVideo" playsinline autoplay muted></video>
+            <canvas id="cameraCanvas"></canvas>
+            <div class="scan-line"></div>
+            <div class="viewfinder-corner tl"></div>
+            <div class="viewfinder-corner tr"></div>
+            <div class="viewfinder-corner bl"></div>
+            <div class="viewfinder-corner br"></div>
+        </div>
+        <div id="scanStatus"></div>
+
+        <button class="btn btn-primary" id="startCameraBtn" onclick="startCamera()">📷 Open Camera to Scan</button>
+        <button class="btn btn-outline" id="stopCameraBtn" onclick="stopCamera()" style="display:none;">⛔ Stop Camera</button>
+
+        <div class="divider"><span>or</span></div>
+
+        <div class="card-title">🖼 Upload QR Image</div>
+        <div class="upload-area" onclick="document.getElementById('qrUpload').click()">
+            <div style="font-size:28px;">📁</div>
+            <p>Tap to upload QR code image from your device</p>
+            <input type="file" id="qrUpload" accept="image/*" style="display:none;" onchange="uploadQR(this)"/>
+        </div>
+
+        <!-- EXIT BUTTON — shows after QR decoded, before confirm -->
+        <div class="exit-section" id="exitSection">
+            <div class="scan-ok">✅</div>
+            <h3>QR Scanned!</h3>
+            <p>QR code verified. Tap the button below to officially confirm your exit and free the slot.</p>
+            <button class="btn btn-green" id="exitBtn" onclick="confirmExit()">🚗 Confirm Exit</button>
+        </div>
+
+        <!-- RESULT -->
+        <div class="result-box" id="resultBox">
+            <div class="result-icon" id="resultIcon"></div>
+            <div class="result-title" id="resultTitle"></div>
+            <div class="result-sub" id="resultSub"></div>
+        </div>
+    </div>
+
+    <div class="info-note">
+        ℹ️ <strong>Your link is personal.</strong> This scan link is tied to your booking only — no one else can use it. After scanning the QR, tap <strong>Confirm Exit</strong> to release the slot. If exit is not confirmed within 15 minutes of booking end, a ₹20/hr penalty applies.
+    </div>
+</div>
+
+<script>
+// Values injected from server — used to validate this is the right customer
+var validToken = '@token';
+var validBookingId = @bookingId;
+var validEmail = '@customerEmail';
+
+var stream = null;
+var scanInterval = null;
+var scanned = false;
+var scannedToken = null;
+
+function startCamera(){
+    document.getElementById('viewfinderWrap').style.display='block';
+    document.getElementById('startCameraBtn').style.display='none';
+    document.getElementById('stopCameraBtn').style.display='block';
+    document.getElementById('scanStatus').innerText='🔍 Scanning for QR code...';
+    navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})
+    .then(function(s){
+        stream=s;
+        var video=document.getElementById('cameraVideo');
+        video.srcObject=s;
+        video.play();
+        scanInterval=setInterval(scanFrame,300);
+    })
+    .catch(function(){
+        document.getElementById('scanStatus').innerText='❌ Camera access denied. Please use upload instead.';
+        document.getElementById('viewfinderWrap').style.display='none';
+        document.getElementById('startCameraBtn').style.display='block';
+        document.getElementById('stopCameraBtn').style.display='none';
+    });
+}
+
+function stopCamera(){
+    if(stream) stream.getTracks().forEach(t=>t.stop());
+    clearInterval(scanInterval);
+    document.getElementById('viewfinderWrap').style.display='none';
+    document.getElementById('startCameraBtn').style.display='block';
+    document.getElementById('stopCameraBtn').style.display='none';
+    document.getElementById('scanStatus').innerText='';
+}
+
+function scanFrame(){
+    if(scanned) return;
+    var video=document.getElementById('cameraVideo');
+    var canvas=document.getElementById('cameraCanvas');
+    if(video.readyState!==video.HAVE_ENOUGH_DATA) return;
+    canvas.width=video.videoWidth;
+    canvas.height=video.videoHeight;
+    var ctx=canvas.getContext('2d');
+    ctx.drawImage(video,0,0,canvas.width,canvas.height);
+    var imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
+    var code=jsQR(imageData.data,imageData.width,imageData.height);
+    if(code){
+        scanned=true;
+        stopCamera();
+        processQRData(code.data);
+    }
+}
+
+function uploadQR(input){
+    var file=input.files[0]; if(!file) return;
+    var reader=new FileReader();
+    reader.onload=function(e){
+        var img=new Image();
+        img.onload=function(){
+            var canvas=document.createElement('canvas');
+            canvas.width=img.width; canvas.height=img.height;
+            var ctx=canvas.getContext('2d');
+            ctx.drawImage(img,0,0);
+            var imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
+            var code=jsQR(imageData.data,imageData.width,imageData.height);
+            if(code){ processQRData(code.data); }
+            else { showResult(false,'❌ No QR Found','Could not read a QR code from this image. Try a clearer photo.'); }
+        };
+        img.src=e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function processQRData(url){
+    // Extract token from scanned QR URL
+    var match = url.match(/[?&]token=([^&]+)/);
+    if(!match){
+        showResult(false,'❌ Invalid QR','This is not a valid SmartSlot exit QR code.');
+        return;
+    }
+    var token = match[1];
+
+    // ── CRITICAL: Check token matches THIS customer's link ──
+    if(token !== validToken){
+        showResult(false,'❌ Invalid QR for You','This QR code does not match your booking. Only the customer who received this link can scan this slot\'s QR.');
+        return;
+    }
+
+    // Token matches — store and show exit button
+    scannedToken = token;
+    document.getElementById('exitSection').style.display='block';
+    document.getElementById('scanStatus').innerText='';
+}
+
+function confirmExit(){
+    if(!scannedToken){
+        showResult(false,'❌ Error','Please scan the QR code first.');
+        return;
+    }
+
+    var btn = document.getElementById('exitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Confirming...';
+
+    fetch('/Parking/ConfirmExit', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+            token: scannedToken,
+            bookingId: validBookingId,
+            customerEmail: validEmail
+        })
+    })
+    .then(r=>r.json())
+    .then(function(data){
+        document.getElementById('exitSection').style.display='none';
+        if(data.success){
+            showResult(true,'✅ Exit Confirmed!', data.message || 'Your exit has been recorded. The slot is now free. Safe journey!');
+            setTimeout(function(){ window.location.href='/Parking/ExitSuccess'; }, 2200);
+        } else {
+            showResult(false,'❌ Exit Failed', data.message || 'Could not confirm exit. Please try again.');
+            btn.disabled=false;
+            btn.innerHTML='🚗 Confirm Exit';
+        }
+    })
+    .catch(function(){
+        showResult(false,'❌ Network Error','Check your connection and try again.');
+        btn.disabled=false;
+        btn.innerHTML='🚗 Confirm Exit';
+    });
+}
+
+function showResult(success, title, sub){
+    var box=document.getElementById('resultBox');
+    box.className='result-box '+(success?'success':'error');
+    box.style.display='block';
+    document.getElementById('resultIcon').innerText=success?'✅':'❌';
+    document.getElementById('resultTitle').innerText=title;
+    document.getElementById('resultSub').innerText=sub;
+}
+</script>
+</body>
+</html>

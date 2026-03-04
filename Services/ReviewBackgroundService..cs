@@ -30,7 +30,9 @@ namespace SmartSlot.Services
                         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                         var emailService = scope.ServiceProvider.GetRequiredService<EmailService>();
 
-                        // 1️⃣ Bookings that still need 1-hour alert (separate query)
+                        // ══════════════════════════════════════════════
+                        // 1️⃣  1-HOUR ALERT EMAIL
+                        // ══════════════════════════════════════════════
                         var alertPending = context.Bookings
                             .Where(b => !b.OneHourAlertSent)
                             .ToList();
@@ -39,9 +41,7 @@ namespace SmartSlot.Services
 
                         foreach (var booking in alertPending)
                         {
-                            // ✅ FIXED: was AddHours(-30) → now AddHours(-1)
                             var alertTime = booking.BookingTo.AddHours(-1);
-
                             Console.WriteLine($"🔎 Booking {booking.Id} — BookingTo: {booking.BookingTo}, AlertTime: {alertTime}, istNow: {istNow}");
 
                             if (istNow >= alertTime && istNow < booking.BookingTo)
@@ -66,7 +66,9 @@ namespace SmartSlot.Services
                             }
                         }
 
-                        // 2️⃣ FIXED: Separate query for review emails - no longer blocked by alert flag
+                        // ══════════════════════════════════════════════
+                        // 2️⃣  REVIEW EMAIL (after booking ends)
+                        // ══════════════════════════════════════════════
                         var reviewPending = context.Bookings
                             .Where(b => !b.ReviewSmsSent && b.BookingTo <= istNow)
                             .ToList();
@@ -93,7 +95,124 @@ namespace SmartSlot.Services
                             }
                         }
 
-                        // ── Slot availability notifications ──
+                        // ══════════════════════════════════════════════
+                        // 3️⃣  EXIT SCAN EMAIL (QR Exit slots only)
+                        //     Fires when booking ends + exit not confirmed
+                        //     Link = token + bid so only the right customer can use it
+                        // ══════════════════════════════════════════════
+                        var exitScanPending = context.Bookings
+                            .Where(b =>
+                                !b.ExitScanAlertSent &&
+                                !b.ExitConfirmed &&
+                                b.BookingTo <= istNow)
+                            .ToList();
+
+                        Console.WriteLine($"📦 Bookings pending exit scan email: {exitScanPending.Count}");
+
+                        foreach (var booking in exitScanPending)
+                        {
+                            try
+                            {
+                                var slot = context.ParkingSlots
+                                    .FirstOrDefault(s => s.Id == booking.ParkingSlotId);
+
+                                // Skip non-QR slots, mark done so we don't retry
+                                if (slot == null || slot.ExitMethod != "QR" || string.IsNullOrEmpty(slot.QrToken))
+                                {
+                                    booking.ExitScanAlertSent = true;
+                                    context.Bookings.Update(booking);
+                                    await context.SaveChangesAsync();
+                                    Console.WriteLine($"⏭ Booking {booking.Id} — not a QR slot, skip.");
+                                    continue;
+                                }
+
+                                if (string.IsNullOrEmpty(booking.CustomerEmail))
+                                {
+                                    booking.ExitScanAlertSent = true;
+                                    context.Bookings.Update(booking);
+                                    await context.SaveChangesAsync();
+                                    Console.WriteLine($"⚠ Booking {booking.Id} — no email, skip.");
+                                    continue;
+                                }
+
+                                // Include bid in link so ExitScan page can verify the customer
+                                var scanLink = $"https://smartslot-fkc6.onrender.com/Parking/ExitScan?token={slot.QrToken}&bid={booking.Id}";
+
+                                await emailService.SendExitScanEmail(
+                                    toEmail: booking.CustomerEmail,
+                                    customerName: booking.CustomerName,
+                                    bookingTo: booking.BookingTo,
+                                    scanLink: scanLink,
+                                    bookingId: booking.Id
+                                );
+
+                                booking.ExitScanAlertSent = true;
+                                context.Bookings.Update(booking);
+                                await context.SaveChangesAsync();
+                                Console.WriteLine($"📨 Exit scan EMAIL sent for Booking {booking.Id} → {booking.CustomerEmail}");
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"❌ Exit Scan Email Error for Booking {booking.Id}: {ex.Message}");
+                            }
+                        }
+
+                        // ══════════════════════════════════════════════
+                        // 4️⃣  PENALTY CHECK — 15 min grace period
+                        //     (changed from 30 min to 15 min)
+                        // ══════════════════════════════════════════════
+                        var penaltyPending = context.Bookings
+                            .Where(b =>
+                                !b.ExitConfirmed &&
+                                !b.PenaltyApplied &&
+                                b.BookingTo <= istNow.AddMinutes(-15))  // ← 15 min grace
+                            .ToList();
+
+                        Console.WriteLine($"📦 Bookings pending penalty check: {penaltyPending.Count}");
+
+                        foreach (var booking in penaltyPending)
+                        {
+                            try
+                            {
+                                var slot = context.ParkingSlots
+                                    .FirstOrDefault(s => s.Id == booking.ParkingSlotId);
+
+                                // Only penalise QR Exit slots
+                                if (slot == null || slot.ExitMethod != "QR")
+                                {
+                                    booking.PenaltyApplied = true;
+                                    context.Bookings.Update(booking);
+                                    await context.SaveChangesAsync();
+                                    continue;
+                                }
+
+                                booking.PenaltyApplied = true;
+                                context.Bookings.Update(booking);
+                                await context.SaveChangesAsync();
+
+                                Console.WriteLine($"⚠ Penalty applied for Booking {booking.Id} — exit not confirmed 15 mins after BookingTo.");
+
+                                if (!string.IsNullOrEmpty(booking.CustomerEmail))
+                                {
+                                    await emailService.SendPenaltyEmail(
+                                        toEmail: booking.CustomerEmail,
+                                        customerName: booking.CustomerName,
+                                        bookingTo: booking.BookingTo,
+                                        bookingId: booking.Id,
+                                        slotOwner: slot.OwnerName
+                                    );
+                                    Console.WriteLine($"📨 Penalty EMAIL sent for Booking {booking.Id}");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"❌ Penalty Check Error for Booking {booking.Id}: {ex.Message}");
+                            }
+                        }
+
+                        // ══════════════════════════════════════════════
+                        // 5️⃣  SLOT AVAILABILITY NOTIFICATIONS
+                        // ══════════════════════════════════════════════
                         var pendingNotifications = context.SlotNotifyRequests
                             .Where(n => !n.NotificationSent)
                             .ToList();
@@ -113,7 +232,8 @@ namespace SmartSlot.Services
                                     b.ParkingSlotId == notify.ParkingSlotId &&
                                     b.Id != notify.BookingId &&
                                     b.BookingFrom <= istNow &&
-                                    b.BookingTo > istNow)
+                                    b.BookingTo > istNow &&
+                                    !b.ExitConfirmed)
                                 .FirstOrDefault();
 
                             if (newActiveBooking != null)

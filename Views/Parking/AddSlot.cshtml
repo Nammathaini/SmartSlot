@@ -1,502 +1,248 @@
 ﻿@{
     ViewData["Title"] = "Add Parking Slot";
+    Layout = "_Layout";
 }
-
 <style>
-    body {
-        background-image: url('https://i.pinimg.com/1200x/ea/3f/92/ea3f92fcdab7799f742c813cdb651463.jpg');
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-        background-color: #000 !important;
-        color: white !important;
-        margin: 0;
-        padding: 0;
+    @@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+    *,*::before,*::after{box-sizing:border-box;}
+    :root{
+        --primary:#2563EB;--primary-dim:#1d4ed8;--green:#10b981;--green-dim:#059669;
+        --dark:#0F172A;--surface:rgba(20,30,48,0.72);--border:rgba(255,255,255,0.08);
+        --text:#f1f5f9;--text-dim:rgba(241,245,249,0.45);
     }
+    /* No body background — _Layout handles the parking photo + blue overlay */
+    .page-wrap{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:40px 20px 60px;}
+    .page-title{font-family:'Poppins',sans-serif;font-size:24px;font-weight:700;margin-bottom:28px;text-align:center;color:#f1f5f9;}
+    .loc-section{width:100%;max-width:480px;margin-bottom:16px;}
+    .loc-label{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px;}
+    .btn-location{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;margin-bottom:10px;background:linear-gradient(90deg,#10b981,#059669);color:#fff;border:none;border-radius:11px;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;box-shadow:0 6px 16px rgba(16,185,129,0.3);}
+    .btn-location:hover{transform:translateY(-1px);}
+    .search-row{display:flex;gap:8px;}
+    .search-row input{flex:1;padding:11px 14px;background:rgba(15,23,42,0.7);border:1px solid rgba(255,255,255,0.06);border-radius:10px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;transition:border-color 0.2s;}
+    .search-row input:focus{border-color:#3B82F6;}
+    .search-row input::placeholder{color:var(--text-dim);}
+    .search-btn{padding:11px 16px;background:rgba(37,99,235,0.12);border:1px solid rgba(37,99,235,0.2);border-radius:10px;color:#93c5fd;font-size:15px;cursor:pointer;transition:all 0.2s;}
+    .status-text{font-size:12px;color:var(--text-dim);text-align:center;margin-top:8px;}
+    .form-card{background:var(--surface);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.09);border-radius:20px;padding:32px;width:100%;max-width:480px;box-shadow:0 16px 60px rgba(0,0,0,0.35);}
+    .field{margin-bottom:16px;}
+    .field label{display:block;font-size:10px;font-weight:600;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:7px;}
+    .field input,.field select{width:100%;padding:12px 14px;background:rgba(15,23,42,0.7);border:1px solid rgba(255,255,255,0.06);border-radius:10px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;transition:border-color 0.2s;}
+    .field input:focus,.field select:focus{border-color:#3B82F6;}
+    .field input::placeholder{color:var(--text-dim);}
+    .field select option{background:#1e293b;}
+    .upload-box{border:2px dashed rgba(255,255,255,0.1);border-radius:12px;padding:20px;text-align:center;margin-top:4px;background:rgba(255,255,255,0.02);cursor:pointer;transition:all 0.2s;}
+    .upload-box:hover{border-color:rgba(16,185,129,0.4);background:rgba(16,185,129,0.03);}
+    .upload-icon{font-size:32px;margin-bottom:8px;}
+    .upload-text{font-size:13px;color:var(--text-dim);}
+    .upload-sub{font-size:11px;color:var(--text-dim);opacity:0.6;margin-top:4px;}
 
-    body::before {
-        content: '';
-        position: fixed;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        background: rgba(0, 0, 0, 0.78);
-        z-index: 0;
-    }
+    /* UPI QR Upload */
+    .upi-qr-upload-box{border:2px dashed rgba(139,92,246,0.3);border-radius:12px;padding:20px;text-align:center;margin-top:4px;background:rgba(139,92,246,0.04);cursor:pointer;transition:all 0.2s;}
+    .upi-qr-upload-box:hover{border-color:rgba(139,92,246,0.6);background:rgba(139,92,246,0.08);}
 
-    .navbar {
-        background-color: #111 !important;
-        position: relative;
-        z-index: 2;
-    }
+    /* QR icon in upload box */
+    .upi-qr-svg-icon{display:flex;justify-content:center;margin-bottom:10px;}
+    .upi-qr-svg-icon svg{width:44px;height:44px;opacity:0.75;}
 
-    .navbar-brand { color: white !important; }
+    .upi-qr-preview{display:none;margin-top:12px;text-align:center;}
+    .upi-qr-preview img{width:140px;height:140px;object-fit:contain;border-radius:10px;border:2px solid rgba(139,92,246,0.3);background:white;padding:6px;}
+    .upi-qr-preview-label{font-size:11px;color:#a78bfa;margin-top:6px;font-weight:600;}
+    .upi-hint{font-size:11px;color:#a78bfa;margin-top:8px;padding:8px 12px;background:rgba(139,92,246,0.08);border-radius:8px;border:1px solid rgba(139,92,246,0.15);}
 
-    .page-wrapper {
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 40px 20px;
-        position: relative;
-        z-index: 1;
-    }
-
-    h2 {
-        color: white;
-        text-align: center;
-        margin-bottom: 30px;
-        font-size: 2rem;
-        letter-spacing: 1px;
-    }
-
-    .form-card {
-        background-color: rgba(26, 26, 26, 0.9);
-        border: 1px solid #333;
-        border-radius: 12px;
-        padding: 40px;
-        width: 100%;
-        max-width: 480px;
-        position: relative;
-        z-index: 1;
-    }
-
-    .form-card label {
-        color: #ccc;
-        display: block;
-        margin-top: 15px;
-        margin-bottom: 5px;
-        font-size: 0.9rem;
-    }
-
-    .form-card input,
-    .form-card select {
-        width: 100%;
-        padding: 10px;
-        border-radius: 6px;
-        border: 1px solid #444;
-        background-color: #2a2a2a;
-        color: white;
-        font-size: 1rem;
-        box-sizing: border-box;
-    }
-
-    .location-section {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 20px;
-        width: 100%;
-        max-width: 480px;
-        position: relative;
-        z-index: 1;
-    }
-
-    .btn-location {
-        padding: 10px 20px;
-        background-color: #28a745;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 1rem;
-        width: 100%;
-    }
-
-    .search-row {
-        display: flex;
-        gap: 8px;
-        width: 100%;
-    }
-
-    .search-row input {
-        flex: 1;
-        padding: 10px;
-        border-radius: 6px;
-        border: 1px solid #444;
-        background-color: #2a2a2a;
-        color: white;
-        font-size: 1rem;
-    }
-
-    .search-row button {
-        padding: 10px 15px;
-        background-color: #007bff;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 1rem;
-    }
-
-    .status-text {
-        color: #aaa;
-        font-size: 0.85rem;
-        text-align: center;
-    }
-
-    .btn-submit {
-        width: 100%;
-        padding: 12px;
-        margin-top: 25px;
-        background-color: #28a745;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        font-size: 1.1rem;
-        cursor: pointer;
-        font-weight: bold;
-    }
-
-    .btn-submit:hover { background-color: #218838; }
-
-    .upload-box {
-        border: 2px dashed #444;
-        border-radius: 8px;
-        padding: 15px;
-        text-align: center;
-        margin-top: 15px;
-        background: rgba(0,0,0,0.3);
-        cursor: pointer;
-    }
-
-    .upload-box:hover { border-color: #28a745; }
-
-    .upload-box p {
-        color: #aaa;
-        font-size: 0.8rem;
-        margin: 5px 0 0 0;
-    }
-
-    .ai-score-box {
-        display: none;
-        margin-top: 15px;
-        padding: 15px;
-        border-radius: 8px;
-        text-align: center;
-        border: 1px solid #444;
-        background: rgba(0,0,0,0.4);
-    }
-
-    .badge-pill {
-        display: inline-block;
-        padding: 10px 28px;
-        border-radius: 30px;
-        font-size: 1.3rem;
-        font-weight: bold;
-        margin-bottom: 12px;
-        letter-spacing: 1px;
-    }
-
-    .analyzing-box {
-        display: none;
-        text-align: center;
-        padding: 15px;
-        color: #aaa;
-        font-size: 0.9rem;
-    }
-
-    .score-row {
-        background: rgba(255,255,255,0.05);
-        border-radius: 6px;
-        padding: 10px 14px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-    }
-
-    .score-label { color: white; font-size: 0.9rem; }
-    .score-value { font-weight: bold; font-size: 0.9rem; }
+    .analyzing-box{display:none;text-align:center;padding:16px;color:var(--text-dim);font-size:13px;}
+    .analyzing-spinner{display:inline-block;width:20px;height:20px;border:2px solid rgba(255,255,255,0.1);border-top-color:#3B82F6;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:8px;}
+    .ai-score-box{display:none;margin-top:16px;padding:24px 18px;border-radius:14px;text-align:center;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);}
+    .badge-pill{display:inline-block;padding:10px 28px;border-radius:30px;font-family:'Poppins',sans-serif;font-size:15px;font-weight:700;margin-bottom:10px;}
+    .badge-sub{font-size:13px;color:var(--text-dim);margin-bottom:12px;}
+    .btn-submit{width:100%;padding:14px;margin-top:10px;background:linear-gradient(90deg,#10b981,#059669);color:#fff;border:none;border-radius:12px;font-family:'Inter',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;box-shadow:0 6px 20px rgba(16,185,129,0.3);}
+    .btn-submit:hover{transform:translateY(-2px);}
+    @@keyframes spin{to{transform:rotate(360deg);}}
+    @@keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
 </style>
 
-<div class="page-wrapper">
-    <h2>🅿️ Add Your Parking Slot</h2>
+<div class="page-wrap">
+    <h2 class="page-title">&#8617; Add Your Parking Slot</h2>
 
-    <div class="location-section">
-        <button type="button" class="btn-location" onclick="getLocation()">📍 Use My Live Location</button>
-        <p id="locationStatus" class="status-text">Please fetch your location using one of the options below.</p>
-
+    <div class="loc-section">
+        <div class="loc-label">Your Location</div>
+        <button type="button" class="btn-location" onclick="getLocation()">&#128205; Use My Live Location</button>
+        <p id="locationStatus" class="status-text">Please fetch your location first.</p>
         <div class="search-row">
-            <input type="text" id="addressInput" placeholder="Search your area / address" />
-            <button type="button" onclick="searchAddress()">🔍</button>
+            <input type="text" id="addressInput" placeholder="Or search area / address..."/>
+            <button type="button" class="search-btn" onclick="searchAddress()">&#128269;</button>
         </div>
         <p id="addressStatus" class="status-text"></p>
     </div>
 
     <div class="form-card">
         <form method="post" action="/Parking/AddSlot" id="slotForm" enctype="multipart/form-data">
-            <input type="hidden" name="Latitude" id="latField" />
-            <input type="hidden" name="Longitude" id="lonField" />
-            <input type="hidden" name="ParkingScore" id="parkingScoreField" value="0" />
-            <input type="hidden" name="ParkingBadge" id="parkingBadgeField" value="" />
-            <input type="hidden" name="ParkingScoreDetails" id="parkingDetailsField" value="" />
+            <input type="hidden" name="Latitude" id="latField"/>
+            <input type="hidden" name="Longitude" id="lonField"/>
+            <input type="hidden" name="ParkingScore" id="parkingScoreField" value="0"/>
+            <input type="hidden" name="ParkingBadge" id="parkingBadgeField" value=""/>
+            <input type="hidden" name="ParkingScoreDetails" id="parkingDetailsField" value=""/>
+            <input type="hidden" name="ExitMethod" value="QR"/>
 
-            <label>Owner Name</label>
-            <input type="text" name="OwnerName" required />
-
-            <label>📞 Phone Number</label>
-            <input type="tel" name="OwnerPhone"
-                   placeholder="Enter your phone number"
-                   maxlength="10"
-                   pattern="[0-9]{10}"
-                   title="Enter 10 digit phone number"
-                   required />
-
-            <label>Price Per Hour (₹)</label>
-            <input type="number" name="PricePerHour" required />
-
-            <label>Available From</label>
-            <input type="datetime-local" name="AvailableFrom" required />
-
-            <label>Available To</label>
-            <input type="datetime-local" name="AvailableTo" required />
-
-            <label>Vehicle Type</label>
-            <select name="VehicleType">
-                <option>Bike</option>
-                <option>Car</option>
-                <option>Both</option>
-            </select>
-
-            <label>Payment Preference</label>
-            <select name="PaymentMode" id="paymentMode" onchange="toggleUpi()">
-                <option value="Cash">cash payment only </option>
-                <option value="UPI">UPI</option>
-            </select>
-
-            <div id="upiSection" style="display:none;">
-                <label>Your UPI ID</label>
-                <input type="text" name="OwnerUpiId" id="ownerUpiId" placeholder="example@upi" />
-                <p id="upiStatus" class="status-text"></p>
+            <div class="field"><label>Owner Name</label><input type="text" name="OwnerName" placeholder="Your full name" required/></div>
+            <div class="field"><label>Phone Number</label><input type="tel" name="OwnerPhone" placeholder="10-digit number" maxlength="10" pattern="[0-9]{10}" required/></div>
+            <div class="field"><label>Price Per Hour (Rs.)</label><input type="number" name="PricePerHour" placeholder="e.g. 30" required/></div>
+            <div class="field"><label>Available From</label><input type="datetime-local" name="AvailableFrom" required/></div>
+            <div class="field"><label>Available To</label><input type="datetime-local" name="AvailableTo" required/></div>
+            <div class="field"><label>Vehicle Type</label>
+                <select name="VehicleType"><option>Bike</option><option>Car</option><option>Both</option></select>
+            </div>
+            <div class="field"><label>Payment Mode</label>
+                <select name="PaymentMode" id="paymentMode" onchange="toggleUpi()">
+                    <option value="Cash">Cash Only</option>
+                    <option value="UPI">UPI</option>
+                    <option value="Both">Both (Cash &amp; UPI)</option>
+                </select>
             </div>
 
-            <label>📸 Parking Slot Photo</label>
-            <div class="upload-box" onclick="document.getElementById('parkingImage').click()">
-                <p style="font-size:2rem;">📷</p>
-                <p>Click to upload your parking slot photo</p>
-                <p>Our AI will analyze and score your parking!</p>
-                <input type="file" id="parkingImage" name="parkingImage"
-                       accept="image/*" style="display:none;"
-                       onchange="analyzeParking(this)" />
+            <div id="upiSection" style="display:none;">
+                <div class="field">
+                    <label>Your UPI ID (optional)</label>
+                    <input type="text" name="OwnerUpiId" id="ownerUpiId" placeholder="example@upi"/>
+                </div>
+                <div class="field">
+                    <label>Upload Your UPI QR Code</label>
+                    <div class="upi-qr-upload-box" onclick="document.getElementById('upiQrFile').click()">
+                        <!-- SVG QR icon instead of crown emoji -->
+                        <div class="upi-qr-svg-icon">
+                            <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="4" y="4" width="24" height="24" rx="3" stroke="#a78bfa" stroke-width="2.5"/>
+                                <rect x="11" y="11" width="10" height="10" fill="#a78bfa" rx="1"/>
+                                <rect x="36" y="4" width="24" height="24" rx="3" stroke="#a78bfa" stroke-width="2.5"/>
+                                <rect x="43" y="11" width="10" height="10" fill="#a78bfa" rx="1"/>
+                                <rect x="4" y="36" width="24" height="24" rx="3" stroke="#a78bfa" stroke-width="2.5"/>
+                                <rect x="11" y="43" width="10" height="10" fill="#a78bfa" rx="1"/>
+                                <rect x="36" y="36" width="7" height="7" fill="#a78bfa" rx="1"/>
+                                <rect x="47" y="36" width="7" height="7" fill="#a78bfa" rx="1"/>
+                                <rect x="36" y="47" width="7" height="7" fill="#a78bfa" rx="1"/>
+                                <rect x="47" y="47" width="7" height="7" fill="#a78bfa" rx="1"/>
+                                <rect x="41" y="41" width="7" height="7" fill="#a78bfa" rx="1" opacity="0.5"/>
+                            </svg>
+                        </div>
+                        <div class="upload-text" style="color:#c4b5fd;font-weight:600;">Tap to upload your UPI QR image</div>
+                        <div class="upload-sub">Customer will scan this to pay you directly</div>
+                        <input type="file" id="upiQrFile" name="upiQrImage" accept="image/*" style="display:none;" onchange="previewUpiQr(this)"/>
+                    </div>
+                    <div class="upi-qr-preview" id="upiQrPreview">
+                        <img id="upiQrPreviewImg" src="" alt="UPI QR Preview"/>
+                        <div class="upi-qr-preview-label">&#10003; QR uploaded &#8212; customers will scan this to pay</div>
+                    </div>
+                    <div class="upi-hint">&#128161; Open GPay/PhonePe/Paytm, go to your QR code, screenshot it and upload here</div>
+                </div>
+            </div>
+
+            <div class="field">
+                <label>&#128247; Parking Slot Photo</label>
+                <div class="upload-box" onclick="document.getElementById('parkingImage').click()">
+                    <div class="upload-icon">&#128247;</div>
+                    <div class="upload-text">Click to upload parking photo</div>
+                    <div class="upload-sub">Our AI will analyze and score your slot</div>
+                    <input type="file" id="parkingImage" name="parkingImage" accept="image/*" style="display:none;" onchange="analyzeParking(this)"/>
+                </div>
             </div>
 
             <div class="analyzing-box" id="analyzingBox">
-                <p>🤖 AI is analyzing your parking slot...</p>
-                <p>Please wait...</p>
+                <span class="analyzing-spinner"></span> AI is analyzing your parking slot...
             </div>
-
-            <!-- AI Score Result -->
             <div class="ai-score-box" id="aiScoreBox">
-
-                <!-- Badge Pill -->
                 <div class="badge-pill" id="badgePill"></div>
-
-                <!-- Sub label -->
-                <div id="badgeSubText"
-                     style="font-size:0.85rem; color:#aaa; margin-bottom:15px;">
-                </div>
-
-                <!-- Score Breakdown -->
-                <div id="scoreBreakdown" style="width:100%; text-align:left;"></div>
-
-                <!-- Preview Image -->
-                <img id="previewImage" src="" alt="Parking Preview"
-                     style="width:100%; border-radius:8px; margin-top:12px; display:none;" />
+                <div class="badge-sub" id="badgeSubText"></div>
+                <img id="previewImage" src="" alt="" style="width:100%;border-radius:10px;margin-top:4px;display:none;"/>
             </div>
 
-            <button type="submit" class="btn-submit" onclick="return validateLocation()">
-                ➕ Add Slot
-            </button>
+            <button type="submit" class="btn-submit" onclick="return validateLocation()">&#10133; Add Slot</button>
         </form>
     </div>
 </div>
 
 <script>
-    function getLocation() {
-        if (navigator.geolocation) {
-            document.getElementById("locationStatus").innerText = "Fetching location...";
-            navigator.geolocation.getCurrentPosition(
-                function (position) {
-                    setLocation(position.coords.latitude, position.coords.longitude);
-                    document.getElementById("locationStatus").innerText = "✅ Live location fetched!";
-                },
-                function () {
-                    document.getElementById("locationStatus").innerText = "❌ Permission denied.";
-                }
-            );
-        }
+function getLocation(){
+    if(!navigator.geolocation){document.getElementById("locationStatus").innerText="Not supported";return;}
+    document.getElementById("locationStatus").innerText="Fetching...";
+    navigator.geolocation.getCurrentPosition(function(p){
+        setLocation(p.coords.latitude,p.coords.longitude);
+        document.getElementById("locationStatus").innerText="Live location fetched!";
+    },function(){document.getElementById("locationStatus").innerText="Permission denied.";});
+}
+function searchAddress(){
+    var address=document.getElementById("addressInput").value.trim();
+    if(!address){document.getElementById("addressStatus").innerText="Please enter an address.";return;}
+    document.getElementById("addressStatus").innerText="Searching...";
+    fetch("https://nominatim.openstreetmap.org/search?q="+encodeURIComponent(address)+"&format=json&limit=1")
+    .then(r=>r.json()).then(function(data){
+        if(!data.length){document.getElementById("addressStatus").innerText="Not found.";setLocation("","");}
+        else{setLocation(data[0].lat,data[0].lon);document.getElementById("addressStatus").innerText="Found: "+data[0].display_name;}
+    }).catch(function(){document.getElementById("addressStatus").innerText="Error. Try again.";});
+}
+function setLocation(lat,lon){document.getElementById("latField").value=lat;document.getElementById("lonField").value=lon;}
+
+function toggleUpi(){
+    var mode=document.getElementById("paymentMode").value;
+    var show=(mode==="UPI"||mode==="Both");
+    document.getElementById("upiSection").style.display=show?"block":"none";
+    if(!show){document.getElementById("ownerUpiId").value="";document.getElementById("upiQrFile").value="";document.getElementById("upiQrPreview").style.display="none";}
+}
+
+function previewUpiQr(input){
+    var file=input.files[0];if(!file)return;
+    var reader=new FileReader();
+    reader.onload=function(e){
+        document.getElementById("upiQrPreviewImg").src=e.target.result;
+        document.getElementById("upiQrPreview").style.display="block";
+    };
+    reader.readAsDataURL(file);
+}
+
+function getBadgeInfo(score){
+    if(score>=80)return{label:"Premium",color:"#FFD700",dark:true,sub:"Excellent parking slot!"};
+    if(score>=70)return{label:"Gold",color:"#C0C0C0",dark:true,sub:"Very good parking slot!"};
+    if(score>=50)return{label:"Silver",color:"#CD7F32",dark:false,sub:"Good parking slot"};
+    if(score>=35)return{label:"Basic",color:"#10b981",dark:false,sub:"Basic parking slot"};
+    return{label:"Poor",color:"#ef4444",dark:false,sub:"Not recommended"};
+}
+function validateLocation(){
+    if(!document.getElementById("latField").value){alert("Please set your location first!");return false;}
+    if(!document.getElementById("parkingImage").files.length){alert("Please upload a parking photo!");return false;}
+    if(parseInt(document.getElementById("parkingScoreField").value)<35){alert("Score too low. Upload a clearer photo of your parking area.");return false;}
+    var mode=document.getElementById("paymentMode").value;
+    if((mode==="UPI"||mode==="Both")&&!document.getElementById("upiQrFile").files.length){
+        alert("Please upload your UPI QR code image!");return false;
     }
-
-    function searchAddress() {
-        var address = document.getElementById("addressInput").value.trim();
-        if (!address) {
-            document.getElementById("addressStatus").innerText = "⚠️ Please enter an address.";
-            return;
-        }
-        document.getElementById("addressStatus").innerText = "Searching...";
-        fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.length === 0) {
-                    document.getElementById("addressStatus").innerText = "❌ No related area found.";
-                    setLocation("", "");
-                } else {
-                    setLocation(data[0].lat, data[0].lon);
-                    document.getElementById("addressStatus").innerText = `✅ Found: ${data[0].display_name}`;
-                }
-            })
-            .catch(() => {
-                document.getElementById("addressStatus").innerText = "❌ Error searching. Try again.";
-            });
-    }
-
-    function setLocation(lat, lon) {
-        document.getElementById("latField").value = lat;
-        document.getElementById("lonField").value = lon;
-    }
-
-    function getBadgeInfo(score) {
-        if (score >= 80) return { label: "🥇 Premium", color: "#FFD700", sub: "Excellent parking slot!" };
-        if (score >= 70) return { label: "🥈 Gold",    color: "#C0C0C0", sub: "Very good parking slot!" };
-        if (score >= 50) return { label: "🥉 Silver",  color: "#CD7F32", sub: "Good parking slot" };
-        if (score >= 30) return { label: "🏠 Basic",   color: "#28a745", sub: "Basic parking slot" };
-        return              { label: "❌ Poor",        color: "#dc3545", sub: "Not recommended" };
-    }
-
-    function validateLocation() {
-        var lat = document.getElementById("latField").value;
-        if (!lat) {
-            alert("⚠️ Please use live location or enter a valid address first!");
-            return false;
-        }
-
-        var imageSelected = document.getElementById("parkingImage").files.length > 0;
-        if (!imageSelected) {
-            alert("⚠️ Please upload a parking slot photo first!");
-            return false;
-        }
-
-        var score = parseInt(document.getElementById("parkingScoreField").value);
-        if (score < 40) {
-            alert("❌ Your parking slot score is too low to list! Please upload a better quality parking photo.");
-            return false;
-        }
-
-        return true;
-    }
-
-    function toggleUpi() {
-        var mode = document.getElementById("paymentMode").value;
-        if (mode === "UPI") {
-            document.getElementById("upiSection").style.display = "block";
-        } else {
-            document.getElementById("upiSection").style.display = "none";
-            document.getElementById("ownerUpiId").value = "";
-        }
-    }
-
-       function analyzeParking(input) {
-        var file = input.files[0];
-        if (!file) return;
-
-        var reader = new FileReader();
-        reader.onload = function (e) {
-            document.getElementById("previewImage").src = e.target.result;
-            document.getElementById("previewImage").style.display = "block";
-        };
-        reader.readAsDataURL(file);
-
-        document.getElementById("analyzingBox").style.display = "block";
-        document.getElementById("aiScoreBox").style.display = "none";
-
-        var formData = new FormData();
-        formData.append("image", file);
-
-        fetch("/Parking/AnalyzeParking", {
-            method: "POST",
-            body: formData
-        })
-        .then(async response => {
-
-            if (!response.ok) {
-                const text = await response.text();
-                throw new Error("Server Error: " + text);
-            }
-
-            return response.json();
-        })
-        .then(data => {
-
-            console.log("AI Response:", data);
-
-            document.getElementById("analyzingBox").style.display = "none";
-            document.getElementById("aiScoreBox").style.display = "block";
-
-            if (!data || data.score === undefined) {
-                throw new Error("Invalid response from server");
-            }
-
-            var score = data.score;
-            var badge = data.badge;
-            var details = data.details || "";
-
-            var info = getBadgeInfo(score);
-
-            document.getElementById("badgePill").innerText = info.label;
-            document.getElementById("badgePill").style.background = info.color;
-            document.getElementById("badgePill").style.color =
-                score >= 70 ? "#000" : "white";
-
-            document.getElementById("badgeSubText").innerText = info.sub;
-            document.getElementById("aiScoreBox").style.borderColor = info.color;
-
-            var lines = details.split("|").filter(l => l.trim() !== "");
-            var breakdownHtml = "";
-
-            lines.forEach(function (line) {
-
-                var parts = line.split(":");
-                var labelPart = parts[0].trim();
-                var percent = parts[1] ? parts[1].trim() : "";
-
-                var boxColor = "#28a745";
-                if (labelPart.includes("Outdoor")) boxColor = "#ffc107";
-                if (labelPart.includes("Basic")) boxColor = "#17a2b8";
-                if (labelPart.includes("❌")) boxColor = "#dc3545";
-
-                breakdownHtml += `
-                <div class="score-row" style="border-left:4px solid ${boxColor};">
-                    <span class="score-label">${labelPart}</span>
-                    <span class="score-value" style="color:${boxColor};">${percent}</span>
-                </div>`;
-            });
-
-            document.getElementById("scoreBreakdown").innerHTML = breakdownHtml;
-
-            document.getElementById("parkingScoreField").value = score;
-            document.getElementById("parkingBadgeField").value = badge;
-            document.getElementById("parkingDetailsField").value = details;
-        })
-        .catch(error => {
-
-            console.error("Analyze Error:", error);
-
-            document.getElementById("analyzingBox").style.display = "none";
-            document.getElementById("aiScoreBox").style.display = "block";
-
-            document.getElementById("badgePill").innerText = "❌ Failed";
-            document.getElementById("badgePill").style.background = "#dc3545";
-            document.getElementById("badgePill").style.color = "white";
-
-            document.getElementById("badgeSubText").innerText =
-                "Could not analyze image";
-
-            document.getElementById("scoreBreakdown").innerHTML =
-                `<div class="score-row" style="border-left:4px solid #dc3545;">
-                    <span class="score-label">${error.message}</span>
-                </div>`;
-        });
-    }
+    return true;
+}
+function analyzeParking(input){
+    var file=input.files[0];if(!file)return;
+    var reader=new FileReader();
+    reader.onload=function(e){document.getElementById("previewImage").src=e.target.result;document.getElementById("previewImage").style.display="block";};
+    reader.readAsDataURL(file);
+    document.getElementById("analyzingBox").style.display="block";
+    document.getElementById("aiScoreBox").style.display="none";
+    var formData=new FormData();formData.append("image",file);
+    fetch("/Parking/AnalyzeParking",{method:"POST",body:formData})
+    .then(async r=>{if(!r.ok)throw new Error("Server Error: "+(await r.text()));return r.json();})
+    .then(function(data){
+        document.getElementById("analyzingBox").style.display="none";
+        document.getElementById("aiScoreBox").style.display="block";
+        if(!data||data.score===undefined)throw new Error("Invalid response");
+        var info=getBadgeInfo(data.score);
+        var pill=document.getElementById("badgePill");
+        pill.innerText=info.label;pill.style.background=info.color;pill.style.color=info.dark?"#000":"#fff";
+        document.getElementById("badgeSubText").innerText=info.sub;
+        document.getElementById("aiScoreBox").style.borderColor=info.color+"44";
+        document.getElementById("parkingScoreField").value=data.score;
+        document.getElementById("parkingBadgeField").value=data.badge;
+        document.getElementById("parkingDetailsField").value=data.details;
+    })
+    .catch(function(){
+        document.getElementById("analyzingBox").style.display="none";
+        document.getElementById("aiScoreBox").style.display="block";
+        var pill=document.getElementById("badgePill");
+        pill.innerText="Analysis Failed";pill.style.background="#ef4444";pill.style.color="#fff";
+        document.getElementById("badgeSubText").innerText="Could not analyze image. Please try again.";
+    });
+}
 </script>

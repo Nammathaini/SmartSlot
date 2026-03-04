@@ -1,175 +1,102 @@
 ﻿@{
     ViewData["Title"] = "Vehicle Verification";
+    Layout = "_Layout";
 }
 
 <style>
-    body {
-        background-image: url('https://i.pinimg.com/1200x/ea/3f/92/ea3f92fcdab7799f742c813cdb651463.jpg');
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-        background-color: #000 !important;
-        color: white !important;
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+        --blue:#2563EB;--blue-light:#3B82F6;--green:#10b981;
+        --glass:rgba(20,30,48,0.72);--border:rgba(255,255,255,0.09);
+        --text:#F1F5F9;--muted:#94A3B8;
     }
-
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.80);
-            z-index: 0;
-        }
-
-    .navbar {
-        background-color: #111 !important;
-        position: relative;
-        z-index: 2;
+    .main{
+        position:relative;z-index:1;
+        min-height:100vh;
+        display:flex;flex-direction:column;
+        align-items:center;justify-content:center;
+        padding:40px 20px;
     }
-
-    .page-wrapper {
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 40px 20px;
-        position: relative;
-        z-index: 1;
+    .verify-card{
+        background:var(--glass);
+        backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+        border:1px solid var(--border);
+        border-radius:20px;padding:36px;
+        width:100%;max-width:520px;
+        box-shadow:0 20px 60px rgba(0,0,0,0.4);
+        animation:fadeUp 0.45s ease both;
     }
+    @@keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
 
-    .card {
-        background-color: rgba(26, 26, 26, 0.95);
-        border: 1px solid #333;
-        border-radius: 12px;
-        padding: 35px;
-        width: 100%;
-        max-width: 520px;
+    .card-title{
+        font-family:'Poppins',sans-serif;font-weight:700;font-size:1.3rem;
+        color:var(--text);text-align:center;margin-bottom:6px;
     }
+    .card-sub{color:var(--muted);text-align:center;font-size:0.85rem;margin-bottom:24px;}
 
-    h2 {
-        color: white;
-        text-align: center;
-        margin-bottom: 25px;
+    /* Steps */
+    .steps{display:flex;justify-content:space-between;margin-bottom:28px;gap:8px;}
+    .step{text-align:center;flex:1;}
+    .step-num{
+        width:32px;height:32px;
+        background:linear-gradient(135deg,var(--blue-light),var(--blue));
+        border-radius:50%;display:inline-flex;
+        align-items:center;justify-content:center;
+        font-weight:700;font-size:0.85rem;color:#fff;
+        margin-bottom:6px;
+        box-shadow:0 4px 12px rgba(37,99,235,0.35);
     }
+    .step p{color:var(--muted);font-size:0.72rem;margin:0;}
 
-    .upload-box {
-        border: 2px dashed #444;
-        border-radius: 8px;
-        padding: 20px;
-        text-align: center;
-        margin-bottom: 20px;
-        background: rgba(0,0,0,0.3);
+    /* Upload boxes */
+    .upload-box{
+        border:2px dashed rgba(255,255,255,0.1);
+        border-radius:12px;padding:18px;
+        text-align:center;margin-bottom:14px;
+        background:rgba(15,23,42,0.45);
+        transition:border-color 0.2s,background 0.2s;
     }
-
-        .upload-box label {
-            color: #28a745;
-            font-weight: bold;
-            font-size: 1rem;
-            display: block;
-            margin-bottom: 10px;
-        }
-
-        .upload-box input[type="file"] {
-            color: #ccc;
-            width: 100%;
-        }
-
-        .upload-box p {
-            color: #aaa;
-            font-size: 0.8rem;
-            margin-top: 8px;
-        }
-
-    .btn-verify {
-        width: 100%;
-        padding: 14px;
-        background: linear-gradient(135deg, #28a745, #007bff);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 1.1rem;
-        font-weight: bold;
-        cursor: pointer;
-        margin-top: 10px;
+    .upload-box:hover{border-color:rgba(59,130,246,0.35);background:rgba(37,99,235,0.05);}
+    .upload-box label{
+        color:var(--green);font-weight:700;
+        font-size:0.9rem;display:block;margin-bottom:10px;cursor:pointer;
     }
-
-        .btn-verify:hover {
-            opacity: 0.9;
-        }
-
-    .steps {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 25px;
+    .upload-box input[type="file"]{
+        color:var(--muted);width:100%;
+        font-size:0.8rem;cursor:pointer;
     }
-
-    .step {
-        text-align: center;
-        flex: 1;
-        padding: 8px;
+    .upload-box input[type="file"]::file-selector-button{
+        background:rgba(37,99,235,0.15);
+        border:1px solid rgba(37,99,235,0.3);
+        color:var(--blue-light);
+        border-radius:6px;padding:5px 12px;
+        font-size:0.78rem;cursor:pointer;
+        margin-right:10px;transition:all 0.2s;
     }
-
-    .step-num {
-        width: 30px;
-        height: 30px;
-        background: #28a745;
-        border-radius: 50%;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        margin-bottom: 5px;
+    .upload-box input[type="file"]::file-selector-button:hover{
+        background:rgba(37,99,235,0.25);
     }
+    .upload-hint{color:var(--muted);font-size:0.75rem;margin-top:7px;margin-bottom:0;}
+    .upload-status{font-size:0.78rem;margin-top:5px;min-height:18px;}
 
-    .step p {
-        color: #aaa;
-        font-size: 0.75rem;
-        margin: 0;
+    .btn-verify{
+        width:100%;padding:14px;
+        background:linear-gradient(90deg,var(--blue-light),var(--blue));
+        color:#fff;border:none;border-radius:12px;
+        font-size:1rem;font-weight:700;cursor:pointer;
+        margin-top:6px;
+        box-shadow:0 6px 20px rgba(37,99,235,0.35);
+        transition:all 0.2s;
+        display:flex;align-items:center;justify-content:center;gap:8px;
     }
-    <script>
-function validateDocument(input, docType) {
-    var file = input.files[0];
-    if (!file) return;
-
-    var validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-    var maxSize = 5 * 1024 * 1024; // 5MB
-
-    if (!validTypes.includes(file.type)) {
-        alert("❌ Wrong file type! Please upload a JPG or PNG image for " + docType);
-        input.value = "";
-        return;
-    }
-
-    if (file.size > maxSize) {
-        alert("❌ File too large! Please upload image under 5MB for " + docType);
-        input.value = "";
-        return;
-    }
-
-    if (file.size < 5000) {
-        alert("⚠️ Image too small! This may not be a valid " + docType + " photo. Please upload a clear photo.");
-        input.value = "";
-        return;
-    }
-
-    // Show green confirmation
-    var statusId = docType === 'RC Book' ? 'rcStatus' :
-                   docType === 'Driving License' ? 'dlStatus' : 'vehicleStatus';
-    document.getElementById(statusId).innerHTML =
-        '<span style="color:#28a745;">✅ ' + file.name + ' selected</span>';
-}
-</script>
+    .btn-verify:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(37,99,235,0.45);}
+    .divider{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);margin:18px 0;}
 </style>
 
-<div class="page-wrapper">
-    <div class="card">
-        <h2>🔐 Vehicle Verification</h2>
-        <p style="color:#aaa; text-align:center; margin-bottom:20px;">
-            Upload your documents to verify your vehicle before booking
-        </p>
+<div class="main">
+    <div class="verify-card">
+        <div class="card-title">&#128274; Vehicle Verification</div>
+        <div class="card-sub">Upload your documents to verify your vehicle before booking</div>
 
         <!-- Steps -->
         <div class="steps">
@@ -191,33 +118,65 @@ function validateDocument(input, docType) {
             <input type="hidden" name="slotId" value="@ViewBag.SlotId" />
 
             <div class="upload-box">
-                <label>📄 RC Book Photo</label>
+                <label>&#128196; RC Book Photo</label>
                 <input type="file" name="rcImage" accept="image/*" required
-                       onchange="validateDocument(this, 'RC Book')" />
-                <p id="rcStatus" style="font-size:0.8rem; margin-top:5px;"></p>
-                <p>⚠️ Number plate and owner name must be clearly visible</p>
+                       onchange="validateDocument(this, 'RC Book', 'rcStatus')" />
+                <p id="rcStatus" class="upload-status"></p>
+                <p class="upload-hint">&#9888; Number plate and owner name must be clearly visible</p>
             </div>
 
             <div class="upload-box">
-                <label>🪪 Driving License Photo</label>
+                <label>&#129514; Driving License Photo</label>
                 <input type="file" name="dlImage" accept="image/*" required
-                       onchange="validateDocument(this, 'Driving License')" />
-                <p id="dlStatus" style="font-size:0.8rem; margin-top:5px;"></p>
-                <p>⚠️ Your name must be clearly visible</p>
+                       onchange="validateDocument(this, 'Driving License', 'dlStatus')" />
+                <p id="dlStatus" class="upload-status"></p>
+                <p class="upload-hint">&#9888; Your name must be clearly visible</p>
             </div>
 
             <div class="upload-box">
-                <label>🚗 Vehicle Photo (Number Plate Visible)</label>
+                <label>&#128664; Vehicle Photo (Number Plate Visible)</label>
                 <input type="file" name="vehicleImage" accept="image/*" required
-                       onchange="validateDocument(this, 'Vehicle Photo')" />
-                <p id="vehicleStatus" style="font-size:0.8rem; margin-top:5px;"></p>
-                <p>⚠️ Take clear photo showing full number plate</p>
+                       onchange="validateDocument(this, 'Vehicle Photo', 'vehicleStatus')" />
+                <p id="vehicleStatus" class="upload-status"></p>
+                <p class="upload-hint">&#9888; Take a clear photo showing the full number plate</p>
             </div>
+
+            <div class="divider"></div>
 
             <button type="submit" class="btn-verify">
-                🔍 Verify My Vehicle
+                &#128269; Verify My Vehicle
             </button>
         </form>
-        
     </div>
 </div>
+
+<script>
+function validateDocument(input, docType, statusId) {
+    var file = input.files[0];
+    var statusEl = document.getElementById(statusId);
+    if (!file) return;
+
+    var validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    var maxSize = 5 * 1024 * 1024;
+
+    if (!validTypes.includes(file.type)) {
+        alert("Wrong file type! Please upload a JPG or PNG image for " + docType);
+        input.value = "";
+        statusEl.innerHTML = '<span style="color:#f87171;">&#10060; Invalid file type</span>';
+        return;
+    }
+    if (file.size > maxSize) {
+        alert("File too large! Please upload image under 5MB for " + docType);
+        input.value = "";
+        statusEl.innerHTML = '<span style="color:#f87171;">&#10060; File too large</span>';
+        return;
+    }
+    if (file.size < 5000) {
+        alert("Image too small! This may not be a valid " + docType + " photo.");
+        input.value = "";
+        statusEl.innerHTML = '<span style="color:#fbbf24;">&#9888; Image too small</span>';
+        return;
+    }
+    statusEl.innerHTML = '<span style="color:#34d399;">&#9989; ' + file.name + ' selected</span>';
+}
+</script>

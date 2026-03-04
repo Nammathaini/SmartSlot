@@ -1,140 +1,107 @@
 ﻿@{
     ViewData["Title"] = "Booking Confirmed";
+    Layout = "_Layout";
+    var paymentMode = ViewBag.PaymentMode as string ?? "";
+    var ownerUpiId  = ViewBag.OwnerUpiId as string ?? "";
+    var ownerName   = ViewBag.OwnerName as string ?? "Slot Owner";
+    var totalAmount = ViewBag.TotalAmount as double? ?? 0;
+    var isUpi = paymentMode.ToLower().Contains("upi") && !string.IsNullOrEmpty(ownerUpiId);
 }
-
 <style>
-    @@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap');
-
-    body{
-        background:#080c10!important;color:white!important;
-        font-family:'DM Sans',sans-serif;
-    }
-    body::before{
-        content:'';position:fixed;inset:0;
-        background:url('/images/parking-bg.jpg') center/cover no-repeat;
-        z-index:0;
-    }
-    body::after{
-        content:'';position:fixed;inset:0;
-        background:linear-gradient(135deg,rgba(5,8,15,0.97),rgba(5,8,15,0.90));
-        z-index:0;
-    }
-    .page-wrapper{
-        position:relative;z-index:1;
-        min-height:100vh;display:flex;
-        align-items:center;justify-content:center;
-        padding:40px 20px;
-    }
-    .success-card{
-        background:rgba(13,17,23,0.98);
-        border:1px solid rgba(0,230,118,0.2);
-        border-radius:24px;padding:52px 44px;
+    @@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+    :root{--primary:#2563EB;--green:#10b981;--border:rgba(255,255,255,0.08);--text:#f1f5f9;--text-dim:rgba(241,245,249,0.45);}
+    /* No body background — _Layout handles the parking photo + blue overlay */
+    .orb{position:fixed;border-radius:50%;z-index:0;pointer-events:none;background:radial-gradient(circle,rgba(37,99,235,0.08) 0%,transparent 65%);width:600px;height:600px;top:-150px;right:-100px;}
+    .page-wrap{position:relative;z-index:1;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 20px;}
+    .card{
+        background:rgba(20,30,48,0.78);
+        backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+        border:1px solid rgba(255,255,255,0.09);
+        border-radius:24px;padding:56px 48px;
         max-width:460px;width:100%;text-align:center;
-        box-shadow:0 0 60px rgba(0,230,118,0.08);
-        animation:cardIn 0.5s ease both;
+        box-shadow:0 24px 80px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.08);
+        animation:cardIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
     }
-    @@keyframes cardIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
-
-    /* Animated checkmark circle */
-    .check-wrap{
-        width:80px;height:80px;
-        background:rgba(0,230,118,0.1);
-        border:2px solid rgba(0,230,118,0.3);
-        border-radius:50%;
-        display:flex;align-items:center;justify-content:center;
-        margin:0 auto 28px;
-        animation:popIn 0.5s 0.2s ease both;
-    }
-    @@keyframes popIn{
-        0%{transform:scale(0);opacity:0;}
-        70%{transform:scale(1.15);}
-        100%{transform:scale(1);opacity:1;}
-    }
-    .check-wrap svg{width:40px;height:40px;}
-    .check-path{
-        stroke:#00e676;stroke-width:3;
-        fill:none;stroke-linecap:round;stroke-linejoin:round;
-        stroke-dasharray:50;stroke-dashoffset:50;
-        animation:drawCheck 0.4s 0.5s ease forwards;
-    }
+    @@keyframes cardIn{from{opacity:0;transform:translateY(24px) scale(0.97);}to{opacity:1;transform:translateY(0) scale(1);}}
+    .check-outer{position:relative;display:inline-block;margin-bottom:32px;}
+    .pulse-ring{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(16,185,129,0.25);animation:pulseRing 1.8s 0.8s ease-out infinite;}
+    @@keyframes pulseRing{0%{transform:scale(1);opacity:0.6;}100%{transform:scale(1.9);opacity:0;}}
+    .check-wrap{width:84px;height:84px;background:rgba(16,185,129,0.1);border:2px solid rgba(16,185,129,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;animation:popIn 0.5s 0.2s cubic-bezier(0.34,1.56,0.64,1) both;}
+    @@keyframes popIn{0%{transform:scale(0);opacity:0;}70%{transform:scale(1.12);}100%{transform:scale(1);opacity:1;}}
+    .check-wrap svg{width:42px;height:42px;}
+    .check-path{stroke:#10b981;stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:50;stroke-dashoffset:50;animation:drawCheck 0.45s 0.55s ease forwards;}
     @@keyframes drawCheck{to{stroke-dashoffset:0;}}
+    h2{font-family:'Poppins',sans-serif;font-size:28px;font-weight:700;margin-bottom:10px;animation:fadeUp 0.5s 0.4s ease both;color:var(--text);}
+    .sub{font-size:14px;color:var(--text-dim);line-height:1.75;margin-bottom:24px;animation:fadeUp 0.5s 0.5s ease both;}
+    .error-box{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);padding:14px;border-radius:10px;margin-bottom:20px;text-align:left;}
+    .error-box p{color:#fca5a5;font-size:13px;word-break:break-all;}
 
-    .pulse-ring{
-        position:absolute;
-        width:80px;height:80px;border-radius:50%;
-        border:2px solid rgba(0,230,118,0.2);
-        animation:pulse 1.5s 0.8s ease-out infinite;
-    }
-    @@keyframes pulse{
-        0%{transform:scale(1);opacity:0.6;}
-        100%{transform:scale(1.7);opacity:0;}
-    }
+    .upi-box{background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);border-radius:14px;padding:18px 20px;margin-bottom:20px;text-align:left;animation:fadeUp 0.5s 0.55s ease both;}
+    .upi-box-title{font-size:13px;font-weight:600;color:#a78bfa;margin-bottom:10px;}
+    .upi-id{font-size:14px;font-weight:700;color:var(--text);background:rgba(15,23,42,0.5);padding:8px 13px;border-radius:8px;border:1px solid rgba(139,92,246,0.2);margin-bottom:8px;word-break:break-all;}
+    .upi-amount-line{font-size:12px;color:rgba(148,163,184,0.7);margin-bottom:12px;}
+    .btn-upi{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;border:none;border-radius:10px;cursor:pointer;background:linear-gradient(90deg,#7C3AED,#6D28D9);color:#fff;font-family:'Inter',sans-serif;font-weight:600;font-size:14px;text-decoration:none;transition:all 0.2s;}
+    .btn-upi:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(109,40,217,0.35);color:#fff;}
+    .upi-note{font-size:11px;color:rgba(148,163,184,0.4);margin-top:7px;text-align:center;}
 
-    h2{
-        font-family:'Syne',sans-serif;font-size:26px;font-weight:800;
-        color:white;margin-bottom:10px;
-        animation:fadeUp 0.5s 0.4s ease both;
-    }
-    .sub{
-        font-size:14px;color:rgba(255,255,255,0.45);
-        line-height:1.7;margin-bottom:32px;
-        animation:fadeUp 0.5s 0.5s ease both;
-    }
+    .actions{display:flex;flex-direction:column;gap:12px;animation:fadeUp 0.5s 0.6s ease both;}
+    .btn-primary{display:flex;align-items:center;justify-content:center;gap:8px;padding:15px;background:linear-gradient(90deg,#3B82F6,#2563EB);color:#fff;border-radius:13px;text-decoration:none;font-family:'Inter',sans-serif;font-size:15px;font-weight:600;transition:all 0.2s;box-shadow:0 6px 20px rgba(37,99,235,0.35);}
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(37,99,235,0.45);color:#fff;}
+    .btn-secondary{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:rgba(255,255,255,0.05);color:var(--text-dim);border:1px solid var(--border);border-radius:13px;text-decoration:none;font-family:'Inter',sans-serif;font-size:14px;font-weight:500;transition:all 0.2s;}
+    .btn-secondary:hover{background:rgba(255,255,255,0.09);color:var(--text);}
     @@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
-
-    .actions{
-        display:flex;flex-direction:column;gap:10px;
-        animation:fadeUp 0.5s 0.6s ease both;
-    }
-    .btn-primary{
-        display:flex;align-items:center;justify-content:center;gap:8px;
-        padding:14px 24px;
-        background:#00e676;color:#000;
-        border-radius:12px;text-decoration:none;
-        font-family:'Syne',sans-serif;font-size:15px;font-weight:700;
-        transition:all 0.2s;
-        box-shadow:0 4px 20px rgba(0,230,118,0.2);
-    }
-    .btn-primary:hover{background:#00c853;transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,230,118,0.3);color:#000;}
-    .btn-secondary{
-        display:flex;align-items:center;justify-content:center;gap:8px;
-        padding:13px 24px;
-        background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.6);
-        border:1px solid rgba(255,255,255,0.08);
-        border-radius:12px;text-decoration:none;
-        font-size:14px;font-weight:500;
-        transition:all 0.2s;
-    }
-    .btn-secondary:hover{background:rgba(255,255,255,0.08);color:white;border-color:rgba(255,255,255,0.15);}
 </style>
 
-<div class="page-wrapper">
-    <div class="success-card">
-        <div style="position:relative;display:inline-block;margin-bottom:28px;">
+<div class="orb"></div>
+<div class="page-wrap">
+    <div class="card">
+        <div class="check-outer">
             <div class="pulse-ring"></div>
             <div class="check-wrap">
-                <svg viewBox="0 0 52 52">
-                    <polyline class="check-path" points="14,26 22,34 38,18"/>
-                </svg>
+                <svg viewBox="0 0 52 52"><polyline class="check-path" points="14,26 22,34 38,18"/></svg>
             </div>
         </div>
-
         <h2>Booking Confirmed!</h2>
-        <p class="sub">
-            Your parking slot has been successfully booked.<br/>
-            A confirmation email has been sent to you.
-        </p>
+        <p class="sub">Your parking slot has been successfully booked.<br/>A confirmation email has been sent to you.</p>
 
-        @if (TempData["Error"] != null)
+        @if (TempData["Error"] != null) {
+            <div class="error-box"><p>@TempData["Error"]</p></div>
+        }
+
+        @if (isUpi)
         {
-            <div style="background:rgba(255,82,82,0.08);border:1px solid rgba(255,82,82,0.2);padding:14px;border-radius:10px;margin-bottom:20px;text-align:left;">
-                <p style="color:#ff8a80;font-size:13px;word-break:break-all;">@TempData["Error"]</p>
+            <div class="upi-box">
+                <div class="upi-box-title">&#128179; Complete Your Payment via UPI</div>
+                <div class="upi-id">@ownerUpiId</div>
+                @if (totalAmount > 0)
+                {
+                    <div class="upi-amount-line">Amount: &#8377;@totalAmount to @ownerName</div>
+                }
+                <a href="#" class="btn-upi" onclick="return openUpi()">
+                    &#128242; Pay via UPI App (GPay / Paytm / PhonePe&#8230;)
+                </a>
+                <div class="upi-note">Opens your UPI app to pay directly to the slot owner</div>
             </div>
         }
 
         <div class="actions">
-            <a href="/Parking/Search" class="btn-primary">🔍 Find More Parking</a>
-            <a href="/Parking/Dashboard" class="btn-secondary">📊 Go to Dashboard</a>
+            <a href="/Parking/Search" class="btn-primary">&#128269; Find More Parking</a>
+            <a href="/Parking/Dashboard" class="btn-secondary">&#128202; Go to Dashboard</a>
         </div>
     </div>
 </div>
+
+@if (isUpi)
+{
+    <script>
+    function openUpi() {
+        var upiId  = '@ownerUpiId';
+        var amount = '@(totalAmount > 0 ? totalAmount.ToString() : "")';
+        var name   = encodeURIComponent('@ownerName');
+        var note   = encodeURIComponent('SmartSlot Parking Payment');
+        var link   = 'upi://pay?pa=' + encodeURIComponent(upiId) + '&pn=' + name + '&tn=' + note + (amount ? '&am=' + amount : '') + '&cu=INR';
+        window.location.href = link;
+        return false;
+    }
+    </script>
+}

@@ -1,377 +1,187 @@
 ﻿@{
     ViewData["Title"] = "Book Parking Slot";
+    Layout = "_Layout";
     var slot = ViewBag.Slot as SmartSlot.Models.ParkingSlot;
-    var bookedRanges = ViewBag.BookedRanges as List<dynamic>;
-    bool isExtension = ViewBag.ExtensionMode != null && (bool)ViewBag.ExtensionMode;
-    DateTime? extensionStart = ViewBag.ExtensionStart as DateTime?;
-    string extensionStartStr = extensionStart != null ? extensionStart.Value.ToString("yyyy-MM-ddTHH:mm") : "";
+    var isExtension = ViewBag.ExtensionMode as bool? ?? false;
+    var existingBookingId = ViewBag.ExistingBookingId as int?;
+    var extensionStart = ViewBag.ExtensionStart != null
+        ? ((DateTime)ViewBag.ExtensionStart).ToString("yyyy-MM-ddTHH:mm")
+        : "";
+    var istNow = ViewBag.IstNow as string ?? DateTime.UtcNow.AddHours(5.5).ToString("yyyy-MM-ddTHH:mm");
+    var locationName = ViewBag.LocationName as string ?? "";
+    var hasUpiQr = slot != null && slot.PaymentMode?.ToLower().Contains("upi") == true && !string.IsNullOrEmpty(slot.UpiQrImagePath);
 }
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 
 <style>
-    @@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap');
-
-    body{
-        background:#080c10!important;color:white!important;
-        font-family:'DM Sans',sans-serif;
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+        --blue:#2563EB;--blue-light:#3B82F6;--blue-glow:rgba(37,99,235,0.35);
+        --glass:rgba(20,30,48,0.72);--border:rgba(255,255,255,0.09);
+        --text:#F1F5F9;--muted:#94A3B8;--green:#10b981;--orange:#F97316;--purple:#8B5CF6;
     }
-    body::before{
-        content:'';position:fixed;inset:0;z-index:0;
-        background:url('/images/parking-bg.jpg') center/cover no-repeat;
-    }
-    body::after{
-        content:'';position:fixed;inset:0;z-index:0;
-        background:rgba(5,8,15,0.92);
-    }
-    .page{
-        position:relative;z-index:1;
-        min-height:100vh;display:flex;flex-direction:column;
-        align-items:center;padding:40px 20px 60px;
-    }
-    .page-title{
-        font-family:'Syne',sans-serif;font-size:22px;font-weight:800;
-        margin-bottom:24px;text-align:center;
-    }
-    .ext-banner{
-        background:rgba(23,162,184,0.12);border:1px solid rgba(23,162,184,0.3);
-        color:#67e8f9;padding:12px 20px;border-radius:12px;
-        font-size:13px;font-weight:500;margin-bottom:20px;
-        width:100%;max-width:480px;text-align:center;
-    }
-    .card{
-        background:rgba(13,17,23,0.97);
-        border:1px solid rgba(255,255,255,0.08);
-        border-radius:18px;padding:24px;
-        width:100%;max-width:480px;margin-bottom:16px;
-        animation:fadeUp 0.4s ease both;
-    }
-    .card:nth-child(3){animation-delay:0.1s;}
-    @@keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
-
-    .card-label{
-        font-family:'Syne',sans-serif;font-size:13px;font-weight:700;
-        color:rgba(255,255,255,0.5);letter-spacing:0.5px;
-        margin-bottom:16px;text-transform:uppercase;font-size:11px;
-    }
-    .detail-row{
-        display:flex;justify-content:space-between;align-items:center;
-        padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);
-    }
-    .detail-row:last-child{border-bottom:none;}
-    .detail-key{font-size:13px;color:rgba(255,255,255,0.4);}
-    .detail-val{font-size:13px;font-weight:600;color:#eee;}
-    .price-val{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:#00e676;}
-
-    /* Payment mode badge */
-    .pay-badge{
-        margin-top:14px;padding:12px 16px;border-radius:12px;
-        display:flex;align-items:center;gap:10px;font-size:13px;
-    }
-    .pay-badge.upi{background:rgba(0,230,118,0.06);border:1px solid rgba(0,230,118,0.15);color:#86efac;}
-    .pay-badge.cash{background:rgba(255,171,64,0.06);border:1px solid rgba(255,171,64,0.15);color:#fcd34d;}
-    .pay-badge-icon{font-size:20px;}
-
-    /* Floating label inputs */
-    .field{position:relative;margin-bottom:16px;}
-    .field label{
-        display:block;font-size:11px;font-weight:600;
-        color:rgba(255,255,255,0.4);letter-spacing:0.8px;
-        text-transform:uppercase;margin-bottom:6px;
-    }
-    .field input,.field .flatpickr-input{
-        width:100%;padding:12px 14px;
-        background:rgba(255,255,255,0.04);
-        border:1px solid rgba(255,255,255,0.08);
-        border-radius:10px;color:white;
-        font-family:'DM Sans',sans-serif;font-size:14px;
-        outline:none;transition:border-color 0.2s,background 0.2s;
-        box-sizing:border-box;
-    }
-    .field input:focus{border-color:#00e676;background:rgba(0,230,118,0.04);}
-    .field input.readonly-field{background:rgba(255,255,255,0.02)!important;color:rgba(255,255,255,0.4)!important;cursor:not-allowed;}
-    .field .hint{font-size:11px;color:rgba(23,162,184,0.7);margin-top:5px;}
-
-    /* Price box */
-    .price-box{
-        background:rgba(0,230,118,0.04);
-        border:1px solid rgba(0,230,118,0.15);
-        border-radius:12px;padding:16px;
-        text-align:center;margin-top:16px;display:none;
-    }
-    .price-duration{font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:6px;}
-    .price-total{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:#00e676;}
-    .price-rate{font-size:12px;color:rgba(255,255,255,0.3);margin-top:4px;}
-
-    /* UPI button */
-    .upi-btn{
-        display:flex;align-items:center;justify-content:center;gap:8px;
-        background:linear-gradient(135deg,#6d28d9,#00e676);
-        color:white;padding:13px;border-radius:12px;
-        text-decoration:none;font-family:'Syne',sans-serif;
-        font-size:14px;font-weight:700;margin-top:12px;
-        transition:all 0.2s;
-    }
-    .upi-btn:hover{opacity:0.9;transform:translateY(-1px);color:white;}
-
-    .upi-note{
-        background:rgba(255,171,64,0.06);border:1px solid rgba(255,171,64,0.15);
-        border-radius:10px;padding:12px;text-align:center;
-        font-size:12px;color:#fcd34d;margin-top:12px;
-    }
-
-    /* Submit button with ripple */
-    .btn-submit{
-        width:100%;padding:14px;margin-top:8px;
-        background:#00e676;color:#000;
-        border:none;border-radius:12px;
-        font-family:'Syne',sans-serif;font-size:15px;font-weight:700;
-        cursor:pointer;transition:all 0.2s;
-        position:relative;overflow:hidden;
-        box-shadow:0 4px 20px rgba(0,230,118,0.2);
-    }
-    .btn-submit:hover{background:#00c853;transform:translateY(-1px);box-shadow:0 8px 28px rgba(0,230,118,0.3);}
-    .btn-submit:active{transform:translateY(0);}
-    .btn-submit:disabled{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.3);cursor:not-allowed;transform:none;box-shadow:none;}
-    .ripple{
-        position:absolute;border-radius:50%;
-        background:rgba(255,255,255,0.3);
-        transform:scale(0);animation:rippleAnim 0.5s linear;
-        pointer-events:none;
-    }
-    @@keyframes rippleAnim{to{transform:scale(4);opacity:0;}}
-
-    /* Spinner */
-    .spinner{
-        display:inline-block;width:16px;height:16px;
-        border:2px solid rgba(0,0,0,0.3);border-top-color:#000;
-        border-radius:50%;animation:spin 0.6s linear infinite;
-        vertical-align:middle;margin-right:6px;
-    }
-    @@keyframes spin{to{transform:rotate(360deg);}}
+    .orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0;}
+    .orb1{top:-15%;right:-5%;width:520px;height:520px;background:radial-gradient(circle,rgba(37,99,235,0.07) 0%,transparent 70%);}
+    .orb2{bottom:-10%;left:-8%;width:440px;height:440px;background:radial-gradient(circle,rgba(16,185,129,0.05) 0%,transparent 70%);}
+    .main{position:relative;z-index:1;max-width:820px;margin:0 auto;padding:40px 24px 80px;}
+    .page-header{margin-bottom:32px;animation:fadeUp 0.45s ease both;}
+    .page-header h1{font-family:'Poppins',sans-serif;font-weight:700;font-size:1.55rem;letter-spacing:-0.4px;margin-bottom:4px;}
+    .page-header p{font-size:0.85rem;color:var(--muted);}
+    .ext-banner{display:flex;align-items:center;gap:10px;padding:13px 18px;margin-bottom:24px;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.25);border-radius:12px;font-size:0.875rem;color:var(--orange);font-weight:500;animation:fadeUp 0.45s ease 0.05s both;}
+    .book-card{background:var(--glass);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--border);border-radius:20px;padding:32px 36px;box-shadow:0 16px 48px rgba(0,0,0,0.35);animation:fadeUp 0.45s ease 0.1s both;}
+    .slot-info{display:flex;gap:16px;flex-wrap:wrap;padding:16px 20px;margin-bottom:28px;background:rgba(15,23,42,0.55);border:1px solid var(--border);border-radius:12px;}
+    .info-chip{display:flex;flex-direction:column;gap:2px;}
+    .ic-label{font-size:0.68rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);font-weight:500;}
+    .ic-val{font-size:0.9rem;font-weight:600;color:var(--text);}
+    .ic-val.green{color:var(--green);}
+    .section-title{font-family:'Poppins',sans-serif;font-weight:600;font-size:0.9rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px;}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+    .form-group{display:flex;flex-direction:column;gap:6px;}
+    .form-group.full{grid-column:1/-1;}
+    .form-group label{font-size:0.78rem;font-weight:500;color:var(--muted);letter-spacing:0.3px;}
+    .form-control{padding:12px 14px;background:rgba(15,23,42,0.7);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Inter',sans-serif;font-size:0.875rem;outline:none;transition:all 0.2s;width:100%;color-scheme:dark;}
+    .form-control:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,0.18);}
+    .form-control::placeholder{color:rgba(148,163,184,0.45);}
+    .locked-field{position:relative;}
+    .locked-badge{font-size:10px;color:var(--orange);font-weight:600;letter-spacing:0.3px;margin-top:3px;}
+    .divider{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);margin:24px 0;}
+    .price-preview{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.18);border-radius:12px;margin-bottom:16px;}
+    .pp-label{font-size:0.85rem;color:var(--muted);}
+    .pp-price{font-family:'Poppins',sans-serif;font-weight:800;font-size:1.5rem;color:var(--green);}
+    .pp-note{font-size:0.75rem;color:var(--muted);}
+    /* UPI QR Box — no icon, clean text only */
+    .upi-qr-box{padding:20px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.22);border-radius:14px;margin-bottom:16px;}
+    .upi-qr-title{font-size:0.95rem;font-weight:700;color:#a78bfa;margin-bottom:3px;}
+    .upi-qr-subtitle{font-size:0.75rem;color:var(--muted);margin-bottom:16px;}
+    .upi-qr-layout{display:flex;align-items:flex-start;gap:20px;}
+    .upi-qr-img-wrap{flex-shrink:0;background:white;border-radius:12px;padding:10px;box-shadow:0 4px 20px rgba(139,92,246,0.25),0 0 0 1px rgba(139,92,246,0.15);width:150px;height:150px;display:flex;align-items:center;justify-content:center;position:relative;}
+    .upi-qr-img-wrap::before,.upi-qr-img-wrap::after{content:'';position:absolute;width:16px;height:16px;border-color:#a78bfa;border-style:solid;border-width:0;}
+    .upi-qr-img-wrap::before{top:-2px;left:-2px;border-top-width:2px;border-left-width:2px;border-radius:4px 0 0 0;}
+    .upi-qr-img-wrap::after{bottom:-2px;right:-2px;border-bottom-width:2px;border-right-width:2px;border-radius:0 0 4px 0;}
+    .upi-qr-img-wrap img{width:130px;height:130px;object-fit:contain;display:block;}
+    .upi-qr-right{flex:1;}
+    .upi-qr-amount{font-family:'Poppins',sans-serif;font-size:1.3rem;font-weight:800;color:var(--green);margin-bottom:6px;}
+    .upi-qr-owner{font-size:0.8rem;color:var(--muted);margin-bottom:12px;}
+    .upi-qr-steps{list-style:none;padding:0;margin:0;}
+    .upi-qr-steps li{font-size:0.78rem;color:var(--muted);margin-bottom:6px;display:flex;align-items:flex-start;gap:7px;}
+    .upi-qr-steps li span.num{background:rgba(139,92,246,0.18);color:#a78bfa;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px;}
+    .upi-paid-check{margin-top:14px;display:flex;align-items:center;gap:8px;}
+    .upi-paid-check input[type=checkbox]{width:16px;height:16px;accent-color:#a78bfa;cursor:pointer;}
+    .upi-paid-check label{font-size:0.8rem;color:#c4b5fd;font-weight:600;cursor:pointer;}
+    .upi-warn{display:none;margin-top:8px;padding:8px 12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;font-size:0.75rem;color:#fca5a5;}
+    .btn-submit{width:100%;padding:15px;border:none;border-radius:12px;cursor:pointer;background:linear-gradient(90deg,var(--blue-light),var(--blue));color:#fff;font-family:'Inter',sans-serif;font-weight:700;font-size:1rem;box-shadow:0 6px 20px var(--blue-glow);transition:all 0.2s;margin-top:8px;}
+    .btn-submit:hover{transform:translateY(-2px);box-shadow:0 10px 28px var(--blue-glow);}
+    .back-link{display:inline-flex;align-items:center;gap:5px;color:var(--muted);text-decoration:none;font-size:0.83rem;margin-bottom:24px;transition:color 0.2s;}
+    .back-link:hover{color:var(--text);}
+    @@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+    @@media(max-width:600px){.form-grid{grid-template-columns:1fr;}.slot-info{flex-direction:column;}.book-card{padding:24px 20px;}.upi-qr-layout{flex-direction:column;align-items:center;}.upi-qr-img-wrap{width:180px;height:180px;}.upi-qr-img-wrap img{width:160px;height:160px;}}
 </style>
 
-<div class="page">
-    <h2 class="page-title">
-        @(isExtension ? "🔄 Extend Your Booking" : "🅿️ Book Parking Slot")
-    </h2>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
 
+<div class="main">
+    <a href="/Parking/Search" class="back-link">&#8592; Back to Search</a>
+    <div class="page-header">
+        <h1>@(isExtension ? "Extend Your Booking" : "Book Parking Slot")</h1>
+        <p>@(isExtension ? "Extend your current parking duration" : "Complete your booking details below")</p>
+    </div>
     @if (isExtension)
     {
-        <div class="ext-banner">🔄 Extension Mode — Select your new end time below</div>
+        <div class="ext-banner">Extension Mode &#8212; Booking starts from <strong style="margin:0 4px;">@(((DateTime)ViewBag.ExtensionStart).AddHours(5.5).ToString("dd MMM, hh:mm tt"))</strong>. Only select a new end time.</div>
     }
-
-    <!-- Slot Details Card -->
-    <div class="card">
-        <div class="card-label">Slot Details</div>
-        <div class="detail-row">
-            <span class="detail-key">Owner</span>
-            <span class="detail-val">@slot.OwnerName</span>
-        </div>
-        <div class="detail-row">
-            <span class="detail-key">Vehicle Type</span>
-            <span class="detail-val">@slot.VehicleType</span>
-        </div>
-        <div class="detail-row">
-            <span class="detail-key">Rate</span>
-            <span class="price-val">₹@slot.PricePerHour/hr</span>
-        </div>
-        <div class="detail-row">
-            <span class="detail-key">Available From</span>
-            <span class="detail-val">@slot.AvailableFrom.ToString("dd MMM, hh:mm tt")</span>
-        </div>
-        <div class="detail-row">
-            <span class="detail-key">Available To</span>
-            <span class="detail-val">@slot.AvailableTo.ToString("dd MMM, hh:mm tt")</span>
-        </div>
-
-        @if (slot.PaymentMode == "UPI")
+    @if (TempData["Error"] != null)
+    {
+        <div style="padding:13px 18px;margin-bottom:20px;background:rgba(220,38,38,0.1);border:1px solid rgba(220,38,38,0.28);border-radius:12px;color:#f87171;font-size:0.875rem;font-weight:500;">&#9888; @TempData["Error"]</div>
+    }
+    <div class="book-card">
+        @if (slot != null)
         {
-            <div class="pay-badge upi">
-                <span class="pay-badge-icon">💳</span>
-                <div>
-                    <div style="font-weight:600;">UPI Payment</div>
-                    <div style="font-size:12px;opacity:0.7;">UPI ID: @slot.OwnerUpiId</div>
-                </div>
-            </div>
-            <a id="upiPayBtn"
-               href="upi://pay?pa=@slot.OwnerUpiId&pn=SmartSlot Parking&am=0&tn=Parking Payment"
-               class="upi-btn" onclick="paymentDone()">
-                📱 Pay via GPay / PhonePe / Paytm
-            </a>
-        }
-        else
-        {
-            <div class="pay-badge cash">
-                <span class="pay-badge-icon">💵</span>
-                <div>
-                    <div style="font-weight:600;">Cash Payment</div>
-                    <div style="font-size:12px;opacity:0.7;">Pay the owner when you arrive</div>
-                </div>
+            <div class="slot-info">
+                <div class="info-chip"><span class="ic-label">Owner</span><span class="ic-val">@slot.OwnerName</span></div>
+                <div class="info-chip"><span class="ic-label">Rate</span><span class="ic-val green">&#8377;@slot.PricePerHour / hr</span></div>
+                <div class="info-chip"><span class="ic-label">Vehicle Type</span><span class="ic-val">@slot.VehicleType</span></div>
+                <div class="info-chip"><span class="ic-label">Location</span><span class="ic-val" id="locationDisplay" style="font-size:0.82rem;">@(string.IsNullOrEmpty(locationName) ? "Fetching location..." : locationName)</span></div>
+                @if (!string.IsNullOrEmpty(slot.PaymentMode))
+                {
+                    <div class="info-chip"><span class="ic-label">Payment</span><span class="ic-val">@slot.PaymentMode</span></div>
+                }
             </div>
         }
-    </div>
-
-    <!-- Booking Form Card -->
-    <div class="card">
-        <div class="card-label">Booking Details</div>
-        <form method="post" action="@(isExtension ? "/Parking/ConfirmExtension" : "/Parking/ConfirmBooking")" id="bookingForm">
-            <input type="hidden" name="ParkingSlotId" value="@slot.Id"/>
+        @{ var formAction = isExtension ? "/Parking/ConfirmExtension" : "/Parking/ConfirmBooking"; }
+        <form method="post" action="@formAction" onsubmit="return validateForm()">
+            @if (slot != null){ <input type="hidden" name="ParkingSlotId" value="@slot.Id"/><input type="hidden" name="PricePerHour" value="@slot.PricePerHour"/> }
+            @if (isExtension && existingBookingId.HasValue){ <input type="hidden" name="ExistingBookingId" value="@existingBookingId.Value"/> }
             <input type="hidden" name="totalAmount" id="totalAmountField" value="0"/>
-            <input type="hidden" name="ExistingBookingId" value="@(ViewBag.ExistingBookingId ?? 0)"/>
-
-            @if (!isExtension)
+            <div class="section-title">Personal Details</div>
+            <div class="form-grid">
+                <div class="form-group"><label>Full Name</label><input type="text" name="CustomerName" class="form-control" placeholder="Your full name" required/></div>
+                <div class="form-group"><label>Phone Number</label><input type="tel" name="CustomerPhone" class="form-control" placeholder="+91 XXXXX XXXXX" required/></div>
+                <div class="form-group full"><label>Vehicle Number</label><input type="text" name="VehicleNumber" class="form-control" placeholder="e.g. TN 01 AB 1234" required/></div>
+            </div>
+            <div class="divider"></div>
+            <div class="section-title">Booking Duration</div>
+            <div class="form-grid">
+                <div class="form-group @(isExtension ? "locked-field" : "")">
+                    <label>From</label>
+                    @if (isExtension)
+                    {
+                        <input type="hidden" name="BookingFrom" value="@extensionStart"/>
+                        <input type="text" id="bookingFrom" class="form-control" value="@(ViewBag.ExtensionStart != null ? ((DateTime)ViewBag.ExtensionStart).AddHours(5.5).ToString("dd MMM yyyy, hh:mm tt") : extensionStart)" readonly disabled style="cursor:not-allowed;opacity:0.6;border-color:rgba(249,115,22,0.3);background:rgba(249,115,22,0.06);color:#F97316;"/>
+                        <span class="locked-badge">&#128274; Locked &#8212; continues from your previous booking end time</span>
+                    }
+                    else
+                    {
+                        <input type="datetime-local" name="BookingFrom" id="bookingFrom" class="form-control" value="@istNow" min="@istNow" required/>
+                    }
+                </div>
+                <div class="form-group"><label>To</label><input type="datetime-local" name="BookingTo" id="bookingTo" class="form-control" min="@(isExtension ? extensionStart : istNow)" required/></div>
+            </div>
+            <div class="price-preview">
+                <div><div class="pp-label">Estimated Cost</div><div class="pp-note" id="durationNote">Select times to calculate</div></div>
+                <div class="pp-price" id="priceDisplay">&#8377;&#8212;</div>
+            </div>
+            @if (hasUpiQr)
             {
-                <div class="field">
-                    <label>Your Name</label>
-                    <input type="text" name="CustomerName" placeholder="Full name" required/>
-                </div>
-                <div class="field">
-                    <label>Phone Number</label>
-                    <input type="tel" name="CustomerPhone" placeholder="10-digit number" maxlength="10" pattern="[0-9]{10}" required/>
-                </div>
-                <div class="field">
-                    <label>Vehicle Number</label>
-                    <input type="text" name="VehicleNumber" placeholder="e.g. TN01AB1234" required/>
+                <div class="upi-qr-box" id="upiQrBox">
+                    <div class="upi-qr-title">Scan &amp; Pay via UPI</div>
+                    <div class="upi-qr-subtitle">Scan the QR below using GPay, PhonePe, Paytm or any UPI app and pay directly to the owner</div>
+                    <div class="upi-qr-layout">
+                        <div class="upi-qr-img-wrap">
+                            <img src="@slot.UpiQrImagePath" alt="Owner UPI QR Code"/>
+                        </div>
+                        <div class="upi-qr-right">
+                            <div class="upi-qr-amount" id="qrAmountDisplay">&#8377;&#8212;</div>
+                            <div class="upi-qr-owner">Pay to: <strong>@slot.OwnerName</strong></div>
+                            <ul class="upi-qr-steps">
+                                <li><span class="num">1</span>Open GPay / PhonePe / Paytm / any UPI app</li>
+                                <li><span class="num">2</span>Tap "Scan QR" and scan the code on the left</li>
+                                <li><span class="num">3</span>Enter the amount shown above and pay</li>
+                                <li><span class="num">4</span>Once payment is done, check the box below</li>
+                            </ul>
+                            <div class="upi-paid-check">
+                                <input type="checkbox" id="upiPaidCheck" onchange="togglePaidCheck()"/>
+                                <label for="upiPaidCheck">I have completed the UPI payment</label>
+                            </div>
+                            <div class="upi-warn" id="upiWarn">Please complete UPI payment and check the box before confirming your booking.</div>
+                        </div>
+                    </div>
                 </div>
             }
-
-            <div class="field">
-                <label>@(isExtension ? "Extension Starts" : "Booking From")</label>
-                @if (isExtension)
-                {
-                    <input type="datetime-local" name="BookingFrom" id="bookingFrom"
-                           value="@extensionStartStr" min="@extensionStartStr" max="@extensionStartStr"
-                           class="readonly-field" readonly required/>
-                    <div class="hint">⏰ Your extension starts from your previous booking end time</div>
-                }
-                else
-                {
-                    <input type="datetime-local" name="BookingFrom" id="bookingFrom"
-                           value="@ViewBag.IstNow" min="@ViewBag.IstNow"
-                           max="@slot.AvailableTo.ToString("yyyy-MM-ddTHH:mm")"
-                           onchange="calculatePrice()" required/>
-                }
-            </div>
-
-            <div class="field">
-                <label>@(isExtension ? "Extend To" : "Booking To")</label>
-                <input type="datetime-local" name="BookingTo" id="bookingTo"
-                       min="@(isExtension ? extensionStartStr : ViewBag.IstNow)"
-                       max="@slot.AvailableTo.ToString("yyyy-MM-ddTHH:mm")"
-                       onchange="calculatePrice()" required/>
-            </div>
-
-            <!-- Price Box -->
-            <div class="price-box" id="priceBox">
-                <div class="price-duration" id="durationText"></div>
-                <div class="price-total">₹<span id="totalPrice">0</span></div>
-                <div class="price-rate">@ ₹@slot.PricePerHour/hr</div>
-            </div>
-
-            @if (slot.PaymentMode == "UPI")
-            {
-                <div class="upi-note" id="payNote">
-                    ⚠ Complete UPI payment first, then click Confirm
-                </div>
-                <button type="submit" class="btn-submit" id="confirmBtn" style="display:none;">
-                    ✅ @(isExtension ? "Confirm Extension" : "Confirm Booking")
-                </button>
-            }
-            else
-            {
-                <button type="submit" class="btn-submit" id="confirmBtn" onclick="handleSubmit(this)">
-                    ✅ @(isExtension ? "Confirm Extension" : "Confirm Booking")
-                </button>
-            }
+            <button type="submit" class="btn-submit">@(isExtension ? "Confirm Extension" : "Confirm Booking")</button>
         </form>
     </div>
 </div>
-
 <script>
-var bookedRanges = [];
-@if (bookedRanges != null)
-{
-    foreach (var range in bookedRanges)
-    {
-        <text>
-        bookedRanges.push({
-            from: new Date("@range.BookingFrom.ToString("yyyy-MM-ddTHH:mm:ss")"),
-            to:   new Date("@range.BookingTo.ToString("yyyy-MM-ddTHH:mm:ss")")
-        });
-        </text>
-    }
-}
-
-function isTimeBlocked(date) {
-    for (var i = 0; i < bookedRanges.length; i++) {
-        if (date >= bookedRanges[i].from && date < bookedRanges[i].to) return true;
-    }
-    return false;
-}
-
-@if (!isExtension)
-{
-    <text>
-    flatpickr("#bookingFrom", {
-        enableTime:true, dateFormat:"Y-m-d H:i",
-        minDate:"@ViewBag.IstNow", defaultDate:"@ViewBag.IstNow",
-        maxDate:"@slot.AvailableTo.ToString("yyyy-MM-ddTHH:mm")",
-        disable:[function(d){return isTimeBlocked(d);}],
-        onChange:function(){calculatePrice();}
-    });
-    </text>
-}
-
-flatpickr("#bookingTo", {
-    enableTime:true, dateFormat:"Y-m-d H:i",
-    minDate:"@(isExtension ? extensionStartStr : ViewBag.IstNow)",
-    maxDate:"@slot.AvailableTo.ToString("yyyy-MM-ddTHH:mm")",
-    disable:[function(d){return isTimeBlocked(d);}],
-    onChange:function(){calculatePrice();}
-});
-
-@if (isExtension)
-{
-    <text>window.addEventListener("load",function(){calculatePrice();});</text>
-}
-
-function calculatePrice() {
-    var from = document.getElementById("bookingFrom").value;
-    var to   = document.getElementById("bookingTo").value;
-    if (!from || !to) return;
-    var fromDate = new Date(from), toDate = new Date(to);
-    if (toDate <= fromDate) { document.getElementById("priceBox").style.display = "none"; return; }
-    var diffMs = toDate - fromDate;
-    var diffHours = diffMs / (1000 * 60 * 60);
-    var pricePerHour = @(slot.PricePerHour);
-    var total = (diffHours * pricePerHour).toFixed(2);
-    var hours   = Math.floor(diffHours);
-    var minutes = Math.round((diffHours - hours) * 60);
-    var dur = (hours > 0 ? hours + " hr " : "") + (minutes > 0 ? minutes + " min" : "");
-    document.getElementById("durationText").innerText = "Duration: " + dur;
-    document.getElementById("totalPrice").innerText = total;
-    document.getElementById("totalAmountField").value = total;
-    document.getElementById("priceBox").style.display = "block";
-    var upiBtn = document.getElementById("upiPayBtn");
-    if (upiBtn) {
-        upiBtn.href = "upi://pay?pa=@slot.OwnerUpiId&pn=SmartSlot Parking&am=" + total + "&tn=Parking Payment";
-    }
-}
-
-function paymentDone() {
-    setTimeout(function() {
-        document.getElementById("confirmBtn").style.display = "block";
-        document.getElementById("payNote").style.display = "none";
-    }, 3000);
-}
-
-// Ripple + loading spinner on submit
-function handleSubmit(btn) {
-    setTimeout(function() {
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner"></span> Processing...';
-    }, 10);
-}
+    var pricePerHour=@(slot?.PricePerHour??0),currentAmount=0,hasUpiQr=@(hasUpiQr?"true":"false");
+    (function(){var lat=@(slot?.Latitude??0),lon=@(slot?.Longitude??0);if(!lat||!lon)return;fetch('https://nominatim.openstreetmap.org/reverse?lat='+lat+'&lon='+lon+'&format=json').then(function(r){return r.json();}).then(function(d){var el=document.getElementById('locationDisplay');if(!el)return;var a=d.address||{},p=[];if(a.road)p.push(a.road);if(a.suburb||a.neighbourhood)p.push(a.suburb||a.neighbourhood);if(a.city||a.town||a.village)p.push(a.city||a.town||a.village);el.textContent=p.length?p.join(', '):(d.display_name||'Location found');}).catch(function(){});})();
+    function calcPrice(){var fe=document.querySelector('input[name="BookingFrom"][type="hidden"]')||document.getElementById('bookingFrom'),fr=fe?fe.value:'',to=document.getElementById('bookingTo').value;if(!fr||!to)return;var d=(new Date(to)-new Date(fr))/3600000;if(d<=0){document.getElementById('priceDisplay').textContent='Rs.--';document.getElementById('durationNote').textContent='End time must be after start';document.getElementById('totalAmountField').value='0';currentAmount=0;updateQrAmount();return;}currentAmount=Math.ceil(d*pricePerHour);document.getElementById('priceDisplay').textContent='Rs.'+currentAmount;document.getElementById('durationNote').textContent=d.toFixed(1)+' hr'+(d!==1?'s':'');document.getElementById('totalAmountField').value=currentAmount;updateQrAmount();}
+    function updateQrAmount(){var el=document.getElementById('qrAmountDisplay');if(!el)return;el.textContent=currentAmount>0?'Rs.'+currentAmount:'Rs.--';}
+    function togglePaidCheck(){var w=document.getElementById('upiWarn');if(w)w.style.display='none';}
+    var fe=document.querySelector('input[name="BookingFrom"][type="hidden"]')||document.getElementById('bookingFrom');
+    if(fe&&fe.type!=='hidden'){fe.addEventListener('change',function(){document.getElementById('bookingTo').min=this.value;calcPrice();});}
+    document.getElementById('bookingTo').addEventListener('change',calcPrice);
+    function validateForm(){var fe=document.querySelector('input[name="BookingFrom"][type="hidden"]')||document.getElementById('bookingFrom'),fr=new Date(fe?fe.value:''),to=new Date(document.getElementById('bookingTo').value);if(!document.getElementById('bookingTo').value){alert('Please select an end time.');return false;}if(to<=fr){alert('End time must be after start time.');return false;}if(hasUpiQr){var c=document.getElementById('upiPaidCheck');if(c&&!c.checked){document.getElementById('upiWarn').style.display='block';document.getElementById('upiQrBox').scrollIntoView({behavior:'smooth',block:'center'});return false;}}return true;}
+    calcPrice();
 </script>

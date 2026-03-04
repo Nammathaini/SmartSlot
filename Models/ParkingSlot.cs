@@ -12,13 +12,20 @@
         public DateTime AvailableFrom { get; set; }
         public DateTime AvailableTo { get; set; }
         public string VehicleType { get; set; } = "";
-        
+
         public string PaymentMode { get; set; } = "Cash";
         public string? OwnerUpiId { get; set; }
+
+        // ── UPI QR Image (uploaded by owner) ──
+        public string? UpiQrImagePath { get; set; }
+
         public string? ParkingImageBase64 { get; set; }
         public int ParkingScore { get; set; } = 0;
         public string? ParkingBadge { get; set; } = "";
         public string? ParkingScoreDetails { get; set; } = "";
-     
+
+        // ── Exit Verification System ──
+        public string ExitMethod { get; set; } = "Manual";
+        public string? QrToken { get; set; }
     }
 }

@@ -1,419 +1,180 @@
 ﻿@{
-    ViewData["Title"] = "Available Parking Slots";
-    var lat = ViewBag.Lat;
-    var lon = ViewBag.Lon;
-    var radius = ViewBag.Radius;
+    ViewData["Title"] = "Available Slots";
+    Layout = "_Layout";
+    var lat      = ViewBag.Lat;
+    var lon      = ViewBag.Lon;
+    var radius   = ViewBag.Radius;
     var fromTime = ViewBag.FromTime as string;
-    var toTime = ViewBag.ToTime as string;
+    var toTime   = ViewBag.ToTime   as string;
 }
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Available Slots — SmartSlot</title>
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-    <style>
-        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 
-        :root {
-            --green: #00e676;
-            --blue: #2979ff;
-            --dark: #080c10;
-            --surface: #0d1117;
-            --card: rgba(255,255,255,0.04);
-            --border: rgba(255,255,255,0.08);
-        }
-
-        body {
-            font-family: 'DM Sans', sans-serif;
-            background: var(--dark); color: white;
-            min-height: 100vh;
-        }
-
-        /* ── Topbar ── */
-        .topbar {
-            position: sticky; top: 0; z-index: 10;
-            background: rgba(8,12,16,0.95);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--border);
-            padding: 16px 20px;
-            display: flex; align-items: center; gap: 14px;
-        }
-        .back-btn {
-            width: 38px; height: 38px;
-            background: var(--card); border: 1px solid var(--border);
-            border-radius: 10px; color: white; font-size: 18px;
-            display: flex; align-items: center; justify-content: center;
-            text-decoration: none; transition: all 0.2s; flex-shrink: 0;
-        }
-        .back-btn:hover { background: rgba(255,255,255,0.1); color: white; }
-        .topbar-title {
-            font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700;
-        }
-        .topbar-count {
-            margin-left: auto;
-            font-size: 12px; color: rgba(255,255,255,0.4);
-            background: var(--card); border: 1px solid var(--border);
-            padding: 4px 10px; border-radius: 100px;
-        }
-
-        /* ── Toolbar ── */
-        .toolbar {
-            max-width: 800px; margin: 0 auto;
-            padding: 16px 20px;
-            display: flex; align-items: center; gap: 10px;
-            flex-wrap: wrap;
-        }
-        .sort-select {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: white; font-size: 13px;
-            padding: 8px 14px; cursor: pointer; outline: none;
-        }
-        .filter-pill {
-            display: flex; align-items: center; gap: 6px;
-            background: rgba(255,171,64,0.08);
-            border: 1px solid rgba(255,171,64,0.2);
-            padding: 6px 12px; border-radius: 100px;
-            font-size: 12px; color: #ffab40;
-        }
-
-        /* ── Grid ── */
-        .page { max-width: 800px; margin: 0 auto; padding: 0 20px 60px; }
-
-        .slots-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-            gap: 14px;
-        }
-
-        /* ── Slot Card ── */
-        .slot-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 20px;
-            transition: all 0.25s;
-            animation: fadeUp 0.4s ease both;
-            display: flex; flex-direction: column; gap: 14px;
-        }
-        .slot-card:hover {
-            border-color: rgba(0,230,118,0.25);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-        }
-
-        .slot-card-header {
-            display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
-        }
-        .slot-owner {
-            font-family: 'Syne', sans-serif;
-            font-size: 15px; font-weight: 700;
-        }
-        .slot-vehicle {
-            font-size: 12px; color: rgba(255,255,255,0.4); margin-top: 3px;
-        }
-        .slot-price {
-            font-family: 'Syne', sans-serif;
-            font-size: 18px; font-weight: 800;
-            color: var(--green); white-space: nowrap;
-        }
-        .slot-price span { font-size: 12px; font-weight: 400; color: rgba(255,255,255,0.4); }
-
-        .slot-meta {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
-        }
-        .meta-item {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 10px 12px;
-        }
-        .meta-label { font-size: 10px; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 0.5px; }
-        .meta-value { font-size: 12px; font-weight: 500; margin-top: 3px; }
-
-        .slot-footer {
-            display: flex; align-items: center; justify-content: space-between; gap: 10px;
-        }
-        .slot-rating {
-            font-size: 13px; color: rgba(255,255,255,0.5);
-        }
-        .slot-distance {
-            font-size: 12px; color: rgba(255,255,255,0.35);
-        }
-        .book-btn {
-            display: flex; align-items: center; gap: 6px;
-            padding: 10px 18px;
-            background: var(--green);
-            color: #000; font-size: 13px; font-weight: 700;
-            border-radius: 10px; text-decoration: none;
-            transition: all 0.2s;
-        }
-        .book-btn:hover {
-            background: #00c853;
-            transform: translateY(-1px);
-        }
-
-        /* ── Status Badge ── */
-        .status-badge {
-            font-size: 10px; font-weight: 700;
-            padding: 3px 8px; border-radius: 100px;
-            letter-spacing: 0.3px;
-        }
-        .badge-premium { background: rgba(255,215,0,0.15); color: #ffd700; }
-        .badge-gold    { background: rgba(255,171,64,0.15); color: #ffab40; }
-        .badge-silver  { background: rgba(176,176,176,0.15); color: #b0b0b0; }
-        .badge-basic   { background: rgba(100,181,246,0.15); color: #64b5f6; }
-        .badge-poor    { background: rgba(255,82,82,0.15); color: #ff5252; }
-
-        /* ── Skeleton ── */
-        .skeleton-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-            gap: 14px;
-        }
-        .skeleton-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px; padding: 20px;
-            display: flex; flex-direction: column; gap: 14px;
-        }
-        .skel {
-            background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
-            background-size: 200% 100%;
-            animation: shimmer 1.5s infinite;
-            border-radius: 8px;
-        }
-        @@keyframes shimmer {
-            0%   { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-        .skel-title  { height: 18px; width: 60%; }
-        .skel-sub    { height: 12px; width: 40%; margin-top: 6px; }
-        .skel-grid   { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .skel-box    { height: 52px; border-radius: 10px; }
-        .skel-btn    { height: 38px; width: 100px; border-radius: 10px; margin-left: auto; }
-
-        /* ── Toast ── */
-        .toast {
-            position: fixed; bottom: 24px; left: 50%;
-            transform: translateX(-50%) translateY(20px);
-            background: var(--surface); border: 1px solid var(--border);
-            color: white; padding: 12px 20px; border-radius: 12px;
-            font-size: 14px; z-index: 9999; opacity: 0;
-            transition: all 0.3s; pointer-events: none;
-            white-space: nowrap;
-        }
-        .toast.show {
-            opacity: 1; transform: translateX(-50%) translateY(0);
-        }
-
-        /* ── Empty ── */
-        .empty-state {
-            grid-column: 1/-1;
-            text-align: center; padding: 60px 20px;
-            background: var(--surface); border: 1px dashed var(--border);
-            border-radius: 16px;
-        }
-        .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
-        .empty-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 8px; }
-        .empty-sub { font-size: 14px; color: rgba(255,255,255,0.3); }
-
-        @@keyframes fadeUp {
-            from { opacity: 0; transform: translateY(14px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-
-        @@media (max-width: 500px) {
-            .slots-grid, .skeleton-grid { grid-template-columns: 1fr; }
-        }
-    </style>
-</head>
-<body>
-
-<!-- Topbar -->
-<div class="topbar">
-    <a href="/Parking/Search" class="back-btn">←</a>
-    <span class="topbar-title">🟢 Available Slots</span>
-    <span class="topbar-count" id="slotCount">Loading...</span>
-</div>
-
-<!-- Toolbar -->
-<div class="toolbar">
-    <select class="sort-select" id="sortOption" onchange="applySort()">
-        <option value="">Sort By</option>
-        <option value="price">Price: Low → High</option>
-        <option value="distance">Distance: Near → Far</option>
-        <option value="rating">Rating: Best First</option>
-        <option value="status">Slot Status</option>
-    </select>
-
-    @if (!string.IsNullOrEmpty(fromTime) && !string.IsNullOrEmpty(toTime))
-    {
-        <div class="filter-pill">
-            📅 @DateTime.Parse(fromTime).ToString("dd MMM, hh:mm tt") → @DateTime.Parse(toTime).ToString("hh:mm tt")
-        </div>
+<style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+        --blue:#2563EB;--blue-light:#3B82F6;--blue-glow:rgba(37,99,235,0.35);
+        --glass:rgba(20,30,48,0.72);--border:rgba(255,255,255,0.08);
+        --text:#F1F5F9;--muted:#94A3B8;--green:#10b981;--red:#ef4444;
     }
-</div>
+    /* No body background — _Layout handles the parking photo + blue overlay */
+    .orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0;}
+    .orb1{top:-10%;left:-8%;width:480px;height:480px;background:radial-gradient(circle,rgba(16,185,129,0.06) 0%,transparent 70%);}
+    .orb2{bottom:-10%;right:-8%;width:420px;height:420px;background:radial-gradient(circle,rgba(37,99,235,0.07) 0%,transparent 70%);}
 
-<!-- Page -->
-<div class="page">
-    <!-- Skeleton -->
-    <div class="skeleton-grid" id="skeletonGrid">
-        @for (int i = 0; i < 4; i++)
-        {
-            <div class="skeleton-card">
-                <div style="display:flex;justify-content:space-between">
-                    <div><div class="skel skel-title"></div><div class="skel skel-sub"></div></div>
-                    <div class="skel" style="height:24px;width:70px;border-radius:8px;"></div>
+    .main{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:36px 24px 80px;}
+
+    .page-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:28px;flex-wrap:wrap;animation:fadeUp 0.45s ease both;}
+    .page-top-left h1{font-family:'Poppins',sans-serif;font-weight:700;font-size:1.55rem;letter-spacing:-0.4px;margin-bottom:6px;}
+    .page-top-left h1 em{font-style:normal;color:var(--green);}
+    .filter-badge{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);border-radius:8px;font-size:0.78rem;color:var(--green);font-weight:500;}
+    .back-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;background:rgba(20,30,48,0.75);border:1px solid var(--border);border-radius:10px;color:var(--muted);text-decoration:none;font-size:0.83rem;font-weight:500;transition:all 0.2s;flex-shrink:0;}
+    .back-btn:hover{color:var(--text);border-color:rgba(255,255,255,0.16);text-decoration:none;}
+
+    .controls{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap;animation:fadeUp 0.45s ease 0.1s both;}
+    .sort-select{padding:9px 13px;background:rgba(20,30,48,0.75);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:'Inter',sans-serif;font-size:0.83rem;outline:none;cursor:pointer;transition:border-color 0.2s;}
+    .sort-select:focus{border-color:var(--blue);}
+    #countLabel{font-size:0.8rem;color:var(--muted);}
+
+    .table-card{background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:18px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,0.3);animation:fadeUp 0.45s ease 0.15s both;}
+    .t-wrap{overflow-x:auto;}
+    table{width:100%;border-collapse:collapse;}
+    thead th{padding:13px 16px;background:rgba(15,23,42,0.7);font-family:'Inter',sans-serif;font-weight:600;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.55px;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;}
+    tbody td{padding:13px 16px;font-size:0.87rem;color:var(--text);border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:middle;}
+    tbody tr:last-child td{border-bottom:none;}
+    tbody tr:hover{background:rgba(255,255,255,0.025);}
+
+    .owner{font-weight:600;}
+    .price{font-family:'Poppins',sans-serif;font-weight:700;color:var(--green);}
+    .dist-val{color:var(--muted);font-size:0.82rem;}
+    .date-val{color:var(--muted);font-size:0.79rem;}
+
+    .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:0.72rem;font-weight:600;}
+    .b-premium{background:rgba(234,179,8,0.15);color:#EAB308;border:1px solid rgba(234,179,8,0.2);}
+    .b-gold{background:rgba(249,115,22,0.12);color:#F97316;border:1px solid rgba(249,115,22,0.2);}
+    .b-silver{background:rgba(148,163,184,0.12);color:#94A3B8;border:1px solid rgba(148,163,184,0.2);}
+    .b-basic{background:rgba(59,130,246,0.1);color:var(--blue-light);border:1px solid rgba(59,130,246,0.2);}
+    .b-na{color:var(--muted);font-size:0.8rem;}
+
+    .btn-book{display:inline-flex;align-items:center;gap:4px;padding:7px 13px;background:linear-gradient(90deg,var(--blue-light),var(--blue));color:#fff;border-radius:8px;text-decoration:none;font-family:'Inter',sans-serif;font-weight:600;font-size:0.78rem;box-shadow:0 3px 10px var(--blue-glow);transition:all 0.2s;white-space:nowrap;}
+    .btn-book:hover{transform:translateY(-1px);box-shadow:0 5px 14px var(--blue-glow);color:#fff;text-decoration:none;}
+
+    .empty td{text-align:center;padding:44px;color:var(--muted);font-size:0.9rem;}
+
+    @@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+</style>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<div class="main">
+    <div class="page-top">
+        <div class="page-top-left">
+            <h1>&#128994; <em>Available</em> Parking Slots</h1>
+            @if (!string.IsNullOrEmpty(fromTime) && !string.IsNullOrEmpty(toTime))
+            {
+                <div class="filter-badge">
+                    &#128197; @DateTime.Parse(fromTime).ToString("dd MMM, hh:mm tt") &nbsp;&#8594;&nbsp; @DateTime.Parse(toTime).ToString("dd MMM, hh:mm tt")
                 </div>
-                <div class="skel-grid">
-                    <div class="skel skel-box"></div>
-                    <div class="skel skel-box"></div>
-                    <div class="skel skel-box"></div>
-                    <div class="skel skel-box"></div>
-                </div>
-                <div style="display:flex;justify-content:space-between;align-items:center">
-                    <div class="skel" style="height:14px;width:80px;"></div>
-                    <div class="skel skel-btn"></div>
-                </div>
-            </div>
-        }
+            }
+        </div>
+        <a href="/Parking/Search" class="back-btn">&#8592; Back to Search</a>
     </div>
 
-    <!-- Slots Grid -->
-    <div class="slots-grid" id="slotsGrid" style="display:none;"></div>
+    <div class="controls">
+        <select id="sortSel" class="sort-select" onchange="applySort()">
+            <option value="">Sort By</option>
+            <option value="price">Price: Low to High</option>
+            <option value="dist">Distance: Near to Far</option>
+            <option value="rating">Rating: High to Low</option>
+            <option value="badge">Slot Status</option>
+        </select>
+        <span id="countLabel"></span>
+    </div>
+
+    <div class="table-card">
+        <div class="t-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Owner</th>
+                        <th>Phone</th>
+                        <th>Price / hr</th>
+                        <th>Vehicle</th>
+                        <th>Available From</th>
+                        <th>Available To</th>
+                        <th>Distance</th>
+                        <th>Rating</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="slotBody">
+                    <tr class="empty"><td colspan="10">&#9203; Loading available slots&#8230;</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
-<!-- Toast -->
-<div class="toast" id="toast"></div>
-
 <script>
-var allSlots = [];
-var fromTime = "@fromTime";
-var toTime = "@toTime";
+var allSlots=[];
+var fFrom="@fromTime", fTo="@toTime";
+var myLat=@lat, myLon=@lon;
 
-function getDistanceKm(lat1, lon1, lat2, lon2) {
-    var R = 6371;
-    var dLat = (lat2-lat1)*Math.PI/180;
-    var dLon = (lon2-lon1)*Math.PI/180;
-    var a = Math.sin(dLat/2)*Math.sin(dLat/2)+
-            Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
-            Math.sin(dLon/2)*Math.sin(dLon/2);
-    return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+function km(a,b,c,d){var R=6371,dL=(c-a)*Math.PI/180,dO=(d-b)*Math.PI/180,x=Math.sin(dL/2)*Math.sin(dL/2)+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dO/2)*Math.sin(dO/2);return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
+
+function badgeHtml(b){
+    if(!b||b==='—') return '<span class="b-na">—</span>';
+    var cls='b-basic';
+    if(b.includes('Premium')) cls='b-premium';
+    else if(b.includes('Gold')) cls='b-gold';
+    else if(b.includes('Silver')) cls='b-silver';
+    return '<span class="badge '+cls+'">'+b+'</span>';
 }
 
-function getStatusBadge(badge) {
-    if (!badge) return '';
-    var cls = badge.includes('Premium') ? 'badge-premium' :
-              badge.includes('Gold')    ? 'badge-gold'    :
-              badge.includes('Silver')  ? 'badge-silver'  :
-              badge.includes('Basic')   ? 'badge-basic'   : 'badge-poor';
-    return `<span class="status-badge ${cls}">${badge}</span>`;
+function render(slots){
+    document.getElementById('countLabel').textContent=slots.length+' slot'+(slots.length!==1?'s':'')+' found';
+    var body=document.getElementById('slotBody');
+    if(!slots.length){body.innerHTML='<tr class="empty"><td colspan="10">No available slots for this time range</td></tr>';return;}
+    body.innerHTML=slots.map(function(s){
+        var rating=s.averageRating?'&#11088; '+s.averageRating.toFixed(1):'<span style="color:var(--muted);font-size:0.8rem">—</span>';
+        return '<tr>'+
+            '<td class="owner">'+s.ownerName+'</td>'+
+            '<td style="color:var(--muted)">'+(s.ownerPhone||'—')+'</td>'+
+            '<td class="price">&#8377;'+s.pricePerHour+'</td>'+
+            '<td>'+s.vehicleType+'</td>'+
+            '<td class="date-val">'+new Date(s.availableFrom).toLocaleString()+'</td>'+
+            '<td class="date-val">'+new Date(s.availableTo).toLocaleString()+'</td>'+
+            '<td class="dist-val">'+s._dist.toFixed(2)+' km</td>'+
+            '<td>'+rating+'</td>'+
+            '<td>'+badgeHtml(s.parkingBadge)+'</td>'+
+            '<td><a href="/Verification/Upload/'+s.id+'" class="btn-book">Book &#8594;</a></td>'+
+        '</tr>';
+    }).join('');
 }
 
-function renderSlots(slots) {
-    document.getElementById('skeletonGrid').style.display = 'none';
-    var grid = document.getElementById('slotsGrid');
-    grid.style.display = 'grid';
-    grid.innerHTML = '';
-
-    document.getElementById('slotCount').textContent = slots.length + ' slot' + (slots.length !== 1 ? 's' : '');
-
-    if (slots.length === 0) {
-        grid.innerHTML = `
-        <div class="empty-state">
-            <div class="empty-icon">🅿️</div>
-            <div class="empty-title">No slots available nearby</div>
-            <div class="empty-sub">Try expanding your search radius or check back later.</div>
-        </div>`;
-        return;
+function applySort(){
+    var v=document.getElementById('sortSel').value;
+    var s=[...allSlots];
+    if(v==='price')  s.sort((a,b)=>a.pricePerHour-b.pricePerHour);
+    if(v==='dist')   s.sort((a,b)=>a._dist-b._dist);
+    if(v==='rating') s.sort((a,b)=>(b.averageRating||0)-(a.averageRating||0));
+    if(v==='badge'){
+        var r={'Premium':1,'Gold':2,'Silver':3,'Basic':4,'Poor':5};
+        s.sort((a,b)=>(r[a.parkingBadge]||6)-(r[b.parkingBadge]||6));
     }
-
-    slots.forEach(function(slot, i) {
-        var dist = slot._distanceValue;
-        var card = document.createElement('div');
-        card.className = 'slot-card';
-        card.style.animationDelay = (i * 0.05) + 's';
-        card.innerHTML = `
-        <div class="slot-card-header">
-            <div>
-                <div class="slot-owner">${slot.ownerName}</div>
-                <div class="slot-vehicle">🚗 ${slot.vehicleType} ${getStatusBadge(slot.parkingBadge)}</div>
-            </div>
-            <div class="slot-price">₹${slot.pricePerHour}<span>/hr</span></div>
-        </div>
-        <div class="slot-meta">
-            <div class="meta-item">
-                <div class="meta-label">From</div>
-                <div class="meta-value">${new Date(slot.availableFrom).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
-            </div>
-            <div class="meta-item">
-                <div class="meta-label">To</div>
-                <div class="meta-value">${new Date(slot.availableTo).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
-            </div>
-            <div class="meta-item">
-                <div class="meta-label">Distance</div>
-                <div class="meta-value">📍 ${dist.toFixed(2)} km</div>
-            </div>
-            <div class="meta-item">
-                <div class="meta-label">Payment</div>
-                <div class="meta-value">${slot.ownerPhone ? '📱 ' + slot.ownerPhone : '—'}</div>
-            </div>
-        </div>
-        <div class="slot-footer">
-            <div>
-                <div class="slot-rating">${slot.averageRating ? '⭐ ' + slot.averageRating.toFixed(1) : 'No reviews yet'}</div>
-            </div>
-            <a href="/Verification/Upload/${slot.id}" class="book-btn">Verify & Book →</a>
-        </div>`;
-        grid.appendChild(card);
-    });
+    render(s);
 }
 
-function applySort() {
-    var opt = document.getElementById('sortOption').value;
-    var sorted = [...allSlots];
-    if (opt === 'price')    sorted.sort((a,b) => a.pricePerHour - b.pricePerHour);
-    if (opt === 'distance') sorted.sort((a,b) => a._distanceValue - b._distanceValue);
-    if (opt === 'rating')   sorted.sort((a,b) => (b.averageRating||0) - (a.averageRating||0));
-    if (opt === 'status') {
-        var rank = {'🥇 Premium':1,'🥈 Gold':2,'🥉 Silver':3,'🏠 Basic':4,'❌ Poor':5};
-        sorted.sort((a,b)=>(rank[a.parkingBadge]||6)-(rank[b.parkingBadge]||6));
-    }
-    renderSlots(sorted);
+function load(){
+    var url='/Parking/NearbySlots?lat=@lat&lon=@lon&radius=@radius';
+    if(fFrom&&fTo) url+='&fromTime='+encodeURIComponent(fFrom)+'&toTime='+encodeURIComponent(fTo);
+    fetch(url).then(r=>r.json()).then(function(data){
+        allSlots=data.filter(s=>!s.isBooked).map(function(s){s._dist=km(myLat,myLon,s.latitude,s.longitude);return s;});
+        render(allSlots);
+    }).catch(function(){document.getElementById('slotBody').innerHTML='<tr class="empty"><td colspan="10">Failed to load. Please refresh.</td></tr>';});
 }
-
-function showToast(msg) {
-    var t = document.getElementById('toast');
-    t.textContent = msg; t.classList.add('show');
-    setTimeout(()=>t.classList.remove('show'), 3000);
-}
-
-function loadData() {
-    var url = "/Parking/NearbySlots?lat=@lat&lon=@lon&radius=@radius";
-    if (fromTime && toTime) {
-        url += "&fromTime=" + encodeURIComponent(fromTime) + "&toTime=" + encodeURIComponent(toTime);
-    }
-
-    fetch(url)
-    .then(r => r.json())
-    .then(data => {
-        var available = data.filter(s => !s.isBooked);
-        allSlots = available.map(s => {
-            s._distanceValue = getDistanceKm(@lat, @lon, s.latitude, s.longitude);
-            return s;
-        });
-        renderSlots(allSlots);
-    })
-    .catch(() => showToast('⚠️ Failed to load slots'));
-}
-
-loadData();
-setInterval(loadData, 30000);
+load();
+setInterval(load,30000);
 </script>
-</body>
-</html>

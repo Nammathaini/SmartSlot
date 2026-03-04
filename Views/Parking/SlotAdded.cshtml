@@ -2,97 +2,72 @@
     ViewData["Title"] = "Slot Added Successfully";
     Layout = "_Layout";
 }
-
 <style>
-    body {
-        background-color: #000 !important;
-        color: white !important;
-        margin: 0;
-        padding: 0;
+    @@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+    :root{--primary:#2563EB;--green:#10b981;--border:rgba(255,255,255,0.08);--text:#f1f5f9;--text-dim:rgba(241,245,249,0.45);}
+    /* No body background — _Layout handles the parking photo + blue overlay */
+    .orb{position:fixed;width:600px;height:600px;border-radius:50%;z-index:0;pointer-events:none;background:radial-gradient(circle,rgba(16,185,129,0.08) 0%,transparent 65%);bottom:-150px;left:-100px;}
+    .page-wrap{position:relative;z-index:1;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 20px;}
+    .card{
+        background:rgba(20,30,48,0.78);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+        border:1px solid rgba(255,255,255,0.09);border-radius:24px;padding:48px 40px;
+        max-width:480px;width:100%;text-align:center;
+        box-shadow:0 24px 80px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.08);
+        animation:cardIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
     }
-
-    body::before {
-        content: '';
-        position: fixed;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        background: rgba(0, 0, 0, 0.78);
-        z-index: 0;
+    @@keyframes cardIn{from{opacity:0;transform:translateY(24px) scale(0.97);}to{opacity:1;transform:translateY(0) scale(1);}}
+    .icon-wrap{
+        width:84px;height:84px;background:rgba(16,185,129,0.1);border:2px solid rgba(16,185,129,0.25);
+        border-radius:50%;display:flex;align-items:center;justify-content:center;
+        font-size:38px;margin:0 auto 28px;
+        animation:popIn 0.5s 0.2s cubic-bezier(0.34,1.56,0.64,1) both;position:relative;
     }
+    .icon-wrap::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:2px solid rgba(16,185,129,0.15);animation:pulseRing 2s 1s ease-out infinite;}
+    @@keyframes pulseRing{0%{transform:scale(1);opacity:0.6;}100%{transform:scale(1.7);opacity:0;}}
+    @@keyframes popIn{0%{transform:scale(0);opacity:0;}70%{transform:scale(1.12);}100%{transform:scale(1);opacity:1;}}
+    h2{font-family:'Poppins',sans-serif;font-size:26px;font-weight:700;margin-bottom:10px;animation:fadeUp 0.5s 0.4s ease both;color:var(--text);}
+    .sub{font-size:14px;color:var(--text-dim);line-height:1.75;margin-bottom:20px;animation:fadeUp 0.5s 0.5s ease both;}
 
-    .navbar { background-color: #111 !important; position: relative; z-index: 2; }
-    .navbar-brand { color: white !important; }
-
-    .page-wrapper {
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 40px 20px;
-        position: relative;
-        z-index: 1;
+    .qr-notice{
+        display:flex;align-items:flex-start;gap:12px;
+        padding:14px 16px;margin-bottom:24px;
+        background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.25);
+        border-radius:12px;text-align:left;
+        animation:fadeUp 0.5s 0.55s ease both;
     }
+    .qr-notice-icon{font-size:20px;flex-shrink:0;margin-top:1px;}
+    .qr-notice-text{font-size:12px;color:#c4b5fd;line-height:1.7;}
+    .qr-notice-text strong{color:#ddd6fe;display:block;font-size:13px;font-weight:600;margin-bottom:3px;}
 
-    .success-card {
-        background-color: rgba(26, 26, 26, 0.95);
-        border: 2px solid #28a745;
-        border-radius: 16px;
-        padding: 50px 40px;
-        width: 100%;
-        max-width: 500px;
-        text-align: center;
-    }
-
-    .success-card h2 {
-        color: #28a745;
-        font-size: 2rem;
-        margin-bottom: 15px;
-    }
-
-    .success-card p {
-        color: #ccc;
-        font-size: 1.1rem;
-        margin-bottom: 30px;
-    }
-
-    .btn-home {
-        display: inline-block;
-        padding: 12px 30px;
-        background-color: #28a745;
-        color: white;
-        border-radius: 8px;
-        text-decoration: none;
-        font-size: 1rem;
-        font-weight: bold;
-        margin: 8px;
-    }
-
-    .btn-home:hover { background-color: #218838; color: white; }
-
-    .btn-find {
-        display: inline-block;
-        padding: 12px 30px;
-        background-color: #007bff;
-        color: white;
-        border-radius: 8px;
-        text-decoration: none;
-        font-size: 1rem;
-        font-weight: bold;
-        margin: 8px;
-    }
-
-    .btn-find:hover { background-color: #0056b3; color: white; }
+    .actions{display:flex;flex-direction:column;gap:12px;animation:fadeUp 0.5s 0.6s ease both;}
+    .btn-primary{display:flex;align-items:center;justify-content:center;gap:8px;padding:15px;background:linear-gradient(90deg,#10b981,#059669);color:#fff;border-radius:13px;text-decoration:none;font-family:'Inter',sans-serif;font-size:15px;font-weight:600;transition:all 0.2s;box-shadow:0 6px 20px rgba(16,185,129,0.3);}
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(16,185,129,0.4);color:#fff;}
+    .btn-secondary{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:rgba(255,255,255,0.05);color:var(--text-dim);border:1px solid var(--border);border-radius:13px;text-decoration:none;font-family:'Inter',sans-serif;font-size:14px;font-weight:500;transition:all 0.2s;}
+    .btn-secondary:hover{background:rgba(255,255,255,0.09);color:var(--text);}
+    .btn-dashboard{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:rgba(37,99,235,0.12);color:#93c5fd;border:1px solid rgba(37,99,235,0.25);border-radius:13px;text-decoration:none;font-family:'Inter',sans-serif;font-size:14px;font-weight:500;transition:all 0.2s;}
+    .btn-dashboard:hover{background:rgba(37,99,235,0.2);color:#bfdbfe;}
+    @@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 </style>
 
-<div class="page-wrapper">
-    <div class="success-card">
-        <div style="font-size:5rem; margin-bottom:20px;">🅿️</div>
-        <h2>✅ Slot Added Successfully!</h2>
-        <p>Your parking slot has been listed on SmartSlot.<br>Customers can now find and book your slot!</p>
-        <div>
-            <a href="/Parking/Index" class="btn-home">➕ Add Another Slot</a>
-            <a href="/Parking/Search" class="btn-find">🔍 Find Parking</a>
+<div class="orb"></div>
+<div class="page-wrap">
+    <div class="card">
+        <div class="icon-wrap">&#127359;</div>
+        <h2>Slot Added!</h2>
+        <p class="sub">Your parking slot has been listed on SmartSlot.<br/>Customers can now find and book your slot!</p>
+
+        <div class="qr-notice">
+            <div class="qr-notice-icon">&#128247;</div>
+            <div class="qr-notice-text">
+                <strong>A QR code has been generated for your slot!</strong>
+                You can view it in your Dashboard. Paste or display this QR at your parking spot so customers can scan it to confirm their exit. Customers will be penalised if they do not scan the QR within 15 minutes of their booking ending.
+            </div>
+        </div>
+
+        <div class="actions">
+            <a href="/Parking/Dashboard" class="btn-dashboard">&#128202; View QR in Dashboard</a>
+            <a href="/Parking/AddSlot" class="btn-primary">&#10133; Add Another Slot</a>
+            <a href="/Parking/Search" class="btn-secondary">&#128269; Find Parking</a>
         </div>
     </div>
 </div>
