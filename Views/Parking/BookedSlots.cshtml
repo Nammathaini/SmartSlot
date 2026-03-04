@@ -7,297 +7,356 @@
     var toTime = ViewBag.ToTime as string;
 }
 
-<style>
-body {
-    background-image: url('https://i.pinimg.com/1200x/ea/3f/92/ea3f92fcdab7799f742c813cdb651463.jpg');
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
-    background-color: #000 !important;
-    color: white !important;
-}
-body::before {
-    content:'';
-    position:fixed;
-    width:100%;
-    height:100%;
-    background:rgba(0,0,0,0.78);
-    z-index:0;
-}
-.container-box {
-    position:relative;
-    z-index:1;
-    max-width:1200px;
-    margin:40px auto;
-    background:rgba(26,26,26,0.95);
-    padding:30px;
-    border-radius:12px;
-    border:1px solid #333;
-}
-h2 { text-align:center; margin-bottom:25px; }
-table { width:100%; border-collapse:collapse; }
-th, td { padding:10px; border:1px solid #444; text-align:center; }
-th { background:#2a2a2a; }
-.back-btn {
-    display:inline-block;
-    margin-bottom:20px;
-    padding:8px 15px;
-    background:#007bff;
-    color:white;
-    border-radius:6px;
-    text-decoration:none;
-}
-.filter-badge {
-    background: rgba(245,158,11,0.15);
-    border: 1px solid #f59e0b;
-    border-radius: 8px;
-    padding: 10px 16px;
-    color: #f59e0b;
-    font-size: 14px;
-    margin-bottom: 16px;
-    text-align: center;
-}
-.countdown { font-weight:bold; animation:pulse 1s infinite alternate; }
-@@keyframes pulse { from { opacity:0.6; } to { opacity:1; } }
-.low-time { color:#ff4d4d; }
-.notify-btn {
-    padding: 6px 14px;
-    background: #f59e0b;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-.notify-btn:hover { background: #d97706; }
-.notify-btn:disabled { background: #555; cursor: default; color: #aaa; }
-.notify-btn.done { background: #16a34a; cursor: default; }
-.toast {
-    position: fixed;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #1a1a1a;
-    border: 1px solid #333;
-    color: white;
-    padding: 12px 24px;
-    border-radius: 10px;
-    font-size: 14px;
-    z-index: 9999;
-    display: none;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-}
-.toast.show { display: block; animation: fadeInUp 0.3s ease; }
-@@keyframes fadeInUp {
-    from { opacity:0; transform: translateX(-50%) translateY(10px); }
-    to   { opacity:1; transform: translateX(-50%) translateY(0); }
-}
-</style>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Booked Slots — SmartSlot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+        :root{
+            --red:#ff5252;--amber:#ffab40;--green:#00e676;
+            --dark:#080c10;--surface:#0d1117;
+            --border:rgba(255,255,255,0.08);
+        }
+        body{font-family:'DM Sans',sans-serif;background:var(--dark);color:white;min-height:100vh;}
 
-<div class="container-box">
-    <a href="/Parking/Search" class="back-btn">⬅ Back to Search</a>
-    <h2>🔴 Booked Parking Slots</h2>
+        .topbar{
+            position:sticky;top:0;z-index:10;
+            background:rgba(8,12,16,0.95);backdrop-filter:blur(12px);
+            border-bottom:1px solid var(--border);
+            padding:16px 20px;display:flex;align-items:center;gap:14px;
+        }
+        .back-btn{
+            width:38px;height:38px;background:rgba(255,255,255,0.04);
+            border:1px solid var(--border);border-radius:10px;
+            color:white;font-size:18px;display:flex;align-items:center;justify-content:center;
+            text-decoration:none;transition:all 0.2s;flex-shrink:0;
+        }
+        .back-btn:hover{background:rgba(255,255,255,0.1);color:white;}
+        .topbar-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;}
+        .topbar-count{
+            margin-left:auto;font-size:12px;color:rgba(255,255,255,0.4);
+            background:rgba(255,255,255,0.04);border:1px solid var(--border);
+            padding:4px 10px;border-radius:100px;
+        }
 
+        .toolbar{max-width:800px;margin:0 auto;padding:14px 20px;display:flex;gap:10px;flex-wrap:wrap;}
+        .sort-select{
+            background:var(--surface);border:1px solid var(--border);
+            border-radius:10px;color:white;font-size:13px;padding:8px 14px;
+            cursor:pointer;outline:none;
+        }
+        .filter-pill{
+            display:flex;align-items:center;gap:6px;
+            background:rgba(255,171,64,0.08);border:1px solid rgba(255,171,64,0.2);
+            padding:6px 12px;border-radius:100px;font-size:12px;color:#ffab40;
+        }
+
+        .page{max-width:800px;margin:0 auto;padding:0 20px 60px;}
+        .slots-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;}
+
+        /* Card */
+        .slot-card{
+            background:var(--surface);border:1px solid var(--border);
+            border-radius:16px;padding:20px;
+            animation:fadeUp 0.4s ease both;transition:all 0.25s;
+        }
+        .slot-card:hover{border-color:rgba(255,82,82,0.2);transform:translateY(-2px);}
+
+        .card-header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px;}
+        .card-owner{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;}
+        .card-vehicle{font-size:12px;color:rgba(255,255,255,0.4);margin-top:3px;}
+        .card-price{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--red);white-space:nowrap;}
+        .card-price span{font-size:12px;font-weight:400;color:rgba(255,255,255,0.4);}
+
+        .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+        .meta-item{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:10px 12px;}
+        .meta-lbl{font-size:10px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.5px;}
+        .meta-val{font-size:12px;font-weight:500;margin-top:3px;}
+        .meta-val.red{color:var(--red);}
+        .meta-val.amber{color:var(--amber);}
+
+        /* Countdown */
+        .countdown-box{
+            background:rgba(255,82,82,0.06);border:1px solid rgba(255,82,82,0.15);
+            border-radius:10px;padding:10px 14px;
+            display:flex;align-items:center;justify-content:space-between;
+            margin-bottom:14px;
+        }
+        .countdown-lbl{font-size:11px;color:rgba(255,255,255,0.4);}
+        .countdown-val{
+            font-family:'Syne',sans-serif;font-size:15px;font-weight:700;
+            color:var(--red);
+        }
+        .countdown-val.amber{color:var(--amber);}
+
+        .card-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+        .card-rating{font-size:13px;color:rgba(255,255,255,0.4);}
+
+        .copy-btn{
+            display:flex;align-items:center;gap:5px;
+            padding:7px 12px;background:rgba(255,255,255,0.04);
+            border:1px solid var(--border);border-radius:8px;
+            color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;
+            transition:all 0.15s;
+        }
+        .copy-btn:hover{background:rgba(255,255,255,0.08);color:white;}
+        .copy-btn.copied{background:rgba(0,230,118,0.08);border-color:rgba(0,230,118,0.2);color:var(--green);}
+
+        .notify-btn{
+            display:flex;align-items:center;gap:6px;
+            padding:9px 14px;
+            background:rgba(255,171,64,0.08);border:1px solid rgba(255,171,64,0.2);
+            color:var(--amber);font-size:12px;font-weight:600;
+            border-radius:10px;cursor:pointer;transition:all 0.2s;
+        }
+        .notify-btn:hover{background:rgba(255,171,64,0.14);}
+        .notify-btn.done{background:rgba(0,230,118,0.08);border-color:rgba(0,230,118,0.2);color:var(--green);cursor:default;}
+        .notify-btn:disabled{opacity:0.5;cursor:not-allowed;}
+
+        /* Skeleton */
+        .skeleton-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;}
+        .skel-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;}
+        .skel{
+            background:linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.08) 50%,rgba(255,255,255,0.04) 75%);
+            background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px;
+        }
+        @@keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+
+        .empty-state{
+            grid-column:1/-1;text-align:center;padding:60px 20px;
+            background:var(--surface);border:1px dashed var(--border);border-radius:16px;
+        }
+        .empty-icon{font-size:48px;margin-bottom:12px;opacity:0.4;}
+        .empty-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:8px;}
+        .empty-sub{font-size:14px;color:rgba(255,255,255,0.3);}
+
+        /* Toast */
+        .toast{
+            position:fixed;bottom:24px;left:50%;
+            transform:translateX(-50%) translateY(20px);
+            background:var(--surface);border:1px solid var(--border);
+            color:white;padding:12px 20px;border-radius:12px;
+            font-size:14px;z-index:9999;opacity:0;transition:all 0.3s;
+            pointer-events:none;white-space:nowrap;
+        }
+        .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+        @@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+        @@media(max-width:500px){.slots-grid,.skeleton-grid{grid-template-columns:1fr;}}
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <a href="/Parking/Search" class="back-btn">←</a>
+    <span class="topbar-title">🔴 Booked Slots</span>
+    <span class="topbar-count" id="slotCount">Loading...</span>
+</div>
+
+<div class="toolbar">
+    <select class="sort-select" id="sortOption" onchange="applySort()">
+        <option value="">Sort By</option>
+        <option value="price">Price: Low → High</option>
+        <option value="distance">Distance: Near → Far</option>
+        <option value="endtime">Ends Soonest</option>
+    </select>
     @if (!string.IsNullOrEmpty(fromTime) && !string.IsNullOrEmpty(toTime))
     {
-        <div class="filter-badge">
-            📅 Showing slots booked during <b>@DateTime.Parse(fromTime).ToString("dd MMM yyyy, hh:mm tt")</b>
-            to <b>@DateTime.Parse(toTime).ToString("dd MMM yyyy, hh:mm tt")</b>
-        </div>
+        <div class="filter-pill">📅 @DateTime.Parse(fromTime).ToString("dd MMM, hh:mm tt") → @DateTime.Parse(toTime).ToString("hh:mm tt")</div>
     }
+</div>
 
-    <select id="sortOption" onchange="applySort()" style="margin-bottom:15px;padding:6px;background:#2a2a2a;color:white;border:1px solid #444;border-radius:6px;">
-        <option value="">Sort By</option>
-        <option value="price">Price (Low → High)</option>
-        <option value="distance">Distance (Near → Far)</option>
-        <option value="status">Slot Status</option>
-    </select>
-
-    <table>
-        <thead>
-            <tr>
-                <th>Owner</th>
-                <th>Phone</th>
-                <th>Price</th>
-                <th>Vehicle</th>
-                <th>Available From</th>
-                <th>Available To</th>
-                <th>Booked From</th>
-                <th>Booked To</th>
-                <th>Time Remaining</th>
-                <th>Distance</th>
-                <th>Rating</th>
-                <th>Status</th>
-                <th>Notify</th>
-            </tr>
-        </thead>
-        <tbody id="bookedBody"></tbody>
-    </table>
+<div class="page">
+    <div class="skeleton-grid" id="skeletonGrid">
+        @for (int i = 0; i < 3; i++)
+        {
+            <div class="skel-card">
+                <div style="display:flex;justify-content:space-between;margin-bottom:14px;">
+                    <div><div class="skel" style="height:18px;width:140px;"></div><div class="skel" style="height:12px;width:80px;margin-top:6px;"></div></div>
+                    <div class="skel" style="height:24px;width:70px;border-radius:8px;"></div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+                    <div class="skel" style="height:52px;border-radius:10px;"></div>
+                    <div class="skel" style="height:52px;border-radius:10px;"></div>
+                    <div class="skel" style="height:52px;border-radius:10px;"></div>
+                    <div class="skel" style="height:52px;border-radius:10px;"></div>
+                </div>
+                <div class="skel" style="height:38px;border-radius:10px;margin-bottom:14px;"></div>
+                <div style="display:flex;justify-content:space-between;">
+                    <div class="skel" style="height:14px;width:80px;"></div>
+                    <div class="skel" style="height:32px;width:100px;border-radius:10px;"></div>
+                </div>
+            </div>
+        }
+    </div>
+    <div class="slots-grid" id="slotsGrid" style="display:none;"></div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-
-var allBookedSlots = [];
+var allSlots = [];
 var notifiedSlots = {};
 var fromTime = "@fromTime";
 var toTime = "@toTime";
 
-function getDistanceKm(lat1, lon1, lat2, lon2) {
-    var R = 6371;
-    var dLat = (lat2 - lat1) * Math.PI / 180;
-    var dLon = (lon2 - lon1) * Math.PI / 180;
-    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) *
-            Math.sin(dLon/2) * Math.sin(dLon/2);
-    return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+function getDistanceKm(lat1,lon1,lat2,lon2){
+    var R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
+    var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+    return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
 
-function getSlotStatus(score) {
-    if (!score) return "—";
-    if (score >= 80) return "🥇 Premium";
-    if (score >= 70) return "🥈 Gold";
-    if (score >= 50) return "🥉 Silver";
-    if (score >= 30) return "🏠 Basic";
-    return "❌ Poor";
+function showToast(msg,type){
+    var t=document.getElementById('toast');
+    t.textContent=msg;t.className='toast show';
+    if(type==='success')t.style.borderColor='rgba(0,230,118,0.3)';
+    else if(type==='error')t.style.borderColor='rgba(255,82,82,0.3)';
+    else t.style.borderColor='rgba(255,255,255,0.08)';
+    clearTimeout(window._toast);
+    window._toast=setTimeout(function(){t.className='toast';},3500);
 }
 
-function showToast(msg, color) {
-    var t = document.getElementById('toast');
-    t.textContent = msg;
-    t.style.borderColor = color || '#333';
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 3500);
-}
-
-function notifyMe(slotId, bookingId, btnEl) {
-    btnEl.disabled = true;
-    btnEl.textContent = 'Registering...';
-
-    fetch('/Parking/NotifyMe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slotId: slotId, bookingId: bookingId })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            btnEl.textContent = '✓ Notified';
-            btnEl.classList.add('done');
-            notifiedSlots[slotId] = true;
-            showToast('✅ We will email you when this slot is free!', '#16a34a');
-        } else {
-            btnEl.disabled = false;
-            btnEl.textContent = '🔔 Notify Me';
-            showToast('❌ ' + (data.message || 'Failed. Please try again.'), '#dc2626');
-        }
-    })
-    .catch(() => {
-        btnEl.disabled = false;
-        btnEl.textContent = '🔔 Notify Me';
-        showToast('❌ Something went wrong.', '#dc2626');
+function copyPhone(phone,btn){
+    navigator.clipboard.writeText(phone).then(function(){
+        btn.className='copy-btn copied';
+        btn.innerHTML='✓ Copied';
+        setTimeout(function(){
+            btn.className='copy-btn';
+            btn.innerHTML='📋 '+phone;
+        },2000);
     });
 }
 
-function renderTable(slots) {
-    var body = document.getElementById("bookedBody");
-    body.innerHTML = "";
+function notifyMe(slotId,bookingId,btn){
+    btn.disabled=true;btn.textContent='Registering...';
+    fetch('/Parking/NotifyMe',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({slotId:slotId,bookingId:bookingId})
+    })
+    .then(r=>r.json())
+    .then(function(d){
+        if(d.success){
+            btn.className='notify-btn done';btn.innerHTML='✓ Will Notify';
+            notifiedSlots[slotId]=true;
+            showToast('✅ We will email you when this slot is free!','success');
+        } else {
+            btn.disabled=false;btn.innerHTML='🔔 Notify Me';
+            showToast('❌ '+(d.message||'Failed'),'error');
+        }
+    })
+    .catch(function(){btn.disabled=false;btn.innerHTML='🔔 Notify Me';showToast('❌ Something went wrong.','error');});
+}
 
-    if (slots.length === 0) {
-        body.innerHTML = "<tr><td colspan='13' style='color:#4ade80;'>No booked slots for your selected time</td></tr>";
+function formatCountdown(endTimeStr){
+    var diff=new Date(endTimeStr)-new Date();
+    if(diff<=0)return{text:'Expired',cls:''};
+    var h=Math.floor(diff/3600000),m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000);
+    var cls=h<1?'amber':'';
+    return{text:h+'h '+m+'m '+s+'s',cls:cls};
+}
+
+function renderSlots(slots){
+    document.getElementById('skeletonGrid').style.display='none';
+    var grid=document.getElementById('slotsGrid');
+    grid.style.display='grid';grid.innerHTML='';
+    document.getElementById('slotCount').textContent=slots.length+' slot'+(slots.length!==1?'s':'');
+
+    if(slots.length===0){
+        grid.innerHTML='<div class="empty-state"><div class="empty-icon">🅿️</div><div class="empty-title">No booked slots here</div><div class="empty-sub">All parking slots in this area are currently available.</div></div>';
         return;
     }
 
-    slots.forEach(slot => {
-        var distance = getDistanceKm(@lat, @lon, slot.latitude, slot.longitude);
-        slot._distanceValue = distance;
+    slots.forEach(function(slot,i){
+        var dist=slot._distanceValue;
+        var alreadyNotified=notifiedSlots[slot.id]||false;
+        var notifyHtml=alreadyNotified
+            ?'<button class="notify-btn done" disabled>✓ Will Notify</button>'
+            :'<button class="notify-btn" onclick="notifyMe('+slot.id+','+(slot.bookingId||0)+',this)">🔔 Notify Me</button>';
 
-        var alreadyNotified = notifiedSlots[slot.id] ? true : false;
-        var notifyBtnHtml = alreadyNotified
-            ? `<button class="notify-btn done" disabled>✓ Notified</button>`
-            : `<button class="notify-btn" onclick="notifyMe(${slot.id}, ${slot.bookingId || 0}, this)">🔔 Notify Me</button>`;
+        var cd=slot.bookingTo?formatCountdown(slot.bookingTo):{text:'—',cls:''};
 
-        body.innerHTML += `
-        <tr>
-            <td>${slot.ownerName}</td>
-            <td>${slot.ownerPhone ? slot.ownerPhone : "-"}</td>
-            <td>₹${slot.pricePerHour}/hr</td>
-            <td>${slot.vehicleType}</td>
-            <td>${new Date(slot.availableFrom).toLocaleString()}</td>
-            <td>${new Date(slot.availableTo).toLocaleString()}</td>
-            <td>${slot.bookingFrom ? new Date(slot.bookingFrom).toLocaleString() : "-"}</td>
-            <td>${slot.bookingTo ? new Date(slot.bookingTo).toLocaleString() : "-"}</td>
-            <td class="countdown" data-end="${slot.bookingTo}"></td>
-            <td>${distance.toFixed(2)} km</td>
-            <td>${slot.averageRating ? "⭐ " + slot.averageRating.toFixed(1) : "No reviews"}</td>
-            <td>${getSlotStatus(slot.parkingScore)}</td>
-            <td>${notifyBtnHtml}</td>
-        </tr>`;
+        var card=document.createElement('div');
+        card.className='slot-card';
+        card.style.animationDelay=(i*0.05)+'s';
+        card.innerHTML=`
+        <div class="card-header">
+            <div>
+                <div class="card-owner">${slot.ownerName}</div>
+                <div class="card-vehicle">🚗 ${slot.vehicleType}</div>
+            </div>
+            <div class="card-price">₹${slot.pricePerHour}<span>/hr</span></div>
+        </div>
+        <div class="meta-grid">
+            <div class="meta-item">
+                <div class="meta-lbl">Distance</div>
+                <div class="meta-val">📍 ${dist.toFixed(2)} km</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-lbl">Rating</div>
+                <div class="meta-val">${slot.averageRating?'⭐ '+slot.averageRating.toFixed(1):'No reviews'}</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-lbl">Booked From</div>
+                <div class="meta-val">${slot.bookingFrom?new Date(slot.bookingFrom).toLocaleString('en-IN',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}):'—'}</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-lbl">Booked To</div>
+                <div class="meta-val red">${slot.bookingTo?new Date(slot.bookingTo).toLocaleString('en-IN',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}):'—'}</div>
+            </div>
+        </div>
+        <div class="countdown-box">
+            <div class="countdown-lbl">⏱ Time Remaining</div>
+            <div class="countdown-val ${cd.cls}" data-end="${slot.bookingTo}">${cd.text}</div>
+        </div>
+        <div class="card-footer">
+            ${slot.ownerPhone?`<button class="copy-btn" onclick="copyPhone('${slot.ownerPhone}',this)">📋 ${slot.ownerPhone}</button>`:'<span></span>'}
+            ${notifyHtml}
+        </div>`;
+        grid.appendChild(card);
     });
 
     startCountdowns();
 }
 
-function applySort() {
-    var option = document.getElementById("sortOption").value;
-    var sorted = [...allBookedSlots];
-
-    if (option === "price") sorted.sort((a,b) => a.pricePerHour - b.pricePerHour);
-    if (option === "distance") sorted.sort((a,b) => a._distanceValue - b._distanceValue);
-    if (option === "status") {
-        var rank = { "🥇 Premium":1,"🥈 Gold":2,"🥉 Silver":3,"🏠 Basic":4,"❌ Poor":5,"—":6 };
-        sorted.sort((a,b) => (rank[getSlotStatus(a.parkingScore)]||7) - (rank[getSlotStatus(b.parkingScore)]||7));
-    }
-
-    renderTable(sorted);
-}
-
-function loadData() {
-    var url = "/Parking/NearbySlots?lat=@lat&lon=@lon&radius=@radius";
-    if (fromTime && toTime) {
-        url += "&fromTime=" + encodeURIComponent(fromTime) +
-               "&toTime="   + encodeURIComponent(toTime);
-    }
-
-    fetch(url)
-    .then(res => res.json())
-    .then(data => {
-        var booked = data.filter(s => s.isBooked);
-        allBookedSlots = booked.map(slot => {
-            slot._distanceValue = getDistanceKm(@lat, @lon, slot.latitude, slot.longitude);
-            return slot;
-        });
-        renderTable(allBookedSlots);
-    });
-}
-
-function startCountdowns() {
-    var elements = document.querySelectorAll(".countdown");
-
-    function update() {
-        elements.forEach(function(el) {
-            var endTime = new Date(el.getAttribute("data-end"));
-            var now = new Date();
-            var diff = endTime - now;
-
-            if (diff <= 0) { el.innerHTML = "Expired"; return; }
-
-            var hours = Math.floor(diff / (1000 * 60 * 60));
-            var minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            var seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-            if (hours < 1) el.classList.add("low-time");
-            el.innerHTML = hours + "h " + minutes + "m " + seconds + "s";
+function startCountdowns(){
+    function tick(){
+        document.querySelectorAll('.countdown-val[data-end]').forEach(function(el){
+            var cd=formatCountdown(el.getAttribute('data-end'));
+            el.textContent=cd.text;
+            el.className='countdown-val'+(cd.cls?' '+cd.cls:'');
         });
     }
+    tick();
+    clearInterval(window._cdTimer);
+    window._cdTimer=setInterval(tick,1000);
+}
 
-    update();
-    setInterval(update, 1000);
+function applySort(){
+    var opt=document.getElementById('sortOption').value;
+    var sorted=[...allSlots];
+    if(opt==='price')sorted.sort((a,b)=>a.pricePerHour-b.pricePerHour);
+    if(opt==='distance')sorted.sort((a,b)=>a._distanceValue-b._distanceValue);
+    if(opt==='endtime')sorted.sort((a,b)=>new Date(a.bookingTo)-new Date(b.bookingTo));
+    renderSlots(sorted);
+}
+
+function loadData(){
+    var url="/Parking/NearbySlots?lat=@lat&lon=@lon&radius=@radius";
+    if(fromTime&&toTime)url+="&fromTime="+encodeURIComponent(fromTime)+"&toTime="+encodeURIComponent(toTime);
+    fetch(url).then(r=>r.json()).then(function(data){
+        var booked=data.filter(s=>s.isBooked);
+        allSlots=booked.map(function(s){s._distanceValue=getDistanceKm(@lat,@lon,s.latitude,s.longitude);return s;});
+        renderSlots(allSlots);
+    }).catch(function(){showToast('⚠️ Failed to load','error');});
 }
 
 loadData();
-setInterval(loadData, 30000);
+setInterval(loadData,30000);
 </script>
+</body>
+</html>

@@ -1,432 +1,556 @@
 ﻿@{
-    ViewData["Title"] = "Find Parking Near Me";
+    ViewData["Title"] = "Find Parking — SmartSlot";
 }
 
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
 <style>
-    body {
-        background-image: url('https://i.pinimg.com/1200x/ea/3f/92/ea3f92fcdab7799f742c813cdb651463.jpg');
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-        background-color: #000 !important;
-        color: white !important;
+    @@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
+    *,*::before,*::after{box-sizing:border-box;}
+    :root{
+        --green:#00e676;--blue:#2979ff;--red:#ff5252;
+        --dark:#080c10;--surface:#0d1117;
+        --border:rgba(255,255,255,0.08);
+    }
+    body{
+        background:var(--dark)!important;color:white!important;
+        font-family:'DM Sans',sans-serif;margin:0;
     }
 
-    body::before {
-        content: '';
-        position: fixed;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.78);
-        z-index: 0;
+    /* ── TOPBAR ── */
+    .topbar{
+        position:sticky;top:0;z-index:100;
+        background:rgba(8,12,16,0.97);backdrop-filter:blur(14px);
+        border-bottom:1px solid var(--border);
+        padding:14px 20px;display:flex;align-items:center;gap:12px;
+    }
+    .back-btn{
+        width:36px;height:36px;background:rgba(255,255,255,0.04);
+        border:1px solid var(--border);border-radius:10px;
+        color:white;font-size:16px;display:flex;align-items:center;justify-content:center;
+        text-decoration:none;transition:all 0.2s;flex-shrink:0;
+    }
+    .back-btn:hover{background:rgba(255,255,255,0.1);color:white;}
+    .logo-mini{display:flex;align-items:center;gap:8px;}
+    .logo-p{
+        width:28px;height:28px;background:var(--blue);
+        color:#000;font-family:'Syne',sans-serif;font-weight:800;font-size:13px;
+        border-radius:7px;display:flex;align-items:center;justify-content:center;
+    }
+    .logo-text{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;}
+    .logo-text span{color:var(--blue);}
+    .topbar-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;margin-left:4px;}
+
+    /* ── MAIN LAYOUT ── */
+    .layout{display:flex;height:calc(100vh - 57px);}
+
+    /* ── SIDEBAR ── */
+    .sidebar{
+        width:340px;flex-shrink:0;
+        background:var(--surface);border-right:1px solid var(--border);
+        overflow-y:auto;display:flex;flex-direction:column;
+        scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.1) transparent;
+    }
+    .sidebar-section{padding:20px;border-bottom:1px solid var(--border);}
+    .section-label{
+        font-size:10px;font-weight:700;letter-spacing:1.5px;
+        text-transform:uppercase;color:rgba(255,255,255,0.3);
+        margin-bottom:12px;
     }
 
-    h2 { text-align:center; margin:20px 0; position:relative; z-index:1; }
-
-    .top-section { text-align:center; position:relative; z-index:1; padding:20px; }
-
-    .btn-location {
-        padding:10px 20px;
-        background:#28a745;
-        color:white;
-        border:none;
-        border-radius:6px;
-        cursor:pointer;
-        font-size:15px;
-        font-weight:600;
+    /* Location bar */
+    .location-bar{
+        display:flex;gap:8px;margin-bottom:10px;
     }
-    .btn-location:hover { background:#218838; }
-
-    .search-row { margin-top:10px; }
-
-    .search-row input {
-        padding:10px;
-        width:280px;
-        border-radius:6px;
-        border:1px solid #444;
-        background:#2a2a2a;
-        color:white;
+    .btn-loc{
+        flex:1;display:flex;align-items:center;justify-content:center;gap:6px;
+        padding:10px 14px;background:var(--green);color:#000;
+        border:none;border-radius:10px;
+        font-family:'Syne',sans-serif;font-size:13px;font-weight:700;
+        cursor:pointer;transition:all 0.2s;
     }
-
-    .search-row button {
-        padding:10px 15px;
-        background:#007bff;
-        color:white;
-        border:none;
-        border-radius:6px;
-        cursor:pointer;
+    .btn-loc:hover{background:#00c853;transform:translateY(-1px);}
+    .search-input-wrap{position:relative;margin-bottom:10px;}
+    .search-input{
+        width:100%;padding:10px 14px 10px 38px;
+        background:rgba(255,255,255,0.04);border:1px solid var(--border);
+        border-radius:10px;color:white;
+        font-family:'DM Sans',sans-serif;font-size:14px;
+        outline:none;transition:border-color 0.2s;
     }
-
-    #status {
-        margin-top:10px;
-        font-size:15px;
-        font-weight:600;
-        min-height:24px;
+    .search-input:focus{border-color:rgba(255,255,255,0.2);}
+    .search-input::placeholder{color:rgba(255,255,255,0.25);}
+    .search-icon{
+        position:absolute;left:12px;top:50%;transform:translateY(-50%);
+        font-size:16px;opacity:0.4;
     }
-
-    .searching { color: #f59e0b; animation: blink 1s infinite alternate; }
-    @@keyframes blink { from { opacity: 0.5; } to { opacity: 1; } }
-
-    .found-msg    { color: #4ade80; }
-    .notfound-msg { color: #f87171; }
-
-    #map { height:500px; margin:20px; border-radius:10px; z-index:1; position:relative; }
-
-    .toggle-section {
-        display:none;
-        text-align:center;
-        margin-top:20px;
-        margin-bottom:30px;
-        z-index:1;
-        position:relative;
+    .btn-search{
+        width:100%;padding:10px;background:rgba(41,121,255,0.12);
+        border:1px solid rgba(41,121,255,0.25);border-radius:10px;
+        color:#7eb3ff;font-size:13px;font-weight:600;
+        cursor:pointer;transition:all 0.2s;
     }
+    .btn-search:hover{background:rgba(41,121,255,0.2);color:white;}
 
-    .toggle-section button {
-        padding:10px 22px;
-        border:none;
-        border-radius:6px;
-        margin:0 10px;
-        cursor:pointer;
-        font-weight:bold;
-        font-size:15px;
+    /* Time filter */
+    .time-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+    .tf-group label{
+        font-size:10px;font-weight:600;letter-spacing:0.5px;
+        text-transform:uppercase;color:rgba(255,255,255,0.35);
+        display:block;margin-bottom:4px;
     }
-
-    .available-btn { background:#28a745; color:white; }
-    .booked-btn    { background:#dc3545; color:white; }
-
-    .time-filter-box {
-        margin: 16px auto;
-        background: rgba(26,26,26,0.95);
-        border: 1px solid #444;
-        border-radius: 12px;
-        padding: 20px;
-        max-width: 560px;
+    .tf-group input{
+        width:100%;padding:9px 10px;
+        background:rgba(255,255,255,0.04);border:1px solid var(--border);
+        border-radius:9px;color:white;
+        font-family:'DM Sans',sans-serif;font-size:12px;
+        outline:none;transition:border-color 0.2s;
     }
-
-    .time-filter-box label { color:#ccc; font-size:13px; display:block; margin-bottom:4px; }
-
-    .time-filter-box input[type="datetime-local"] {
-        padding: 8px 12px;
-        border-radius: 6px;
-        border: 1px solid #555;
-        background: #2a2a2a;
-        color: white;
-        font-size: 14px;
-        width: 100%;
-        box-sizing: border-box;
+    .tf-group input:focus{border-color:var(--blue);}
+    .btn-proceed{
+        width:100%;padding:12px;
+        background:linear-gradient(135deg,var(--blue),#7c3aed);
+        color:white;border:none;border-radius:11px;
+        font-family:'Syne',sans-serif;font-size:14px;font-weight:700;
+        cursor:pointer;transition:all 0.2s;
+        box-shadow:0 4px 16px rgba(41,121,255,0.2);
     }
+    .btn-proceed:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(41,121,255,0.3);}
 
-    .proceed-btn {
-        margin-top: 14px;
-        padding: 12px 30px;
-        background: linear-gradient(135deg, #28a745, #20c997);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 15px;
-        font-weight: bold;
-        cursor: pointer;
-        width: 100%;
-        transition: transform 0.2s;
+    /* Status */
+    .status-box{
+        display:flex;align-items:center;gap:8px;
+        padding:10px 14px;border-radius:10px;
+        font-size:13px;font-weight:500;
+        transition:all 0.3s;
+    }
+    .status-box.searching{background:rgba(255,171,64,0.08);border:1px solid rgba(255,171,64,0.2);color:#ffab40;}
+    .status-box.found{background:rgba(0,230,118,0.08);border:1px solid rgba(0,230,118,0.2);color:var(--green);}
+    .status-box.error{background:rgba(255,82,82,0.08);border:1px solid rgba(255,82,82,0.2);color:#ff8a80;}
+    .status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+    .status-dot.amber{background:#ffab40;animation:blink 1s infinite alternate;}
+    .status-dot.green{background:var(--green);}
+    .status-dot.red{background:#ff5252;}
+    @@keyframes blink{from{opacity:0.4;}to{opacity:1;}}
+
+    /* Stats row */
+    .stats-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 20px;border-bottom:1px solid var(--border);}
+    .stat-pill{
+        display:flex;align-items:center;gap:8px;
+        padding:10px 14px;border-radius:10px;cursor:pointer;
+        transition:all 0.2s;border:1px solid var(--border);
+        background:rgba(255,255,255,0.02);
+    }
+    .stat-pill:hover{border-color:rgba(255,255,255,0.2);}
+    .stat-pill.avail{border-color:rgba(0,230,118,0.2);background:rgba(0,230,118,0.04);}
+    .stat-pill.booked{border-color:rgba(255,82,82,0.2);background:rgba(255,82,82,0.04);}
+    .stat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+    .stat-dot.green{background:var(--green);}
+    .stat-dot.red{background:var(--red);}
+    .stat-num{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;}
+    .stat-lbl{font-size:11px;color:rgba(255,255,255,0.4);}
+
+    /* Extension error */
+    .ext-error{
+        background:rgba(255,82,82,0.08);border:1px solid rgba(255,82,82,0.2);
+        border-radius:10px;padding:12px 16px;
+        font-size:13px;color:#ff8a80;font-weight:500;
+        margin:12px 20px 0;
     }
 
-    .proceed-btn:hover { transform: translateY(-2px); }
+    /* ── MAP ── */
+    .map-wrap{flex:1;position:relative;}
+    #map{width:100%;height:100%;}
+
+    /* Map overlay buttons */
+    .map-fab{
+        position:absolute;z-index:10;
+        display:flex;flex-direction:column;gap:8px;
+        right:16px;bottom:24px;
+    }
+    .fab-btn{
+        width:42px;height:42px;
+        background:rgba(13,17,23,0.95);backdrop-filter:blur(8px);
+        border:1px solid var(--border);border-radius:12px;
+        color:white;font-size:18px;display:flex;align-items:center;justify-content:center;
+        cursor:pointer;transition:all 0.2s;
+    }
+    .fab-btn:hover{background:rgba(255,255,255,0.1);}
+
+    /* Map legend */
+    .map-legend{
+        position:absolute;bottom:24px;left:16px;z-index:10;
+        background:rgba(13,17,23,0.92);backdrop-filter:blur(8px);
+        border:1px solid var(--border);border-radius:12px;padding:10px 14px;
+        font-size:12px;display:flex;gap:14px;
+    }
+    .legend-item{display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.6);}
+    .legend-dot{width:10px;height:10px;border-radius:50%;}
+
+    /* Popup styling */
+    .leaflet-popup-content-wrapper{
+        background:rgba(13,17,23,0.98)!important;
+        border:1px solid rgba(255,255,255,0.1)!important;
+        border-radius:12px!important;
+        box-shadow:0 8px 32px rgba(0,0,0,0.5)!important;
+        color:white!important;
+        font-family:'DM Sans',sans-serif!important;
+        padding:0!important;
+    }
+    .leaflet-popup-content{margin:0!important;padding:0!important;}
+    .leaflet-popup-tip{background:rgba(13,17,23,0.98)!important;}
+    .leaflet-popup-close-button{color:rgba(255,255,255,0.4)!important;top:8px!important;right:10px!important;}
+
+    .popup-inner{padding:16px 18px;min-width:200px;}
+    .popup-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:4px;}
+    .popup-price{font-size:18px;font-weight:700;margin-bottom:10px;}
+    .popup-price.green{color:var(--green);}
+    .popup-price.red{color:var(--red);}
+    .popup-row{font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:3px;}
+    .popup-btn{
+        display:block;width:100%;padding:9px;margin-top:12px;
+        background:var(--green);color:#000;
+        border:none;border-radius:9px;
+        font-family:'Syne',sans-serif;font-size:13px;font-weight:700;
+        cursor:pointer;text-align:center;text-decoration:none;
+        transition:all 0.2s;
+    }
+    .popup-btn:hover{background:#00c853;color:#000;}
+    .popup-btn.red{background:var(--red);color:white;}
+    .popup-btn.red:hover{background:#d32f2f;color:white;}
+
+    /* Toast */
+    .toast{
+        position:fixed;bottom:24px;left:50%;
+        transform:translateX(-50%) translateY(20px);
+        background:var(--surface);border:1px solid var(--border);
+        color:white;padding:12px 20px;border-radius:12px;
+        font-size:14px;z-index:9999;opacity:0;transition:all 0.3s;
+        pointer-events:none;white-space:nowrap;
+    }
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+    /* Mobile responsive */
+    @@media(max-width:768px){
+        .layout{flex-direction:column;}
+        .sidebar{width:100%;height:auto;max-height:55vh;}
+        .map-wrap{flex:1;min-height:320px;}
+    }
 </style>
 
-<h2>🔍 Find Parking Near Me</h2>
-
-<div class="top-section">
-    <button class="btn-location" onclick="useLiveLocation()">📍 Use My Live Location</button>
-
-    <div class="search-row">
-        <input type="text" id="searchAddress" placeholder="Search your area / address" />
-        <button onclick="searchByAddress()">🔍 Search (3 km)</button>
+<!-- Topbar -->
+<div class="topbar">
+    <a href="/Parking/Index" class="back-btn">←</a>
+    <div class="logo-mini">
+        <div class="logo-p">P</div>
+        <div class="logo-text">Smart<span>Slot</span></div>
     </div>
-
-    <!-- Time Filter Box -->
-    <div class="time-filter-box">
-        <p style="color:#f59e0b; font-weight:bold; margin-bottom:14px; font-size:15px;">
-            🗓 When do you need parking?
-        </p>
-        <div style="display:flex; gap:16px; flex-wrap:wrap; justify-content:center;">
-            <div style="flex:1; min-width:200px;">
-                <label>Parking From</label>
-                <input type="datetime-local" id="filterFrom" />
-            </div>
-            <div style="flex:1; min-width:200px;">
-                <label>Parking To</label>
-                <input type="datetime-local" id="filterTo" />
-            </div>
-        </div>
-        <button class="proceed-btn" onclick="proceedSearch()">
-            🚀 Proceed — Find Available Slots
-        </button>
-    </div>
-
-    <p id="status"></p>
-
-    @if (TempData["ExtensionError"] != null)
-    {
-        <div style="background:#dc3545;padding:12px;margin:15px auto;max-width:600px;border-radius:8px;text-align:center;font-weight:bold;">
-            @TempData["ExtensionError"]
-        </div>
-    }
+    <span class="topbar-title">Find Parking</span>
 </div>
 
-<div id="map"></div>
+<div class="layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
 
-<div id="toggleSection" class="toggle-section">
-    <button class="available-btn" onclick="goToAvailable()">🟢 Available Slots</button>
-    <button class="booked-btn"    onclick="goToBooked()">🔴 Booked Slots</button>
+        @if (TempData["ExtensionError"] != null)
+        {
+            <div class="ext-error">⚠ @TempData["ExtensionError"]</div>
+        }
+
+        <!-- Location -->
+        <div class="sidebar-section">
+            <div class="section-label">Your Location</div>
+            <button class="btn-loc" onclick="useLiveLocation()">📍 Use Live Location</button>
+            <div style="height:8px;"></div>
+            <div class="search-input-wrap">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchAddress" class="search-input"
+                       placeholder="Search area / address..."
+                       onkeydown="if(event.key==='Enter')searchByAddress()"/>
+            </div>
+            <button class="btn-search" onclick="searchByAddress()">Search Address</button>
+        </div>
+
+        <!-- Time Filter -->
+        <div class="sidebar-section">
+            <div class="section-label">Parking Duration</div>
+            <div class="time-fields">
+                <div class="tf-group">
+                    <label>From</label>
+                    <input type="datetime-local" id="filterFrom"/>
+                </div>
+                <div class="tf-group">
+                    <label>To</label>
+                    <input type="datetime-local" id="filterTo"/>
+                </div>
+            </div>
+            <button class="btn-proceed" onclick="proceedSearch()">
+                🚀 Find Parking Slots
+            </button>
+        </div>
+
+        <!-- Status -->
+        <div class="sidebar-section" id="statusSection" style="display:none;">
+            <div class="status-box" id="statusBox">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText"></span>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-row" id="statsRow" style="display:none;">
+            <div class="stat-pill avail" onclick="goToAvailable()" title="View available slots">
+                <span class="stat-dot green"></span>
+                <div>
+                    <div class="stat-num" id="availCount">0</div>
+                    <div class="stat-lbl">Available</div>
+                </div>
+            </div>
+            <div class="stat-pill booked" onclick="goToBooked()" title="View booked slots">
+                <span class="stat-dot red"></span>
+                <div>
+                    <div class="stat-num" id="bookedCount">0</div>
+                    <div class="stat-lbl">Booked</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Nav buttons -->
+        <div id="navButtons" style="display:none;padding:12px 20px;display:none;gap:8px;flex-direction:column;">
+            <button onclick="goToAvailable()"
+                style="width:100%;padding:12px;background:rgba(0,230,118,0.1);
+                border:1px solid rgba(0,230,118,0.25);border-radius:11px;
+                color:#00e676;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;
+                cursor:pointer;transition:all 0.2s;">
+                🟢 View Available Slots →
+            </button>
+            <button onclick="goToBooked()"
+                style="width:100%;padding:12px;background:rgba(255,82,82,0.1);
+                border:1px solid rgba(255,82,82,0.25);border-radius:11px;
+                color:#ff5252;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;
+                cursor:pointer;transition:all 0.2s;">
+                🔴 View Booked Slots →
+            </button>
+        </div>
+
+    </div>
+
+    <!-- Map -->
+    <div class="map-wrap">
+        <div id="map"></div>
+
+        <!-- Legend -->
+        <div class="map-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#00e676;"></div> Available</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ff5252;"></div> Booked</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#2979ff;"></div> You</div>
+        </div>
+
+        <!-- FABs -->
+        <div class="map-fab">
+            <button class="fab-btn" onclick="if(userLat)map.setView([userLat,userLon],15);" title="Center map">🎯</button>
+            <button class="fab-btn" onclick="map.zoomIn()" title="Zoom in">+</button>
+            <button class="fab-btn" onclick="map.zoomOut()" title="Zoom out">−</button>
+        </div>
+    </div>
 </div>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<div class="toast" id="toast"></div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
 <script>
-
-var map = L.map('map').setView([13.0827, 80.2707], 13);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+// Map init
+var map = L.map('map', {zoomControl:false}).setView([13.0827, 80.2707], 13);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution:'© OpenStreetMap, © CARTO', maxZoom:19
+}).addTo(map);
 
 var markerLayer = L.layerGroup().addTo(map);
 var searchCircle = null;
-var availableSlots = [];
-var bookedSlots = [];
+var availableSlots=[], bookedSlots=[];
 var userLat, userLon;
-var filterFromVal = null;
-var filterToVal = null;
+var filterFromVal=null, filterToVal=null;
 
-var greenIcon = L.icon({
-    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-    iconSize: [25, 41], iconAnchor: [12, 41]
-});
+// Custom icons using SVG circles
+function makeIcon(color){
+    return L.divIcon({
+        className:'',
+        html:'<div style="width:14px;height:14px;border-radius:50%;background:'+color+';border:2px solid rgba(255,255,255,0.4);box-shadow:0 0 8px '+color+'88;"></div>',
+        iconSize:[14,14],iconAnchor:[7,7]
+    });
+}
+var greenIcon = makeIcon('#00e676');
+var redIcon   = makeIcon('#ff5252');
+var blueIcon  = makeIcon('#2979ff');
 
-var redIcon = L.icon({
-    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-    iconSize: [25, 41], iconAnchor: [12, 41]
-});
-
-function getDistanceKm(lat1, lon1, lat2, lon2) {
-    var R = 6371;
-    var dLat = (lat2 - lat1) * Math.PI / 180;
-    var dLon = (lon2 - lon1) * Math.PI / 180;
-    var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
-            Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
-            Math.sin(dLon/2)*Math.sin(dLon/2);
-    return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(2);
+function getDistanceKm(lat1,lon1,lat2,lon2){
+    var R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
+    var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+    return (R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))).toFixed(2);
 }
 
-function getSlotStatus(score) {
-    if (!score)    return "—";
-    if (score>=80) return "🥇 Premium";
-    if (score>=70) return "🥈 Gold";
-    if (score>=50) return "🥉 Silver";
-    if (score>=30) return "🏠 Basic";
-    return "❌ Poor";
+function setStatus(msg, type){
+    var sec=document.getElementById('statusSection');
+    var box=document.getElementById('statusBox');
+    var dot=document.getElementById('statusDot');
+    var txt=document.getElementById('statusText');
+    sec.style.display='block';
+    box.className='status-box '+type;
+    dot.className='status-dot '+(type==='searching'?'amber':type==='found'?'green':'red');
+    txt.innerHTML=msg;
 }
 
-function setStatus(msg, type) {
-    var el = document.getElementById("status");
-    el.className = type || "";
-    el.innerHTML = msg;
+function showToast(msg,type){
+    var t=document.getElementById('toast');
+    t.textContent=msg;t.className='toast show';
+    if(type==='success')t.style.borderColor='rgba(0,230,118,0.3)';
+    else if(type==='error')t.style.borderColor='rgba(255,82,82,0.3)';
+    clearTimeout(window._toast);
+    window._toast=setTimeout(function(){t.className='toast';},3500);
 }
 
-function resetUI() {
-    document.getElementById("toggleSection").style.display = "none";
+function resetUI(){
     markerLayer.clearLayers();
-    if (searchCircle) { map.removeLayer(searchCircle); searchCircle = null; }
+    if(searchCircle){map.removeLayer(searchCircle);searchCircle=null;}
+    document.getElementById('statsRow').style.display='none';
+    document.getElementById('navButtons').style.display='none';
 }
 
-function useLiveLocation() {
-    setStatus("📡 Getting your location...", "searching");
-    navigator.geolocation.getCurrentPosition(function(pos) {
-        userLat = pos.coords.latitude;
-        userLon = pos.coords.longitude;
-        map.setView([userLat, userLon], 14);
+function useLiveLocation(){
+    setStatus('Getting your live location...','searching');
+    navigator.geolocation.getCurrentPosition(function(pos){
+        userLat=pos.coords.latitude;userLon=pos.coords.longitude;
+        map.setView([userLat,userLon],15);
         markerLayer.clearLayers();
-        markerLayer.addLayer(
-            L.marker([userLat, userLon]).bindPopup("📍 You are here!").openPopup()
-        );
-        setStatus("✅ Location set! Now select your parking time and click Proceed.", "found-msg");
-    }, function() {
-        setStatus("❌ Location access denied.", "notfound-msg");
+        markerLayer.addLayer(L.marker([userLat,userLon],{icon:blueIcon}).bindPopup('<div class="popup-inner"><div class="popup-name">📍 You are here</div></div>').openPopup());
+        setStatus('Location set! Select parking time and hit Find.','found');
+    },function(){
+        setStatus('Location access denied. Please search by address.','error');
     });
 }
 
-function searchByAddress() {
-    var address = document.getElementById("searchAddress").value.trim();
-    if (!address) return;
-
-    setStatus("🔍 Finding <b>" + address + "</b>...", "searching");
-
-    fetch("https://nominatim.openstreetmap.org/search?q=" +
-        encodeURIComponent(address) + "&format=json&limit=1")
-    .then(res => res.json())
-    .then(data => {
-        if (!data.length) {
-            setStatus("❌ Location not found.", "notfound-msg");
-            return;
-        }
-        userLat = parseFloat(data[0].lat);
-        userLon = parseFloat(data[0].lon);
-        map.setView([userLat, userLon], 14);
+function searchByAddress(){
+    var addr=document.getElementById('searchAddress').value.trim();
+    if(!addr)return;
+    setStatus('Finding <b>'+addr+'</b>...','searching');
+    fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(addr)+'&format=json&limit=1')
+    .then(r=>r.json()).then(function(data){
+        if(!data.length){setStatus('Location not found. Try a different search.','error');return;}
+        userLat=parseFloat(data[0].lat);userLon=parseFloat(data[0].lon);
+        map.setView([userLat,userLon],15);
         markerLayer.clearLayers();
-        markerLayer.addLayer(
-            L.marker([userLat, userLon]).bindPopup("📍 " + address).openPopup()
-        );
-        setStatus("✅ Location set! Now select your parking time and click Proceed.", "found-msg");
-    });
+        markerLayer.addLayer(L.marker([userLat,userLon],{icon:blueIcon}).bindPopup('<div class="popup-inner"><div class="popup-name">📍 '+addr+'</div></div>').openPopup());
+        setStatus('Location set! Select parking time and hit Find.','found');
+    }).catch(function(){setStatus('Search failed. Please try again.','error');});
 }
 
-function proceedSearch() {
-    filterFromVal = document.getElementById("filterFrom").value;
-    filterToVal   = document.getElementById("filterTo").value;
-
-    if (!filterFromVal || !filterToVal) {
-        alert("Please select both Parking From and Parking To times!");
-        return;
-    }
-
-    if (new Date(filterToVal) <= new Date(filterFromVal)) {
-        alert("Parking To time must be after Parking From time!");
-        return;
-    }
-
-    if (!userLat || !userLon) {
-        alert("Please use live location or search an address first!");
-        return;
-    }
-
-    performSearch(userLat, userLon);
+function proceedSearch(){
+    filterFromVal=document.getElementById('filterFrom').value;
+    filterToVal=document.getElementById('filterTo').value;
+    if(!filterFromVal||!filterToVal){showToast('⚠ Please select both From and To times','error');return;}
+    if(new Date(filterToVal)<=new Date(filterFromVal)){showToast('⚠ "To" must be after "From"','error');return;}
+    if(!userLat||!userLon){showToast('⚠ Set your location first','error');return;}
+    performSearch(userLat,userLon);
 }
 
-function performSearch(lat, lon) {
-    resetUI();
-    userLat = lat;
-    userLon = lon;
-
-    map.setView([lat, lon], 14);
-
-    markerLayer.addLayer(
-        L.marker([lat, lon]).bindPopup("📍 You are here!").openPopup()
-    );
-
-    searchCircle = L.circle([lat, lon], {
-        color: 'blue', fillColor: '#3f51b5', fillOpacity: 0.15, radius: 3000
+function performSearch(lat,lon){
+    resetUI();userLat=lat;userLon=lon;
+    map.setView([lat,lon],15);
+    markerLayer.addLayer(L.marker([lat,lon],{icon:blueIcon}).bindPopup('<div class="popup-inner"><div class="popup-name">📍 Your Location</div></div>').openPopup());
+    searchCircle=L.circle([lat,lon],{
+        color:'rgba(41,121,255,0.4)',fillColor:'rgba(41,121,255,0.06)',
+        fillOpacity:1,radius:3000,weight:1
     }).addTo(map);
+    setStatus('Searching for parking slots nearby...','searching');
 
-    setStatus("⏳ Searching for parking slots nearby...", "searching");
+    var url='/Parking/NearbySlots?lat='+lat+'&lon='+lon+'&radius=3';
+    if(filterFromVal&&filterToVal)url+='&fromTime='+encodeURIComponent(filterFromVal)+'&toTime='+encodeURIComponent(filterToVal);
 
-    var url = "/Parking/NearbySlots?lat=" + lat + "&lon=" + lon + "&radius=3";
-    if (filterFromVal && filterToVal) {
-        url += "&fromTime=" + encodeURIComponent(filterFromVal) +
-               "&toTime="   + encodeURIComponent(filterToVal);
-    }
+    fetch(url).then(r=>r.json()).then(function(slots){
+        if(!slots||!slots.length){setStatus('No parking slots found within 3 km.','error');return;}
 
-    fetch(url)
-    .then(res => res.json())
-    .then(slots => {
-        if (!slots || !slots.length) {
-            setStatus("😕 No parking slots found within 3 km.", "notfound-msg");
-            return;
-        }
+        availableSlots=slots.filter(s=>!s.isBooked);
+        bookedSlots=slots.filter(s=>s.isBooked);
 
-        availableSlots = slots.filter(s => !s.isBooked);
-        bookedSlots    = slots.filter(s =>  s.isBooked);
+        document.getElementById('availCount').textContent=availableSlots.length;
+        document.getElementById('bookedCount').textContent=bookedSlots.length;
+        document.getElementById('statsRow').style.display='grid';
+        document.getElementById('navButtons').style.display='flex';
 
-        var coordCount = {};
+        var coordCount={};
 
-        availableSlots.forEach(function(slot) {
-            var slotLat = parseFloat(slot.latitude);
-            var slotLon = parseFloat(slot.longitude);
-            if (isNaN(slotLat) || isNaN(slotLon)) return;
-
-            var key = slotLat.toFixed(6) + "," + slotLon.toFixed(6);
-            if (!coordCount[key]) coordCount[key] = 0;
-            else coordCount[key]++;
-            var offset = coordCount[key] * 0.00015;
-
-            var dist = getDistanceKm(lat, lon, slotLat, slotLon);
-
-            markerLayer.addLayer(
-                L.marker([slotLat + offset, slotLon + offset], { icon: greenIcon })
-                .bindPopup(
-                    "<b>" + slot.ownerName + "</b><br>" +
-                    "₹" + slot.pricePerHour + "/hr<br>" +
-                    slot.vehicleType + "<br>🟢 Available<br>" +
-                    dist + " km away"
-                )
-            );
+        // Drop available markers with stagger
+        availableSlots.forEach(function(slot,i){
+            var slotLat=parseFloat(slot.latitude),slotLon=parseFloat(slot.longitude);
+            if(isNaN(slotLat)||isNaN(slotLon))return;
+            var key=slotLat.toFixed(5)+','+slotLon.toFixed(5);
+            coordCount[key]=(coordCount[key]||0)+1;
+            var offset=coordCount[key]*0.00015;
+            var dist=getDistanceKm(lat,lon,slotLat,slotLon);
+            setTimeout(function(){
+                var m=L.marker([slotLat+offset,slotLon+offset],{icon:greenIcon});
+                var rating=slot.averageRating?('⭐ '+slot.averageRating.toFixed(1)):'No reviews';
+                m.bindPopup(
+                    '<div class="popup-inner">'+
+                    '<div class="popup-name">'+slot.ownerName+'</div>'+
+                    '<div class="popup-price green">₹'+slot.pricePerHour+'/hr</div>'+
+                    '<div class="popup-row">🚗 '+slot.vehicleType+'</div>'+
+                    '<div class="popup-row">📍 '+dist+' km away</div>'+
+                    '<div class="popup-row">'+rating+'</div>'+
+                    '<a href="/Parking/Book/'+slot.id+'" class="popup-btn">Book Now →</a>'+
+                    '</div>'
+                );
+                markerLayer.addLayer(m);
+            },i*60);
         });
 
-        bookedSlots.forEach(function(slot) {
-            var slotLat = parseFloat(slot.latitude);
-            var slotLon = parseFloat(slot.longitude);
-            if (isNaN(slotLat) || isNaN(slotLon)) return;
-
-            var key = slotLat.toFixed(6) + "," + slotLon.toFixed(6);
-            if (!coordCount[key]) coordCount[key] = 0;
-            else coordCount[key]++;
-            var offset = coordCount[key] * 0.00015;
-
-            var dist = getDistanceKm(lat, lon, slotLat, slotLon);
-
-            markerLayer.addLayer(
-                L.marker([slotLat + offset, slotLon + offset], { icon: redIcon })
-                .bindPopup(
-                    "<b>" + slot.ownerName + "</b><br>" +
-                    "₹" + slot.pricePerHour + "/hr<br>" +
-                    slot.vehicleType + "<br>🔴 Booked<br>" +
-                    dist + " km away"
-                )
-            );
+        bookedSlots.forEach(function(slot,i){
+            var slotLat=parseFloat(slot.latitude),slotLon=parseFloat(slot.longitude);
+            if(isNaN(slotLat)||isNaN(slotLon))return;
+            var key=slotLat.toFixed(5)+','+slotLon.toFixed(5);
+            coordCount[key]=(coordCount[key]||0)+1;
+            var offset=coordCount[key]*0.00015;
+            var dist=getDistanceKm(lat,lon,slotLat,slotLon);
+            var bookTo=slot.bookingTo?new Date(slot.bookingTo).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'—';
+            setTimeout(function(){
+                var m=L.marker([slotLat+offset,slotLon+offset],{icon:redIcon});
+                m.bindPopup(
+                    '<div class="popup-inner">'+
+                    '<div class="popup-name">'+slot.ownerName+'</div>'+
+                    '<div class="popup-price red">₹'+slot.pricePerHour+'/hr</div>'+
+                    '<div class="popup-row">🚗 '+slot.vehicleType+'</div>'+
+                    '<div class="popup-row">📍 '+dist+' km away</div>'+
+                    '<div class="popup-row">🔴 Booked until '+bookTo+'</div>'+
+                    '</div>'
+                );
+                markerLayer.addLayer(m);
+            },i*60+100);
         });
 
-        var filterMsg = filterFromVal && filterToVal
-            ? " for <b>" + new Date(filterFromVal).toLocaleString() +
-              "</b> → <b>" + new Date(filterToVal).toLocaleString() + "</b>"
-            : "";
+        var timeInfo=filterFromVal&&filterToVal?' for selected time':'';
+        setStatus('Found <b>'+availableSlots.length+' available</b> and <b>'+bookedSlots.length+' booked</b> slots'+timeInfo,'found');
 
-        setStatus(
-            "✅ Found <b>" + availableSlots.length + " available</b> and <b>" +
-            bookedSlots.length + " booked</b> slot(s) nearby" + filterMsg + ".",
-            "found-msg"
-        );
-
-        document.getElementById("toggleSection").style.display = "block";
-    })
-    .catch(function() {
-        setStatus("❌ Failed to load slots. Please try again.", "notfound-msg");
-    });
+    }).catch(function(){setStatus('Failed to load slots. Please try again.','error');});
 }
 
-// ── Navigate to separate pages with filter times ──
-function goToAvailable() {
-    if (!userLat || !userLon) return;
-    var url = "/Parking/AvailableSlots?lat=" + userLat + "&lon=" + userLon + "&radius=3";
-    if (filterFromVal && filterToVal) {
-        url += "&fromTime=" + encodeURIComponent(filterFromVal) +
-               "&toTime="   + encodeURIComponent(filterToVal);
-    }
-    window.location.href = url;
+function goToAvailable(){
+    if(!userLat||!userLon)return;
+    var url='/Parking/AvailableSlots?lat='+userLat+'&lon='+userLon+'&radius=3';
+    if(filterFromVal&&filterToVal)url+='&fromTime='+encodeURIComponent(filterFromVal)+'&toTime='+encodeURIComponent(filterToVal);
+    window.location.href=url;
 }
 
-function goToBooked() {
-    if (!userLat || !userLon) return;
-    var url = "/Parking/BookedSlots?lat=" + userLat + "&lon=" + userLon + "&radius=3";
-    if (filterFromVal && filterToVal) {
-        url += "&fromTime=" + encodeURIComponent(filterFromVal) +
-               "&toTime="   + encodeURIComponent(filterToVal);
-    }
-    window.location.href = url;
+function goToBooked(){
+    if(!userLat||!userLon)return;
+    var url='/Parking/BookedSlots?lat='+userLat+'&lon='+userLon+'&radius=3';
+    if(filterFromVal&&filterToVal)url+='&fromTime='+encodeURIComponent(filterFromVal)+'&toTime='+encodeURIComponent(filterToVal);
+    window.location.href=url;
 }
 
-// Auto refresh every 60 seconds
-setInterval(function() {
-    if (!userLat || !userLon || !filterFromVal || !filterToVal) return;
-    performSearch(userLat, userLon);
-}, 60000);
-
+// Auto refresh
+setInterval(function(){
+    if(userLat&&userLon&&filterFromVal&&filterToVal)performSearch(userLat,userLon);
+},60000);
 </script>

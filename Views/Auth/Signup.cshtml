@@ -1,154 +1,144 @@
 ﻿@{
     Layout = null;
 }
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Sign Up - SmartSlot</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Create Account — SmartSlot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-            background-image: url('https://i.pinimg.com/1200x/ea/3f/92/ea3f92fcdab7799f742c813cdb651463.jpg');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+        :root{
+            --green:#00e676;--blue:#2979ff;
+            --dark:#080c10;--border:rgba(255,255,255,0.08);
         }
-        body::before {
-            content: '';
-            position: fixed;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.75);
-            z-index: 0;
+        html,body{height:100%;}
+        body{
+            font-family:'DM Sans',sans-serif;background:var(--dark);color:white;
+            display:flex;align-items:center;justify-content:center;
+            min-height:100vh;padding:20px;
         }
-        .auth-container {
-            position: relative;
-            z-index: 1;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        .bg{
+            position:fixed;inset:0;z-index:0;
+            background:url('https://i.pinimg.com/1200x/ea/3f/92/ea3f92fcdab7799f742c813cdb651463.jpg') center/cover no-repeat;
         }
-        .auth-card {
-            background: rgba(26,26,26,0.95);
-            padding: 35px;
-            width: 350px;
-            border-radius: 12px;
-            border: 1px solid #333;
+        .bg::after{
+            content:'';position:absolute;inset:0;
+            background:linear-gradient(135deg,rgba(5,8,15,0.97),rgba(5,8,15,0.90),rgba(0,15,5,0.95));
         }
-        .step-label {
-            text-align: center;
-            font-size: 12px;
-            color: #888;
-            margin-bottom: 6px;
-            letter-spacing: 1px;
-            text-transform: uppercase;
+        .glow{
+            position:fixed;width:500px;height:500px;border-radius:50%;z-index:0;pointer-events:none;
+            background:radial-gradient(circle,rgba(0,230,118,0.06) 0%,transparent 70%);
+            bottom:-100px;left:-80px;
         }
-        h2 {
-            color: white;
-            text-align: center;
-            margin-bottom: 8px;
-            font-size: 22px;
+        .card{
+            position:relative;z-index:1;
+            width:100%;max-width:380px;
+            background:rgba(13,17,23,0.95);
+            border:1px solid var(--border);
+            border-radius:20px;padding:40px 36px;
+            animation:fadeUp 0.5s ease both;
         }
-        .desc {
-            text-align: center;
-            color: #aaa;
-            font-size: 13px;
-            margin-bottom: 24px;
+        @@keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+        .logo{display:flex;align-items:center;gap:10px;margin-bottom:28px;justify-content:center;}
+        .logo-p{
+            width:36px;height:36px;background:var(--green);
+            color:#000;font-family:'Syne',sans-serif;font-weight:800;font-size:18px;
+            border-radius:10px;display:flex;align-items:center;justify-content:center;
         }
-        input {
-            width: 100%;
-            padding: 12px;
-            margin: 8px 0;
-            border-radius: 6px;
-            border: 1px solid #444;
-            background: #2a2a2a;
-            color: white;
-            font-size: 15px;
-            box-sizing: border-box;
+        .logo-text{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;}
+        .logo-text span{color:var(--green);}
+        h2{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;margin-bottom:6px;text-align:center;}
+        .subtitle{font-size:13px;color:rgba(255,255,255,0.4);text-align:center;margin-bottom:24px;}
+
+        /* Step indicator */
+        .steps{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:24px;}
+        .step-dot{
+            width:28px;height:4px;border-radius:2px;
+            background:var(--border);transition:background 0.3s;
         }
-        input:focus {
-            outline: none;
-            border-color: #28a745;
+        .step-dot.active{background:var(--green);}
+        .step-dot.done{background:rgba(0,230,118,0.4);}
+        .step-label-row{
+            display:flex;justify-content:center;
+            font-size:11px;font-weight:600;letter-spacing:0.8px;
+            text-transform:uppercase;color:rgba(255,255,255,0.35);
+            margin-bottom:20px;
         }
-        button {
-            width: 100%;
-            padding: 12px;
-            background: #28a745;
-            border: none;
-            border-radius: 6px;
-            color: white;
-            margin-top: 12px;
-            cursor: pointer;
-            font-size: 15px;
-            font-weight: 600;
+        .step-label-row span{color:var(--green);}
+
+        .alert{padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:16px;}
+        .alert-error{background:rgba(255,82,82,0.1);border:1px solid rgba(255,82,82,0.2);color:#ff8a80;}
+
+        .field{position:relative;margin-bottom:14px;}
+        .field label{
+            display:block;font-size:11px;font-weight:600;
+            color:rgba(255,255,255,0.4);letter-spacing:0.8px;
+            text-transform:uppercase;margin-bottom:6px;
         }
-        button:hover { opacity: 0.9; }
-        .error {
-            color: #ff4d4d;
-            text-align: center;
-            margin-bottom: 10px;
-            font-size: 13px;
-            background: rgba(255,77,77,0.1);
-            padding: 8px;
-            border-radius: 6px;
+        .field input{
+            width:100%;padding:12px 14px;
+            background:rgba(255,255,255,0.04);
+            border:1px solid var(--border);
+            border-radius:10px;color:white;
+            font-family:'DM Sans',sans-serif;font-size:14px;
+            transition:border-color 0.2s,background 0.2s;outline:none;
         }
-        .switch {
-            text-align: center;
-            margin-top: 18px;
-            color: #aaa;
-            font-size: 13px;
+        .field input:focus{border-color:var(--green);background:rgba(0,230,118,0.04);}
+        .btn-submit{
+            width:100%;padding:13px;margin-top:8px;
+            background:var(--green);color:#000;
+            border:none;border-radius:12px;
+            font-family:'Syne',sans-serif;font-size:15px;font-weight:700;
+            cursor:pointer;transition:all 0.2s;
+            box-shadow:0 4px 20px rgba(0,230,118,0.2);
         }
-        .switch a {
-            color: #007bff;
-            text-decoration: none;
-        }
-        .steps {
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            margin-bottom: 24px;
-        }
-        .step-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #444;
-        }
-        .step-dot.active { background: #28a745; }
+        .btn-submit:hover{background:#00c853;transform:translateY(-1px);box-shadow:0 8px 28px rgba(0,230,118,0.3);}
+        .btn-submit:active{transform:translateY(0);}
+        .switch{text-align:center;margin-top:22px;font-size:13px;color:rgba(255,255,255,0.4);}
+        .switch a{color:var(--blue);text-decoration:none;font-weight:500;}
+        .switch a:hover{text-decoration:underline;}
+        .divider{height:1px;background:var(--border);margin:20px 0;}
+        .hint{font-size:12px;color:rgba(255,255,255,0.3);margin-top:6px;}
     </style>
 </head>
 <body>
-    <div class="auth-container">
-        <div class="auth-card">
-            <div class="step-label">Step 1 of 3</div>
-            <h2>Create Account</h2>
-            <p class="desc">Enter your phone number to receive a verification code</p>
-
-            <div class="steps">
-                <div class="step-dot active"></div>
-                <div class="step-dot"></div>
-                <div class="step-dot"></div>
-            </div>
-
-            @if (ViewBag.Error != null)
-            {
-                <div class="error">@ViewBag.Error</div>
-            }
-
-            <form method="post">
-                <input type="tel" name="phone" placeholder="Phone Number (10 digits)" required
-                       pattern="[0-9]{10}" maxlength="10" />
-                <button type="submit">Send OTP →</button>
-            </form>
-
-            <div class="switch">
-                Already have an account? <a href="/Auth/Signin">Sign In</a>
-            </div>
-        </div>
+<div class="bg"></div>
+<div class="glow"></div>
+<div class="card">
+    <div class="logo">
+        <div class="logo-p">P</div>
+        <div class="logo-text">Smart<span>Slot</span></div>
     </div>
+    <h2>Create Account</h2>
+    <p class="subtitle">Enter your phone number to get started</p>
+
+    <div class="step-label-row">Step <span>&nbsp;1&nbsp;</span> of 3</div>
+    <div class="steps">
+        <div class="step-dot active"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+    </div>
+
+    @if (ViewBag.Error != null)
+    {
+        <div class="alert alert-error">⚠ @ViewBag.Error</div>
+    }
+
+    <form method="post">
+        <div class="field">
+            <label>Phone Number</label>
+            <input type="tel" name="phone" placeholder="10-digit mobile number"
+                   required pattern="[0-9]{10}" maxlength="10" autocomplete="tel"/>
+        </div>
+        <p class="hint">We'll send a verification code to this number.</p>
+        <button type="submit" class="btn-submit">Send OTP →</button>
+    </form>
+
+    <div class="divider"></div>
+    <div class="switch">Already have an account? <a href="/Auth/Signin">Sign In</a></div>
+</div>
 </body>
 </html>

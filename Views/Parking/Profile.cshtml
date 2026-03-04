@@ -2,198 +2,190 @@
     Layout = null;
     var user = ViewBag.User as SmartSlot.Models.User;
 }
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Profile - SmartSlot</title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Profile — SmartSlot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
-            * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-                font-family: 'Segoe UI', sans-serif;
-            }
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+        :root{
+            --green:#00e676;--blue:#2979ff;
+            --dark:#080c10;--surface:#0d1117;
+            --border:rgba(255,255,255,0.08);
+        }
+        body{font-family:'DM Sans',sans-serif;background:var(--dark);color:white;min-height:100vh;}
+        .topbar{
+            position:sticky;top:0;z-index:10;
+            background:rgba(8,12,16,0.95);backdrop-filter:blur(12px);
+            border-bottom:1px solid var(--border);
+            padding:16px 20px;display:flex;align-items:center;gap:14px;
+        }
+        .back-btn{
+            width:38px;height:38px;background:rgba(255,255,255,0.04);
+            border:1px solid var(--border);border-radius:10px;
+            color:white;font-size:18px;display:flex;align-items:center;justify-content:center;
+            text-decoration:none;transition:all 0.2s;
+        }
+        .back-btn:hover{background:rgba(255,255,255,0.1);color:white;}
+        .topbar-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;}
+        .page{max-width:480px;margin:0 auto;padding:32px 20px 60px;}
 
-            body {
-                background: #0f0f0f;
-                color: white;
-                min-height: 100vh;
-            }
+        /* Avatar hero */
+        .avatar-hero{
+            text-align:center;padding:32px 20px 28px;
+            animation:fadeUp 0.5s ease both;
+        }
+        .avatar-ring{
+            position:relative;display:inline-block;margin-bottom:16px;
+        }
+        .avatar{
+            width:88px;height:88px;
+            background:linear-gradient(135deg,var(--blue),#7c3aed);
+            border-radius:50%;display:flex;align-items:center;justify-content:center;
+            font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:white;
+            position:relative;z-index:1;
+        }
+        .avatar-glow{
+            position:absolute;inset:-4px;border-radius:50%;
+            background:linear-gradient(135deg,var(--blue),#7c3aed);
+            opacity:0.2;filter:blur(8px);z-index:0;
+        }
+        .verified-badge{
+            position:absolute;bottom:2px;right:2px;z-index:2;
+            width:24px;height:24px;background:var(--green);
+            border-radius:50%;display:flex;align-items:center;justify-content:center;
+            font-size:12px;border:2px solid var(--dark);
+        }
+        .avatar-name{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:6px;}
+        .avatar-tag{
+            display:inline-flex;align-items:center;gap:6px;
+            background:rgba(0,230,118,0.08);border:1px solid rgba(0,230,118,0.2);
+            padding:4px 12px;border-radius:100px;
+            font-size:12px;color:var(--green);font-weight:500;
+        }
 
-            .topbar {
-                background: #1a1a1a;
-                border-bottom: 1px solid #222;
-                padding: 16px 24px;
-                display: flex;
-                align-items: center;
-                gap: 16px;
-                position: sticky;
-                top: 0;
-            }
+        /* Info card */
+        .info-card{
+            background:var(--surface);border:1px solid var(--border);
+            border-radius:16px;overflow:hidden;margin-bottom:14px;
+            animation:fadeUp 0.5s 0.1s ease both;
+        }
+        .info-row{
+            display:flex;align-items:center;gap:14px;
+            padding:18px 20px;border-bottom:1px solid var(--border);
+            transition:background 0.15s;
+        }
+        .info-row:last-child{border-bottom:none;}
+        .info-row:hover{background:rgba(255,255,255,0.02);}
+        .info-icon{
+            width:38px;height:38px;border-radius:10px;
+            display:flex;align-items:center;justify-content:center;
+            font-size:18px;flex-shrink:0;
+        }
+        .icon-user{background:rgba(41,121,255,0.1);}
+        .icon-phone{background:rgba(0,230,118,0.1);}
+        .icon-email{background:rgba(255,171,64,0.1);}
+        .info-label{
+            font-size:10px;font-weight:600;letter-spacing:1px;
+            text-transform:uppercase;color:rgba(255,255,255,0.3);
+        }
+        .info-value{font-size:15px;color:#eee;font-weight:500;margin-top:3px;}
 
-            .back-btn {
-                background: rgba(255,255,255,0.08);
-                border: none;
-                color: white;
-                width: 38px;
-                height: 38px;
-                border-radius: 10px;
-                font-size: 18px;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                text-decoration: none;
-            }
+        /* Actions */
+        .actions{
+            display:grid;grid-template-columns:1fr 1fr;gap:10px;
+            animation:fadeUp 0.5s 0.2s ease both;
+        }
+        .action-btn{
+            display:flex;align-items:center;gap:10px;
+            padding:14px 16px;
+            background:var(--surface);border:1px solid var(--border);
+            border-radius:14px;color:white;text-decoration:none;
+            font-size:13px;font-weight:500;transition:all 0.2s;
+        }
+        .action-btn:hover{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.14);color:white;transform:translateY(-1px);}
+        .action-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+        .action-btn.danger{color:#ff5252;}
+        .action-btn.danger:hover{background:rgba(255,82,82,0.06);border-color:rgba(255,82,82,0.2);color:#ff5252;}
 
-                .back-btn:hover {
-                    background: rgba(255,255,255,0.15);
-                }
+        @@keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
 
-            .topbar-title {
-                font-size: 20px;
-                font-weight: 700;
-            }
-
-            .page {
-                max-width: 500px;
-                margin: 0 auto;
-                padding: 36px 20px;
-            }
-
-            /* Avatar */
-            .avatar-wrap {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                margin-bottom: 36px;
-            }
-
-            .avatar {
-                width: 90px;
-                height: 90px;
-                background: linear-gradient(135deg, #2563eb, #1d4ed8);
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 40px;
-                font-weight: 800;
-                color: white;
-                margin-bottom: 14px;
-                box-shadow: 0 0 0 4px rgba(37,99,235,0.2);
-            }
-
-            .avatar-name {
-                font-size: 22px;
-                font-weight: 700;
-            }
-
-            .avatar-tag {
-                font-size: 13px;
-                color: #22c55e;
-                margin-top: 4px;
-                font-weight: 500;
-            }
-
-            /* Info Cards */
-            .info-card {
-                background: #1a1a1a;
-                border: 1px solid #2a2a2a;
-                border-radius: 14px;
-                overflow: hidden;
-                margin-bottom: 16px;
-            }
-
-            .info-row {
-                display: flex;
-                align-items: center;
-                gap: 16px;
-                padding: 18px 20px;
-                border-bottom: 1px solid #222;
-            }
-
-                .info-row:last-child {
-                    border-bottom: none;
-                }
-
-            .info-icon {
-                font-size: 20px;
-                width: 36px;
-                text-align: center;
-                flex-shrink: 0;
-            }
-
-            .info-content {
-            }
-
-            .info-label {
-                font-size: 11px;
-                color: #666;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-                font-weight: 600;
-            }
-
-            .info-value {
-                font-size: 15px;
-                color: #eee;
-                font-weight: 500;
-                margin-top: 2px;
-            }
+        .section-label{
+            font-size:11px;font-weight:600;letter-spacing:1.5px;
+            text-transform:uppercase;color:rgba(255,255,255,0.3);
+            margin-bottom:10px;margin-top:24px;
+        }
     </style>
 </head>
 <body>
+<div class="topbar">
+    <a href="/Parking/Index" class="back-btn">←</a>
+    <span class="topbar-title">Profile</span>
+</div>
 
-    <div class="topbar">
-        <a href="/Parking/Index" class="back-btn">←</a>
-        <span class="topbar-title">👤 Profile</span>
+<div class="page">
+@if (user != null)
+{
+    <div class="avatar-hero">
+        <div class="avatar-ring">
+            <div class="avatar-glow"></div>
+            <div class="avatar">@user.Username.Substring(0,1).ToUpper()</div>
+            <div class="verified-badge">✓</div>
+        </div>
+        <div class="avatar-name">@user.Username</div>
+        <div style="margin-top:8px;">
+            <span class="avatar-tag">✓ SmartSlot Member</span>
+        </div>
     </div>
 
-    <div class="page">
-
-        @if (user != null)
-        {
-            <div class="avatar-wrap">
-                <div class="avatar">@user.Username.Substring(0, 1).ToUpper()</div>
-                <div class="avatar-name">@user.Username</div>
-                <div class="avatar-tag">✓ SmartSlot Member</div>
+    <div class="section-label">Account Info</div>
+    <div class="info-card">
+        <div class="info-row">
+            <div class="info-icon icon-user">👤</div>
+            <div>
+                <div class="info-label">Username</div>
+                <div class="info-value">@user.Username</div>
             </div>
-
-            <div class="info-card">
-                <div class="info-row">
-                    <div class="info-icon">👤</div>
-                    <div class="info-content">
-                        <div class="info-label">Username</div>
-                        <div class="info-value">@user.Username</div>
-                    </div>
-                </div>
-                <div class="info-row">
-                    <div class="info-icon">📱</div>
-                    <div class="info-content">
-                        <div class="info-label">Phone Number</div>
-                        <div class="info-value">@user.PhoneNumber</div>
-                    </div>
-                </div>
-                <div class="info-row">
-                    <div class="info-icon">✉️</div>
-                    <div class="info-content">
-                        <div class="info-label">Email Address</div>
-                        <div class="info-value">@user.Email</div>
-                    </div>
-                </div>
+        </div>
+        <div class="info-row">
+            <div class="info-icon icon-phone">📱</div>
+            <div>
+                <div class="info-label">Phone Number</div>
+                <div class="info-value">@user.PhoneNumber</div>
             </div>
-        }
-        else
-        {
-            <div style="text-align:center; color:#555; margin-top:60px;">
-                <div style="font-size:48px;">⚠️</div>
-                <p style="margin-top:12px;">Could not load profile. Please sign in again.</p>
+        </div>
+        <div class="info-row">
+            <div class="info-icon icon-email">✉️</div>
+            <div>
+                <div class="info-label">Email Address</div>
+                <div class="info-value">@(string.IsNullOrEmpty(user.Email) ? "Not set" : user.Email)</div>
             </div>
-        }
-
+        </div>
     </div>
+
+    <div class="section-label">Actions</div>
+    <div class="actions">
+        <a href="/Parking/Dashboard" class="action-btn">
+            <span class="action-icon" style="background:rgba(41,121,255,0.1)">📊</span> Dashboard
+        </a>
+        <a href="/Auth/ResetPassword" class="action-btn">
+            <span class="action-icon" style="background:rgba(0,230,118,0.1)">🔑</span> Reset Password
+        </a>
+        <a href="/Parking/Search" class="action-btn" style="grid-column:span 2;">
+            <span class="action-icon" style="background:rgba(255,171,64,0.1)">🔍</span> Find Parking
+        </a>
+    </div>
+}
+else
+{
+    <div style="text-align:center;padding:60px 20px;color:rgba(255,255,255,0.3);">
+        <div style="font-size:48px;margin-bottom:12px;opacity:0.4;">⚠️</div>
+        <p>Could not load profile. Please sign in again.</p>
+    </div>
+}
+</div>
 </body>
 </html>
