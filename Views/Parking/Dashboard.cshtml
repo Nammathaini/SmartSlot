@@ -2,7 +2,7 @@
     Layout = null;
     var slots = ViewBag.MySlots as List<SmartSlot.Models.ParkingSlot> ?? new List<SmartSlot.Models.ParkingSlot>();
     var bookings = (ViewBag.MyBookings as System.Collections.IEnumerable)?.Cast<dynamic>().ToList() ?? new List<dynamic>();
-    var activeBookings = bookings.Where(b => ((DateTime)b.BookingTo) > DateTime.UtcNow).ToList();
+    var activeBookings = bookings.Where(b => ((DateTime)b.BookingTo) > DateTime.Now).ToList();
     var totalBooked = bookings.Count;
 }
 <!DOCTYPE html>
@@ -131,6 +131,7 @@
 </div>
 
 <script>
+// ✅ NO .AddHours(5.5) — dates stored as IST in DB already
 var slotsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(slots.Select(s => new {
     id           = s.Id,
     ownerName    = s.OwnerName,
@@ -140,8 +141,8 @@ var slotsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(slots.Select
     exitMethod   = s.ExitMethod,
     isBooked     = s.IsBooked,
     qrToken      = s.QrToken ?? "",
-    availableFrom = s.AvailableFrom.AddHours(5.5).ToString("dd MMM, hh:mm tt"),
-    availableTo   = s.AvailableTo.AddHours(5.5).ToString("dd MMM, hh:mm tt")
+    availableFrom = s.AvailableFrom.ToString("dd MMM yyyy, hh:mm tt"),
+    availableTo   = s.AvailableTo.ToString("dd MMM yyyy, hh:mm tt")
 })));
 
 var bookingsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(bookings.Select(b => new {
@@ -149,9 +150,9 @@ var bookingsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(bookings.
     parkingSlotId = (int)b.ParkingSlotId,
     vehicleNumber = (string)b.VehicleNumber,
     customerName  = (string)b.CustomerName,
-    bookingFrom   = ((DateTime)b.BookingFrom).AddHours(5.5).ToString("dd MMM, hh:mm tt"),
-    bookingTo     = ((DateTime)b.BookingTo).AddHours(5.5).ToString("dd MMM, hh:mm tt"),
-    isActive      = ((DateTime)b.BookingTo) > DateTime.UtcNow,
+    bookingFrom   = ((DateTime)b.BookingFrom).ToString("dd MMM yyyy, hh:mm tt"),
+    bookingTo     = ((DateTime)b.BookingTo).ToString("dd MMM yyyy, hh:mm tt"),
+    isActive      = ((DateTime)b.BookingTo) > DateTime.Now,
     exitConfirmed = (bool)b.ExitConfirmed
 })));
 
@@ -165,35 +166,38 @@ function openModal(type) {
     if (type === 'slots') {
         title.innerHTML = 'Your Listed Slots <button class="modal-close" onclick="closeModal()">Close</button>';
         if (!slotsData.length) {
-            html = '<div class="empty-state"><div class="empty-icon">P</div><div class="empty-text">No slots listed yet.</div></div>';
+            html = '<div class="empty-state"><div class="empty-icon">🅿</div><div class="empty-text">No slots listed yet.</div></div>';
         } else {
             slotsData.forEach(function(s) {
                 var qrHtml = '';
-                if (s.exitMethod === 'QR' && s.qrToken) {
+                if (s.qrToken) {
                     qrHtml = '<div class="qr-section">'
                         + '<div class="qr-box" id="mqr-' + s.id + '"></div>'
                         + '<div>'
-                        + '<div class="qr-info-title">Exit QR Code</div>'
-                        + '<div class="qr-info-sub">Paste this QR at your slot. Customer scans to confirm exit.</div>'
-                        + '<div class="qr-penalty-note">No scan after booking ends = penalty applies</div>'
-                        + '<button class="btn-dl-qr" onclick="downloadQR(' + s.id + ', \'' + s.ownerName + '\');">&#11123; Download QR</button>'
+                        + '<div class="qr-info-title">&#128247; Exit QR Code</div>'
+                        + '<div class="qr-info-sub">Display this QR at your slot.<br/>Customer scans to confirm exit.</div>'
+                        + '<div class="qr-penalty-note">&#9888; No scan within 15 min = penalty applies</div>'
+                        + '<button class="btn-dl-qr" onclick="downloadQR(' + s.id + ', \'' + s.ownerName.replace(/'/g,"\\'") + '\');">&#11123; Download QR</button>'
                         + '</div></div>';
                 }
                 html += '<div class="detail-card">'
                     + '<div class="dc-top">'
                     + '<div class="dc-icon" style="background:rgba(16,185,129,0.1)">&#127968;</div>'
                     + '<div class="dc-body">'
-                    + '<div class="dc-title">' + s.ownerName + ' - ' + s.vehicleType
-                    + (s.exitMethod === 'QR' ? ' <span class="badge-qr">QR Exit</span>' : '') + '</div>'
-                    + '<div class="dc-meta">Rs.' + s.pricePerHour + '/hr - ' + s.paymentMode + '</div>'
-                    + '<div class="dc-meta">' + s.availableFrom + ' to ' + s.availableTo + '</div>'
+                    + '<div class="dc-title">' + s.ownerName + ' &mdash; ' + s.vehicleType
+                    + (s.qrToken ? ' <span class="badge-qr">QR Exit</span>' : '') + '</div>'
+                    + '<div class="dc-meta">&#8377;' + s.pricePerHour + '/hr &bull; ' + s.paymentMode + '</div>'
+                    + '<div class="dc-meta">&#128197; ' + s.availableFrom + ' &rarr; ' + s.availableTo + '</div>'
                     + '</div>'
-                    + (s.isBooked ? '<span class="badge badge-red">Booked</span>' : '<span class="badge badge-green">Available</span>')
+                    + (s.isBooked
+                        ? '<span class="badge badge-red">Booked</span>'
+                        : '<span class="badge badge-green">Available</span>')
                     + '</div>'
                     + qrHtml
                     + '</div>';
             });
         }
+
     } else if (type === 'bookings') {
         title.innerHTML = 'All Bookings <button class="modal-close" onclick="closeModal()">Close</button>';
         if (!bookingsData.length) {
@@ -204,14 +208,17 @@ function openModal(type) {
                     + '<div class="dc-top">'
                     + '<div class="dc-icon" style="background:rgba(37,99,235,0.1)">&#128273;</div>'
                     + '<div class="dc-body">'
-                    + '<div class="dc-title">Slot #' + b.parkingSlotId + ' - ' + b.vehicleNumber + '</div>'
-                    + '<div class="dc-meta">' + b.bookingFrom + ' to ' + b.bookingTo + '</div>'
-                    + (b.exitConfirmed ? '<div class="dc-meta" style="color:#10b981;">Exit Confirmed</div>' : '')
+                    + '<div class="dc-title">Slot #' + b.parkingSlotId + ' &mdash; ' + b.vehicleNumber + '</div>'
+                    + '<div class="dc-meta">&#128197; ' + b.bookingFrom + ' &rarr; ' + b.bookingTo + '</div>'
+                    + (b.exitConfirmed ? '<div class="dc-meta" style="color:#10b981;">&#9989; Exit Confirmed</div>' : '')
                     + '</div>'
-                    + (b.isActive ? '<span class="badge badge-blue">Active</span>' : '<span class="badge badge-red">Expired</span>')
+                    + (b.isActive
+                        ? '<span class="badge badge-blue">Active</span>'
+                        : '<span class="badge badge-red">Expired</span>')
                     + '</div></div>';
             });
         }
+
     } else if (type === 'active') {
         title.innerHTML = 'Active Now <button class="modal-close" onclick="closeModal()">Close</button>';
         if (!activeData.length) {
@@ -222,8 +229,8 @@ function openModal(type) {
                     + '<div class="dc-top">'
                     + '<div class="dc-icon" style="background:rgba(245,158,11,0.1)">&#9889;</div>'
                     + '<div class="dc-body">'
-                    + '<div class="dc-title">Slot #' + b.parkingSlotId + ' - ' + b.vehicleNumber + '</div>'
-                    + '<div class="dc-meta">' + b.bookingFrom + ' to ' + b.bookingTo + '</div>'
+                    + '<div class="dc-title">Slot #' + b.parkingSlotId + ' &mdash; ' + b.vehicleNumber + '</div>'
+                    + '<div class="dc-meta">&#128197; ' + b.bookingFrom + ' &rarr; ' + b.bookingTo + '</div>'
                     + '</div>'
                     + '<span class="badge badge-amber">Live</span>'
                     + '</div></div>';
@@ -234,11 +241,12 @@ function openModal(type) {
     body.innerHTML = html;
     document.getElementById('modalOverlay').classList.add('open');
 
+    // Generate QR codes after HTML is injected
     if (type === 'slots') {
         slotsData.forEach(function(s) {
-            if (s.exitMethod === 'QR' && s.qrToken) {
+            if (s.qrToken) {
                 var el = document.getElementById('mqr-' + s.id);
-                if (el) {
+                if (el && el.children.length === 0) {
                     new QRCode(el, {
                         text: 'https://smartslot-sc9u.onrender.com/Parking/ExitScan?token=' + s.qrToken,
                         width: 70, height: 70,
@@ -253,26 +261,36 @@ function openModal(type) {
 
 function downloadQR(slotId, ownerName) {
     var box = document.getElementById('mqr-' + slotId);
-    if (!box) return;
+    if (!box) { alert('Open the Slots panel first to load the QR.'); return; }
+
     var canvas = box.querySelector('canvas');
     var img    = box.querySelector('img');
     var dataUrl = '';
+
     if (canvas) {
-        dataUrl = canvas.toDataURL('image/png');
-    } else if (img) {
-        // draw img onto temp canvas
+        // Make a larger padded version for download
         var c = document.createElement('canvas');
-        c.width = 70; c.height = 70;
+        c.width = 200; c.height = 200;
         var ctx = c.getContext('2d');
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0,0,70,70);
-        ctx.drawImage(img, 0, 0, 70, 70);
+        ctx.fillRect(0, 0, 200, 200);
+        ctx.drawImage(canvas, 15, 15, 170, 170);
+        dataUrl = c.toDataURL('image/png');
+    } else if (img) {
+        var c = document.createElement('canvas');
+        c.width = 200; c.height = 200;
+        var ctx = c.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, 200, 200);
+        ctx.drawImage(img, 15, 15, 170, 170);
         dataUrl = c.toDataURL('image/png');
     }
-    if (!dataUrl) return;
+
+    if (!dataUrl) { alert('QR not ready yet. Please wait a moment and try again.'); return; }
+
     var a = document.createElement('a');
     a.href = dataUrl;
-    a.download = 'SmartSlot_QR_' + ownerName.replace(/\s+/g,'_') + '.png';
+    a.download = 'SmartSlot_QR_' + (ownerName || 'Slot' + slotId).replace(/\s+/g,'_') + '.png';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

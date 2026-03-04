@@ -93,9 +93,9 @@
             </div>
             <div class="field"><label>Payment Mode</label>
                 <select name="PaymentMode" id="paymentMode" onchange="toggleUpi()">
-                    <option value="Cash">Cash Only</option>
+                    <option value="Cash">Hard Cash Only</option>
                     <option value="UPI">UPI</option>
-                    <option value="Both">Both (Cash &amp; UPI)</option>
+                    
                 </select>
             </div>
 
@@ -182,7 +182,7 @@ function setLocation(lat,lon){document.getElementById("latField").value=lat;docu
 
 function toggleUpi(){
     var mode=document.getElementById("paymentMode").value;
-    var show=(mode==="UPI"||mode==="Both");
+    var show=(mode==="UPI");
     document.getElementById("upiSection").style.display=show?"block":"none";
     if(!show){document.getElementById("ownerUpiId").value="";document.getElementById("upiQrFile").value="";document.getElementById("upiQrPreview").style.display="none";}
 }
@@ -209,7 +209,7 @@ function validateLocation(){
     if(!document.getElementById("parkingImage").files.length){alert("Please upload a parking photo!");return false;}
     if(parseInt(document.getElementById("parkingScoreField").value)<35){alert("Score too low. Upload a clearer photo of your parking area.");return false;}
     var mode=document.getElementById("paymentMode").value;
-    if((mode==="UPI"||mode==="Both")&&!document.getElementById("upiQrFile").files.length){
+    if((mode==="UPI")&&!document.getElementById("upiQrFile").files.length){
         alert("Please upload your UPI QR code image!");return false;
     }
     return true;
