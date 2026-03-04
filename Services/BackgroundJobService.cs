@@ -99,7 +99,7 @@ namespace SmartSlot.Services
                     var slot = context.ParkingSlots.Find(booking.ParkingSlotId);
                     if (slot != null && !string.IsNullOrEmpty(booking.CustomerEmail))
                     {
-                        var scanLink = $"https://smartslot-fkc6.onrender.com/Parking/ExitScan?token={slot.QrToken}&bid={booking.Id}";
+                        var scanLink = $"https://smartslot-sc9u.onrender.com/Parking/ExitScan?token={slot.QrToken}&bid={booking.Id}";
                         await emailService.SendExitScanEmail(
                             toEmail: booking.CustomerEmail,
                             customerName: booking.CustomerName,

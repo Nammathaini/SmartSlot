@@ -136,7 +136,7 @@ namespace SmartSlot.Services
                                 }
 
                                 // Include bid in link so ExitScan page can verify the customer
-                                var scanLink = $"https://smartslot-fkc6.onrender.com/Parking/ExitScan?token={slot.QrToken}&bid={booking.Id}";
+                                var scanLink = $"https://smartslot-sc9u.onrender.com/Parking/ExitScan?token={slot.QrToken}&bid={booking.Id}";
 
                                 await emailService.SendExitScanEmail(
                                     toEmail: booking.CustomerEmail,

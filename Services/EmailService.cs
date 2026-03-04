@@ -23,7 +23,7 @@ namespace SmartSlot.Services
         {
             var istFrom = availableFrom.AddHours(5.5);
             var istTo = availableTo.AddHours(5.5);
-            var dashboardLink = "https://smartslot-fkc6.onrender.com/Parking/Dashboard";
+            var dashboardLink = "https://smartslot-sc9u.onrender.com/Parking/Dashboard";
 
             var html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>
 <style>
@@ -169,7 +169,7 @@ namespace SmartSlot.Services
     <div class='detail-row'><span class='detail-label'>Vehicle Type</span><span class='detail-value'>{vehicleType}</span></div>
     <div class='detail-row'><span class='detail-label'>Price Per Hour</span><span class='detail-value'>₹{pricePerHour}/hr</span></div>
     <div class='detail-row'><span class='detail-label'>Available Until</span><span class='detail-value'>{istTo:dd MMM yyyy, hh:mm tt}</span></div>
-    <a href='https://smartslot-fkc6.onrender.com/Parking/Search' class='cta'>Book Now →</a>
+    <a href='https://smartslot-sc9u.onrender.com/Parking/Search' class='cta'>Book Now →</a>
   </div>
   <div class='footer'>2025 SmartSlot. All rights reserved.</div>
 </div></body></html>";
@@ -211,7 +211,7 @@ namespace SmartSlot.Services
         // ── Review Email ──
         public async Task SendReviewEmail(string toEmail, string customerName, int bookingId)
         {
-            var reviewLink = $"https://smartslot-fkc6.onrender.com/Parking/Review/{bookingId}";
+            var reviewLink = $"https://smartslot-sc9u.onrender.com/Parking/Review/{bookingId}";
 
             var html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>
 <style>
@@ -246,7 +246,7 @@ namespace SmartSlot.Services
         public async Task SendOneHourAlertEmail(string toEmail, string customerName, DateTime bookingTo, int bookingId)
         {
             string formattedTime = bookingTo.AddHours(5.5).ToString("hh:mm tt");
-            var extendLink = $"https://smartslot-fkc6.onrender.com/Parking/Extend/{bookingId}";
+            var extendLink = $"https://smartslot-sc9u.onrender.com/Parking/Extend/{bookingId}";
 
             var html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>
 <style>
@@ -349,7 +349,7 @@ namespace SmartSlot.Services
         {
             var subject = "🟢 Parking Slot is Now Free — SmartSlot";
 
-            var bookUrl = $"https://smartslot-fkc6.onrender.com/Parking/Book/{slotId}";
+            var bookUrl = $"https://smartslot-sc9u.onrender.com/Parking/Book/{slotId}";
 
             var body = $@"
 <!DOCTYPE html>
@@ -423,7 +423,7 @@ namespace SmartSlot.Services
         {
             var subject = "⏰ 1 Hour Left on Your Parking — SmartSlot";
             var istTo = bookingTo.AddHours(5.5);
-            var extendUrl = $"https://smartslot-fkc6.onrender.com/Parking/Extend/{bookingId}";
+            var extendUrl = $"https://smartslot-sc9u.onrender.com/Parking/Extend/{bookingId}";
 
             var body = $@"
 <!DOCTYPE html>

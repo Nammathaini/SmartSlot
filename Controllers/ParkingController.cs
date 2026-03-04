@@ -414,7 +414,7 @@ namespace SmartSlot.Controllers
             {
                 if (!string.IsNullOrEmpty(booking.CustomerEmail) && !string.IsNullOrEmpty(slot.QrToken))
                 {
-                    var scanLink = $"https://smartslot-fkc6.onrender.com/Parking/ExitScan?token={slot.QrToken}&bid={booking.Id}";
+                    var scanLink = $"https://smartslot-sc9u.onrender.com/Parking/ExitScan?token={slot.QrToken}&bid={booking.Id}";
                     await _emailService.SendExitScanEmail(
                         toEmail: booking.CustomerEmail,
                         customerName: booking.CustomerName,

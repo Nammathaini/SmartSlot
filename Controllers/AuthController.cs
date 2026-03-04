@@ -291,7 +291,7 @@ namespace SmartSlot.Controllers
             _context.PasswordResetTokens.Add(resetToken);
             _context.SaveChanges();
 
-            var resetLink = $"https://smartslot-fkc6.onrender.com/Auth/ResetPasswordByToken?token={token}";
+            var resetLink = $"https://smartslot-sc9u.onrender.com/Auth/ResetPasswordByToken?token={token}";
 
             try
             {
