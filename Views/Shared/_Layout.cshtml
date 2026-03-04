@@ -3,42 +3,141 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - SmartSlot</title>
-    <script type="importmap"></script>
+    <title>@ViewData["Title"] — SmartSlot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/SmartSlot.styles.css" asp-append-version="true" />
+    <style>
+        :root {
+            --green: #00e676;
+            --blue: #2979ff;
+            --red: #ff5252;
+            --dark: #080c10;
+            --surface: #0d1117;
+            --border: rgba(255,255,255,0.08);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--dark);
+            color: white;
+            min-height: 100vh;
+        }
+
+        /* ── Page transition ── */
+        .page-wrapper {
+            animation: pageIn 0.35s ease both;
+        }
+        @@keyframes pageIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Global Toast ── */
+        #globalToast {
+            position: fixed; bottom: 24px; left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: white; padding: 12px 22px;
+            border-radius: 14px; font-size: 14px;
+            z-index: 99999; opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            white-space: nowrap;
+            font-family: 'DM Sans', sans-serif;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+        #globalToast.show {
+            opacity: 1; transform: translateX(-50%) translateY(0);
+        }
+        #globalToast.success { border-color: rgba(0,230,118,0.3); }
+        #globalToast.error   { border-color: rgba(255,82,82,0.3); }
+        #globalToast.info    { border-color: rgba(41,121,255,0.3); }
+
+        /* ── Progress bar ── */
+        #pageProgress {
+            position: fixed; top: 0; left: 0; height: 2px;
+            background: var(--green); z-index: 99999;
+            width: 0%; transition: width 0.3s ease;
+            box-shadow: 0 0 8px var(--green);
+        }
+
+        /* ── Bootstrap overrides ── */
+        .navbar { display: none !important; }
+        footer  { display: none !important; }
+        .container { max-width: 100% !important; padding: 0 !important; }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--dark); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+        /* ── Selection ── */
+        ::selection { background: rgba(0,230,118,0.2); }
+    </style>
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">SmartSlot</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                    </ul>
-                </div>
-            </div>
-        </nav>
-    </header>
+
+<!-- Page progress bar -->
+<div id="pageProgress"></div>
+
+<!-- Global Toast -->
+<div id="globalToast"></div>
+
+<div class="page-wrapper">
     <div class="container">
-        <main role="main" class="pb-3">
+        <main role="main">
             @RenderBody()
         </main>
     </div>
+</div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - SmartSlot - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-        </div>
-    </footer>
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
-    @await RenderSectionAsync("Scripts", required: false)
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+
+<script>
+    // ── Global Toast System ──
+    window.showToast = function(msg, type) {
+        var t = document.getElementById('globalToast');
+        t.textContent = msg;
+        t.className = 'show ' + (type || '');
+        clearTimeout(window._toastTimer);
+        window._toastTimer = setTimeout(function() {
+            t.className = '';
+        }, 3500);
+    };
+
+    // ── Page Progress Bar on navigation ──
+    document.addEventListener('click', function(e) {
+        var link = e.target.closest('a[href]');
+        if (!link) return;
+        var href = link.getAttribute('href');
+        if (!href || href.startsWith('#') || href.startsWith('javascript') || href.startsWith('upi://')) return;
+        if (link.getAttribute('target') === '_blank') return;
+
+        var bar = document.getElementById('pageProgress');
+        bar.style.width = '0%';
+        setTimeout(function() { bar.style.width = '60%'; }, 10);
+        setTimeout(function() { bar.style.width = '85%'; }, 200);
+    });
+
+    // ── Show success toasts from TempData ──
+    @if (TempData["ToastSuccess"] != null)
+    {
+        <text>window.showToast('@TempData["ToastSuccess"]', 'success');</text>
+    }
+    @if (TempData["ToastError"] != null)
+    {
+        <text>window.showToast('@TempData["ToastError"]', 'error');</text>
+    }
+</script>
+
+@await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

@@ -30,30 +30,30 @@ namespace SmartSlot.Services
                         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                         var emailService = scope.ServiceProvider.GetRequiredService<EmailService>();
 
-                        // ── Alert + Review Emails ──
-                        var activeBookings = context.Bookings
-                            .Where(b => !b.ReviewSmsSent || !b.OneHourAlertSent)
+                        // 1️⃣ Bookings that still need 1-hour alert (separate query)
+                        var alertPending = context.Bookings
+                            .Where(b => !b.OneHourAlertSent)
                             .ToList();
 
-                        Console.WriteLine($"📦 Total bookings pending alert/review: {activeBookings.Count}");
+                        Console.WriteLine($"📦 Bookings pending 1-hour alert: {alertPending.Count}");
 
-                        foreach (var booking in activeBookings)
+                        foreach (var booking in alertPending)
                         {
-                            Console.WriteLine($"🔎 Checking Booking ID: {booking.Id}");
+                            // ✅ FIXED: was AddHours(-30) → now AddHours(-1)
+                            var alertTime = booking.BookingTo.AddHours(-1);
 
-                            // 🔔 1 HOUR BEFORE END ALERT
-                            if (!booking.OneHourAlertSent &&
-                                istNow >= booking.BookingTo.AddHours(-30) &&
-                                istNow < booking.BookingTo)
+                            Console.WriteLine($"🔎 Booking {booking.Id} — BookingTo: {booking.BookingTo}, AlertTime: {alertTime}, istNow: {istNow}");
+
+                            if (istNow >= alertTime && istNow < booking.BookingTo)
                             {
                                 try
                                 {
                                     await emailService.SendOneHourAlertEmail(
-     booking.CustomerEmail,
-     booking.CustomerName,
-     booking.BookingTo,
-     booking.Id  // ← add this
- );
+                                        booking.CustomerEmail,
+                                        booking.CustomerName,
+                                        booking.BookingTo,
+                                        booking.Id
+                                    );
                                     booking.OneHourAlertSent = true;
                                     context.Bookings.Update(booking);
                                     await context.SaveChangesAsync();
@@ -64,26 +64,32 @@ namespace SmartSlot.Services
                                     Console.WriteLine($"❌ 1-hour Alert Email Error: {ex.Message}");
                                 }
                             }
+                        }
 
-                            // ⭐ AFTER BOOKING ENDS → SEND REVIEW EMAIL
-                            if (!booking.ReviewSmsSent && booking.BookingTo <= istNow)
+                        // 2️⃣ FIXED: Separate query for review emails - no longer blocked by alert flag
+                        var reviewPending = context.Bookings
+                            .Where(b => !b.ReviewSmsSent && b.BookingTo <= istNow)
+                            .ToList();
+
+                        Console.WriteLine($"📦 Bookings pending review email: {reviewPending.Count}");
+
+                        foreach (var booking in reviewPending)
+                        {
+                            try
                             {
-                                try
-                                {
-                                    await emailService.SendReviewEmail(
-                                        booking.CustomerEmail,
-                                        booking.CustomerName,
-                                        booking.Id
-                                    );
-                                    booking.ReviewSmsSent = true;
-                                    context.Bookings.Update(booking);
-                                    await context.SaveChangesAsync();
-                                    Console.WriteLine($"📨 Review EMAIL sent for Booking {booking.Id}");
-                                }
-                                catch (Exception ex)
-                                {
-                                    Console.WriteLine($"❌ Review Email Error: {ex.Message}");
-                                }
+                                await emailService.SendReviewEmail(
+                                    booking.CustomerEmail,
+                                    booking.CustomerName,
+                                    booking.Id
+                                );
+                                booking.ReviewSmsSent = true;
+                                context.Bookings.Update(booking);
+                                await context.SaveChangesAsync();
+                                Console.WriteLine($"📨 Review EMAIL sent for Booking {booking.Id}");
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"❌ Review Email Error: {ex.Message}");
                             }
                         }
 
@@ -135,7 +141,6 @@ namespace SmartSlot.Services
                                     notify.NotificationSent = true;
                                     context.SlotNotifyRequests.Update(notify);
                                     await context.SaveChangesAsync();
-
                                     Console.WriteLine($"📧 Slot available email sent to {notify.CustomerEmail}");
                                 }
                             }

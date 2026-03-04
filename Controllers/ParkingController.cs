@@ -236,8 +236,6 @@ namespace SmartSlot.Controllers
             _context.Bookings.Update(booking);
             _context.SaveChanges();
 
-            Console.WriteLine($"✅ Extension saved — BookingId: {booking.Id}, New BookingTo: {BookingTo}");
-
             try
             {
                 var userId = HttpContext.Session.GetString("UserId");
@@ -276,32 +274,14 @@ namespace SmartSlot.Controllers
             return View();
         }
 
-        // ================= REVIEW =================
         [HttpGet]
         public IActionResult Review(int bookingId)
         {
-            Console.WriteLine($"🔍 REVIEW HIT — bookingId: {bookingId}");
-
-            if (bookingId <= 0)
-            {
-                Console.WriteLine("❌ bookingId is 0 or invalid!");
-                return NotFound("Invalid booking ID");
-            }
+            if (bookingId <= 0) return NotFound("Invalid booking ID");
 
             var booking = _context.Bookings.FirstOrDefault(b => b.Id == bookingId);
-            if (booking == null)
-            {
-                Console.WriteLine($"❌ Booking {bookingId} NOT FOUND in DB");
-                return NotFound($"Booking {bookingId} not found");
-            }
-
-            Console.WriteLine($"✅ Booking found — SlotId: {booking.ParkingSlotId}, ReviewSubmitted: {booking.ReviewSubmitted}");
-
-            if (booking.ReviewSubmitted)
-            {
-                Console.WriteLine("⚠️ Review already submitted");
-                return RedirectToAction("ReviewSuccess");
-            }
+            if (booking == null) return NotFound($"Booking {bookingId} not found");
+            if (booking.ReviewSubmitted) return RedirectToAction("ReviewSuccess");
 
             ViewBag.BookingId = booking.Id;
             ViewBag.ParkingSlotId = booking.ParkingSlotId;
@@ -311,17 +291,9 @@ namespace SmartSlot.Controllers
         [HttpPost]
         public IActionResult SubmitReview(int BookingId, int ParkingSlotId, int Rating, string Comment)
         {
-            Console.WriteLine($"📝 SubmitReview — BookingId: {BookingId}, Rating: {Rating}");
-
             var booking = _context.Bookings.FirstOrDefault(b => b.Id == BookingId);
-            if (booking == null)
-            {
-                Console.WriteLine($"❌ Booking {BookingId} not found for review");
-                return NotFound();
-            }
-
-            if (booking.ReviewSubmitted)
-                return RedirectToAction("ReviewSuccess");
+            if (booking == null) return NotFound();
+            if (booking.ReviewSubmitted) return RedirectToAction("ReviewSuccess");
 
             var review = new Review
             {
@@ -337,15 +309,11 @@ namespace SmartSlot.Controllers
             _context.Bookings.Update(booking);
             _context.SaveChanges();
 
-            Console.WriteLine($"✅ Review saved for BookingId: {BookingId}");
             return RedirectToAction("ReviewSuccess");
         }
 
         [HttpGet]
-        public IActionResult ReviewSuccess()
-        {
-            return View();
-        }
+        public IActionResult ReviewSuccess() => View();
 
         [HttpPost]
         public IActionResult NotifyMe([FromBody] NotifyMeRequest request)
@@ -370,7 +338,7 @@ namespace SmartSlot.Controllers
             if (existing != null)
                 return Json(new { success = true, message = "Already registered." });
 
-            var notifyRequest = new SlotNotifyRequest
+            _context.SlotNotifyRequests.Add(new SlotNotifyRequest
             {
                 ParkingSlotId = request.SlotId,
                 BookingId = request.BookingId,
@@ -378,9 +346,7 @@ namespace SmartSlot.Controllers
                 CustomerName = user.Username,
                 NotificationSent = false,
                 CreatedAt = DateTime.UtcNow
-            };
-
-            _context.SlotNotifyRequests.Add(notifyRequest);
+            });
             _context.SaveChanges();
 
             return Json(new { success = true });
@@ -397,9 +363,7 @@ namespace SmartSlot.Controllers
 
             using var ms = new MemoryStream();
             await image.CopyToAsync(ms);
-            var imageBytes = ms.ToArray();
-
-            var (score, badge, details) = await _parkingAIService.AnalyzeParkingImage(imageBytes);
+            var (score, badge, details) = await _parkingAIService.AnalyzeParkingImage(ms.ToArray());
             return Json(new { score, badge, details });
         }
 
@@ -407,7 +371,6 @@ namespace SmartSlot.Controllers
         {
             if (HttpContext.Session.GetString("UserId") == null)
                 return RedirectToAction("Signin", "Auth", new { returnUrl = HttpContext.Request.Path });
-
             return View();
         }
 
@@ -418,22 +381,24 @@ namespace SmartSlot.Controllers
                 return Json(new { error = "Unauthorized" });
 
             var istNow = DateTime.UtcNow.AddHours(5.5);
-            var allSlots = _context.ParkingSlots.ToList();
 
             DateTime? filterFrom = null;
             DateTime? filterTo = null;
-
             if (!string.IsNullOrEmpty(fromTime)) filterFrom = DateTime.Parse(fromTime);
             if (!string.IsNullOrEmpty(toTime)) filterTo = DateTime.Parse(toTime);
 
-            Console.WriteLine($"🔍 NearbySlots — lat:{lat} lon:{lon} filterFrom:{filterFrom} filterTo:{filterTo}");
+            // ✅ FIX BUG 3: exclude slots whose availability window has already passed
+            var allSlots = _context.ParkingSlots
+                .Where(s => s.AvailableTo > istNow)
+                .ToList();
+
+            Console.WriteLine($"🔍 NearbySlots — istNow:{istNow} active slots:{allSlots.Count}");
 
             var nearbySlots = allSlots
                 .Where(slot => _distanceService.GetDistance(lat, lon, slot.Latitude, slot.Longitude) <= radius)
                 .Select(slot =>
                 {
                     bool isBooked;
-
                     if (filterFrom.HasValue && filterTo.HasValue)
                     {
                         isBooked = _context.Bookings.Any(b =>
@@ -443,10 +408,10 @@ namespace SmartSlot.Controllers
                     }
                     else
                     {
-                        var activeBooking = _context.Bookings
-                            .Where(b => b.ParkingSlotId == slot.Id && b.BookingFrom <= istNow && b.BookingTo > istNow)
-                            .FirstOrDefault();
-                        isBooked = activeBooking != null;
+                        isBooked = _context.Bookings.Any(b =>
+                            b.ParkingSlotId == slot.Id &&
+                            b.BookingFrom <= istNow &&
+                            b.BookingTo > istNow);
                     }
 
                     var activeBookingInfo = _context.Bookings
@@ -460,9 +425,10 @@ namespace SmartSlot.Controllers
                         .FirstOrDefault();
 
                     DateTime displayAvailableFrom = slot.AvailableFrom;
-                    if (latestBooking != null && latestBooking.BookingTo > slot.AvailableFrom)
-                        if (latestBooking.BookingTo < slot.AvailableTo)
-                            displayAvailableFrom = latestBooking.BookingTo;
+                    if (latestBooking != null &&
+                        latestBooking.BookingTo > slot.AvailableFrom &&
+                        latestBooking.BookingTo < slot.AvailableTo)
+                        displayAvailableFrom = latestBooking.BookingTo;
 
                     return new
                     {
@@ -489,7 +455,7 @@ namespace SmartSlot.Controllers
                 })
                 .ToList();
 
-            Console.WriteLine($"✅ NearbySlots returning {nearbySlots.Count} slots");
+            Console.WriteLine($"✅ Returning {nearbySlots.Count} slots");
             return Json(nearbySlots);
         }
 
@@ -508,11 +474,9 @@ namespace SmartSlot.Controllers
                 .Select(b => new { BookingFrom = b.BookingFrom, BookingTo = b.BookingTo })
                 .ToList();
 
-            var istNow = DateTime.UtcNow.AddHours(5.5);
-
             ViewBag.Slot = slot;
             ViewBag.BookedRanges = bookedRanges;
-            ViewBag.IstNow = istNow.ToString("yyyy-MM-ddTHH:mm");
+            ViewBag.IstNow = DateTime.UtcNow.AddHours(5.5).ToString("yyyy-MM-ddTHH:mm");
             return View();
         }
 
@@ -563,11 +527,9 @@ namespace SmartSlot.Controllers
             if (HttpContext.Session.GetString("UserId") == null)
                 return RedirectToAction("Signin", "Auth", new { returnUrl = HttpContext.Request.Path });
 
-            ViewBag.Lat = lat;
-            ViewBag.Lon = lon;
+            ViewBag.Lat = lat; ViewBag.Lon = lon;
             ViewBag.Radius = radius;
-            ViewBag.FromTime = fromTime;
-            ViewBag.ToTime = toTime;
+            ViewBag.FromTime = fromTime; ViewBag.ToTime = toTime;
             return View();
         }
 
@@ -577,19 +539,15 @@ namespace SmartSlot.Controllers
             if (HttpContext.Session.GetString("UserId") == null)
                 return RedirectToAction("Signin", "Auth", new { returnUrl = HttpContext.Request.Path });
 
-            ViewBag.Lat = lat;
-            ViewBag.Lon = lon;
+            ViewBag.Lat = lat; ViewBag.Lon = lon;
             ViewBag.Radius = radius;
-            ViewBag.FromTime = fromTime;
-            ViewBag.ToTime = toTime;
+            ViewBag.FromTime = fromTime; ViewBag.ToTime = toTime;
             return View();
         }
 
         [HttpGet]
-        public IActionResult DebugTest()
-        {
-            return Content("✅ ParkingController is working on Render.");
-        }
+        public IActionResult DebugTest() =>
+            Content("✅ ParkingController is working on Render.");
     }
 
     public class NotifyMeRequest
