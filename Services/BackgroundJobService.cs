@@ -43,8 +43,8 @@ namespace SmartSlot.Services
 
         private async Task RunJobsAsync(ApplicationDbContext context, EmailService emailService)
         {
-            var utcNow = DateTime.UtcNow;
-            var istNow = utcNow.AddHours(5.5);
+            // ✅ DB stores IST — always compare against istNow, never raw utcNow
+            var istNow = DateTime.UtcNow.AddHours(5.5);
             Console.WriteLine($"⏰ Background check at (IST): {istNow:MM/dd/yyyy HH:mm:ss}");
 
             // ── 1. One-hour alert ─────────────────────────────────────────
@@ -59,17 +59,18 @@ namespace SmartSlot.Services
                 var alertTime = booking.BookingTo.AddHours(-1);
                 Console.WriteLine($"🔎 Booking {booking.Id} — BookingTo: {booking.BookingTo:MM/dd/yyyy HH:mm:ss}, AlertTime: {alertTime:MM/dd/yyyy HH:mm:ss}, istNow: {istNow:MM/dd/yyyy HH:mm:ss}");
 
-                // Already expired — just mark done so it stops showing in logs
-                if (booking.BookingTo <= utcNow)
+                // ✅ FIX: compare against istNow (DB stores IST)
+                // Already expired — mark done immediately so it clears from the queue
+                if (booking.BookingTo <= istNow)
                 {
-                    Console.WriteLine($"⏭ Booking {booking.Id} already expired — marking sent to clear from queue");
+                    Console.WriteLine($"⏭ Booking {booking.Id} already expired (IST) — marking sent to clear from queue");
                     booking.OneHourAlertSent = true;
                     context.Bookings.Update(booking);
                     continue;
                 }
 
-                // Send only within the 1-hour window before booking ends
-                if (utcNow >= alertTime && utcNow < booking.BookingTo)
+                // ✅ FIX: send only within the 1-hour window — compare IST vs IST
+                if (istNow >= alertTime && istNow < booking.BookingTo)
                 {
                     try
                     {
@@ -94,8 +95,9 @@ namespace SmartSlot.Services
             }
 
             // ── 2. Review email ───────────────────────────────────────────
+            // ✅ FIX: use istNow
             var reviewPending = context.Bookings
-                .Where(b => !b.ReviewSmsSent && b.BookingTo <= utcNow)
+                .Where(b => !b.ReviewSmsSent && b.BookingTo <= istNow)
                 .ToList();
 
             Console.WriteLine($"📦 Bookings pending review email: {reviewPending.Count}");
@@ -123,12 +125,13 @@ namespace SmartSlot.Services
             }
 
             // ── 3. Exit scan alert ────────────────────────────────────────
+            // ✅ FIX: use istNow for all comparisons
             var exitScanPending = context.Bookings
                 .Where(b =>
                     !b.ExitScanAlertSent &&
                     !b.ExitConfirmed &&
-                    b.BookingTo <= utcNow &&
-                    b.BookingTo >= utcNow.AddMinutes(-15))
+                    b.BookingTo <= istNow &&
+                    b.BookingTo >= istNow.AddMinutes(-15))
                 .ToList();
 
             Console.WriteLine($"📦 Bookings pending exit scan email: {exitScanPending.Count}");
@@ -160,11 +163,12 @@ namespace SmartSlot.Services
             }
 
             // ── 4. Penalty check ──────────────────────────────────────────
+            // ✅ FIX: use istNow
             var penaltyPending = context.Bookings
                 .Where(b =>
                     !b.ExitConfirmed &&
                     !b.PenaltyApplied &&
-                    b.BookingTo <= utcNow.AddMinutes(-15))
+                    b.BookingTo <= istNow.AddMinutes(-15))
                 .ToList();
 
             Console.WriteLine($"📦 Bookings pending penalty check: {penaltyPending.Count}");
@@ -195,6 +199,7 @@ namespace SmartSlot.Services
             }
 
             // ── 5. Slot-free notification (Notify Me) ─────────────────────
+            // ✅ FIX: use istNow
             var notifyPending = context.SlotNotifyRequests
                 .Where(n => !n.NotificationSent)
                 .ToList();
@@ -206,8 +211,8 @@ namespace SmartSlot.Services
                 bool stillBooked = context.Bookings.Any(b =>
                     b.ParkingSlotId == waiter.ParkingSlotId &&
                     !b.ExitConfirmed &&
-                    b.BookingFrom <= utcNow &&
-                    b.BookingTo > utcNow);
+                    b.BookingFrom <= istNow &&
+                    b.BookingTo > istNow);
 
                 if (stillBooked) continue;
 
@@ -225,7 +230,7 @@ namespace SmartSlot.Services
                         slotId: slot.Id
                     );
                     waiter.NotificationSent = true;
-                    waiter.SentAt = utcNow;
+                    waiter.SentAt = DateTime.UtcNow;
                     context.SlotNotifyRequests.Update(waiter);
                     Console.WriteLine($"📧 Slot-free alert sent → {waiter.CustomerEmail} for Slot #{waiter.ParkingSlotId}");
                 }

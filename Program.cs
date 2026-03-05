@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using SmartSlot.Data;
 using SmartSlot.Models;
@@ -13,11 +14,11 @@ builder.Services.Configure<TwilioSettings>(
 
 builder.Services.AddScoped<SmsService>();
 builder.Services.AddHostedService<ReviewBackgroundService>();
+builder.Services.AddHostedService<BackgroundJobService>();
 builder.Services.AddScoped<SmartSlot.Services.DistanceService>();
 builder.Services.AddScoped<SmartSlot.Services.VerificationService>();
 builder.Services.AddHttpClient<SmartSlot.Services.ParkingAIService>();
 builder.Services.AddScoped<SmartSlot.Services.ParkingAIService>();
-
 
 // ✅ Register Brevo EmailService
 builder.Services.AddHttpClient<SmartSlot.Services.EmailService>();
@@ -31,7 +32,15 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
+// ✅ Store DataProtection keys in PostgreSQL so sessions survive Render redeploys
+// Without this, every redeploy wipes the keys and logs out all users
+builder.Services.AddDataProtection()
+    .PersistKeysToDbContext<ApplicationDbContext>()
+    .SetApplicationName("SmartSlot");
+
 var app = builder.Build();
+
+// ✅ Run migrations once on startup (kept single — removed duplicate below)
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -51,12 +60,6 @@ app.UseAuthorization();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Auth}/{action=Index}/{id?}");
-// Auto migrate on startup
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    db.Database.Migrate();
-}
 
 if (app.Environment.IsProduction())
 {
