@@ -418,14 +418,15 @@ namespace SmartSlot.Controllers
                 var owner = _context.Users.FirstOrDefault(u => u.PhoneNumber == slot.OwnerPhone);
                 if (owner != null && !string.IsNullOrEmpty(owner.Email))
                     await _emailService.SendOwnerCancelNotificationEmail(
-     toEmail: owner.Email,
-     ownerName: slot.OwnerName,
-     customerName: booking.CustomerName,
-     customerPhone: booking.CustomerPhone,
-     vehicleNumber: booking.VehicleNumber,
-     bookingFrom: booking.BookingFrom.AddHours(5.5),
-     bookingTo: booking.BookingTo.AddHours(5.5),
-     paymentMode: slot.PaymentMode)
+                        toEmail: owner.Email,
+                        ownerName: slot.OwnerName,
+                        customerName: booking.CustomerName,
+                        customerPhone: booking.CustomerPhone,
+                        vehicleNumber: booking.VehicleNumber,
+                        bookingFrom: booking.BookingFrom.AddHours(5.5),
+                        bookingTo: booking.BookingTo.AddHours(5.5),
+                        paymentMode: slot.PaymentMode);
+                        
             }
             catch (Exception ex) { Console.WriteLine($"📧 Owner cancel email failed: {ex.Message}"); }
 
