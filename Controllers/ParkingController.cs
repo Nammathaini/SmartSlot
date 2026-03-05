@@ -698,10 +698,23 @@ namespace SmartSlot.Controllers
                 })
                 .Select(slot =>
                 {
+                    // ✅ RULE: slot is booked if ANY booking exists that is not ExitConfirmed
+                    // and not Cancelled — regardless of time. Slot only frees on QR scan.
+                    bool hasUnconfirmedBooking = _context.Bookings.Any(b =>
+                        b.ParkingSlotId == slot.Id &&
+                        !b.ExitConfirmed &&
+                        !b.IsCancelled);
+
                     bool isBooked;
-                    if (filterFromUtc.HasValue && filterToUtc.HasValue)
+                    if (hasUnconfirmedBooking)
                     {
-                        // ✅ Use UTC times — BookingFrom/BookingTo are stored as UTC in DB
+                        // Slot has an active or overdue unconfirmed booking — always booked
+                        isBooked = true;
+                    }
+                    else if (filterFromUtc.HasValue && filterToUtc.HasValue)
+                    {
+                        // No unconfirmed booking — but check if a confirmed booking overlaps the search window
+                        // (edge case: back-to-back bookings where previous is confirmed but new one starts)
                         isBooked = _context.Bookings.Any(b =>
                             b.ParkingSlotId == slot.Id &&
                             b.BookingFrom < filterToUtc.Value &&
@@ -711,13 +724,7 @@ namespace SmartSlot.Controllers
                     }
                     else
                     {
-                        // ✅ Use UTC — BookingFrom/BookingTo stored as UTC in DB
-                        isBooked = _context.Bookings.Any(b =>
-                            b.ParkingSlotId == slot.Id &&
-                            b.BookingFrom <= utcNow &&
-                            b.BookingTo > utcNow &&
-                            !b.ExitConfirmed &&
-                            !b.IsCancelled);
+                        isBooked = false;
                     }
 
                     // ✅ Use UTC for booking queries — BookingFrom/BookingTo stored as UTC
