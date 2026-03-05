@@ -117,19 +117,19 @@ namespace SmartSlot.Controllers
 
             if (parkingImage != null && parkingImage.Length > 0)
             {
-                var dir = Path.Combine(_env.WebRootPath, "uploads", "slot-photos");
-                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
-                var ext2 = Path.GetExtension(parkingImage.FileName).ToLower();
-                if (string.IsNullOrEmpty(ext2)) ext2 = ".jpg";
-                var fn2 = $"slot_{Guid.NewGuid():N}{ext2}";
-                using (var fs = new FileStream(Path.Combine(dir, fn2), FileMode.Create))
-                    await parkingImage.CopyToAsync(fs);
-                slot.ParkingImagePath = $"/uploads/slot-photos/{fn2}";
+                using var ms = new MemoryStream();
+                await parkingImage.CopyToAsync(ms);
+                var base64 = Convert.ToBase64String(ms.ToArray());
+                var ext = parkingImage.ContentType ?? "image/jpeg";
+                slot.ParkingImageBase64 = $"data:{ext};base64,{base64}";
+                slot.ParkingImagePath = null;
             }
 
             slot.ExitMethod = "QR";
             slot.QrToken = Guid.NewGuid().ToString("N");
             slot.IsBooked = false;
+            slot.UserId = int.Parse(HttpContext.Session.GetString("UserId") ?? "0");
+
 
             _context.ParkingSlots.Add(slot);
             _context.SaveChanges();
@@ -649,7 +649,7 @@ namespace SmartSlot.Controllers
                         bookingFrom = activeBookingInfo?.BookingFrom,
                         bookingTo = activeBookingInfo?.BookingTo,
                         bookingId = activeBookingInfo?.Id,
-                        slotImageUrl = slot.ParkingImagePath ?? ""
+                        slotImageUrl = slot.ParkingImageBase64 ?? slot.ParkingImagePath ?? ""
                     };
                 })
                 .ToList();
