@@ -140,7 +140,7 @@
                         <th>Price / hr</th>
                         <th>Vehicle</th>
                         <th>Booked Until</th>
-                        <th>Time Remaining</th>
+                        
                         <th>Available From</th>
                         <th>Available To</th>
                         <th>Distance</th>
@@ -234,7 +234,7 @@ function render(slots) {
             +'<td class="price">&#8377;'+s.pricePerHour+'</td>'
             +'<td>'+s.vehicleType+'</td>'
             +'<td><span class="booked-until">&#128308; '+fmtDate(s.bookingTo)+'</span></td>'
-            +'<td>'+timeRemainingHtml(s.bookingTo, s.id)+'</td>'
+            
             +'<td class="date-val">'+fmtDate(s.availableFrom)+'</td>'
             +'<td class="date-val">'+fmtDate(s.availableTo)+'</td>'
             +'<td class="dist-val">'+s._dist.toFixed(2)+' km</td>'
