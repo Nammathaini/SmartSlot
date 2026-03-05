@@ -115,20 +115,32 @@ namespace SmartSlot.Controllers
                 slot.UpiQrImagePath = $"/uploads/upi-qr/{fileName}";
             }
 
+            Console.WriteLine($"🖼 parkingImage null? {parkingImage == null}");
+            Console.WriteLine($"🖼 parkingImage length: {parkingImage?.Length ?? 0}");
+            Console.WriteLine($"🖼 parkingImage filename: {parkingImage?.FileName ?? "NULL"}");
+            Console.WriteLine($"🖼 parkingImage contenttype: {parkingImage?.ContentType ?? "NULL"}");
+
             if (parkingImage != null && parkingImage.Length > 0)
             {
+                Console.WriteLine($"🖼 Starting Base64 conversion...");
                 using var ms = new MemoryStream();
                 await parkingImage.CopyToAsync(ms);
                 var base64 = Convert.ToBase64String(ms.ToArray());
                 var ext = parkingImage.ContentType ?? "image/jpeg";
                 slot.ParkingImageBase64 = $"data:{ext};base64,{base64}";
                 slot.ParkingImagePath = null;
+                Console.WriteLine($"🖼 Base64 saved! Length: {slot.ParkingImageBase64.Length}");
+            }
+            else
+            {
+                Console.WriteLine($"🖼 ❌ parkingImage was NULL or empty — not saved!");
             }
 
             slot.ExitMethod = "QR";
             slot.QrToken = Guid.NewGuid().ToString("N");
             slot.IsBooked = false;
             slot.UserId = int.Parse(HttpContext.Session.GetString("UserId") ?? "0");
+
 
 
             _context.ParkingSlots.Add(slot);
