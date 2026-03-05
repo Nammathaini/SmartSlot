@@ -85,7 +85,6 @@ namespace SmartSlot.Controllers
 
             var userId = HttpContext.Session.GetString("UserId");
             var user = _context.Users.FirstOrDefault(u => u.Id.ToString() == userId);
-
             ViewBag.Username = HttpContext.Session.GetString("Username");
             ViewBag.User = user;
             return View();
@@ -196,6 +195,11 @@ namespace SmartSlot.Controllers
             var userId = HttpContext.Session.GetString("UserId");
             var user = _context.Users.FirstOrDefault(u => u.Id.ToString() == userId);
 
+            // ✅ KEY FIX: Browser sends IST time → convert to real UTC for storage
+            // BackgroundJobService uses DateTime.UtcNow → comparisons work correctly
+            var bookingFromSave = DateTime.SpecifyKind(BookingFrom.AddHours(-5.5), DateTimeKind.Utc);
+            var bookingToSave = DateTime.SpecifyKind(BookingTo.AddHours(-5.5), DateTimeKind.Utc);
+
             var booking = new Booking
             {
                 ParkingSlotId = ParkingSlotId,
@@ -203,8 +207,8 @@ namespace SmartSlot.Controllers
                 CustomerPhone = CustomerPhone,
                 CustomerEmail = user?.Email ?? "",
                 VehicleNumber = VehicleNumber,
-                BookingFrom = BookingFrom,
-                BookingTo = BookingTo,
+                BookingFrom = bookingFromSave,
+                BookingTo = bookingToSave,
                 ReviewSmsSent = false,
                 ReviewSubmitted = false,
                 OneHourAlertSent = false,
@@ -218,7 +222,7 @@ namespace SmartSlot.Controllers
             _context.ParkingSlots.Update(slot);
             _context.SaveChanges();
 
-            Console.WriteLine($"✅ Booking saved — Id:{booking.Id}");
+            Console.WriteLine($"✅ Booking saved — Id:{booking.Id} From:{bookingFromSave} To:{bookingToSave}");
 
             try
             {
@@ -258,7 +262,7 @@ namespace SmartSlot.Controllers
                 catch (Exception ex) { Console.WriteLine($"📡 SignalR (confirm booking) failed: {ex.Message}"); }
             });
 
-            // ✅ FIX: store as string — TempData cannot serialize double
+            // ✅ FIX: TempData stores string not double
             TempData["PaymentMode"] = slot.PaymentMode;
             TempData["OwnerUpiId"] = slot.OwnerUpiId ?? "";
             TempData["OwnerName"] = slot.OwnerName;
@@ -282,10 +286,13 @@ namespace SmartSlot.Controllers
             var slot = _context.ParkingSlots.Find(ParkingSlotId);
             if (slot == null) return NotFound();
 
+            // ✅ KEY FIX: Browser sends IST → convert to real UTC
+            var bookingToSave = DateTime.SpecifyKind(BookingTo.AddHours(-5.5), DateTimeKind.Utc);
+
             var conflict = _context.Bookings.FirstOrDefault(b =>
                 b.ParkingSlotId == ParkingSlotId &&
                 b.Id != ExistingBookingId &&
-                b.BookingFrom < BookingTo &&
+                b.BookingFrom < bookingToSave &&
                 b.BookingTo > booking.BookingTo);
 
             if (conflict != null)
@@ -294,7 +301,7 @@ namespace SmartSlot.Controllers
                 return RedirectToAction("Search");
             }
 
-            booking.BookingTo = BookingTo;
+            booking.BookingTo = bookingToSave;
             booking.OneHourAlertSent = false;
             booking.ReviewSmsSent = false;
             booking.ExitConfirmed = false;
@@ -324,7 +331,7 @@ namespace SmartSlot.Controllers
             }
             catch (Exception ex) { Console.WriteLine($"📧 Extension email failed: {ex.Message}"); }
 
-            // ✅ FIX: store as string — TempData cannot serialize double
+            // ✅ FIX: TempData stores string not double
             TempData["PaymentMode"] = slot.PaymentMode;
             TempData["OwnerUpiId"] = slot.OwnerUpiId ?? "";
             TempData["OwnerName"] = slot.OwnerName;
@@ -342,7 +349,6 @@ namespace SmartSlot.Controllers
             ViewBag.PaymentMode = TempData["PaymentMode"] as string ?? "";
             ViewBag.OwnerUpiId = TempData["OwnerUpiId"] as string ?? "";
             ViewBag.OwnerName = TempData["OwnerName"] as string ?? "";
-            // ✅ FIX: parse back from string
             ViewBag.TotalAmount = double.TryParse(TempData["TotalAmount"] as string, out double amt) ? amt : 0;
             ViewBag.UpiQrImagePath = TempData["UpiQrImagePath"] as string ?? "";
             return View();
@@ -363,6 +369,8 @@ namespace SmartSlot.Controllers
             ViewBag.BookingId = booking.Id;
             ViewBag.CustomerEmail = booking.CustomerEmail;
             ViewBag.SlotOwner = slot.OwnerName;
+            // ✅ BookingTo stored as IST-tagged-Utc — display as-is, no conversion needed
+            // BookingTo stored as real UTC — add 5.5hrs to show IST
             ViewBag.BookingTo = booking.BookingTo.AddHours(5.5).ToString("hh:mm tt, dd MMM");
             return View();
         }
@@ -388,7 +396,8 @@ namespace SmartSlot.Controllers
                 return Json(new { success = true, message = "Exit already confirmed. Safe journey!" });
 
             booking.ExitConfirmed = true;
-            booking.ExitConfirmedAt = DateTime.UtcNow.AddHours(5.5);
+            // ✅ Store exit time as IST-tagged-Utc (consistent with booking times)
+            booking.ExitConfirmedAt = DateTime.SpecifyKind(DateTime.UtcNow.AddHours(5.5), DateTimeKind.Utc);
             booking.PenaltyApplied = false;
             _context.Bookings.Update(booking);
 
@@ -415,7 +424,7 @@ namespace SmartSlot.Controllers
             {
                 if (!string.IsNullOrEmpty(booking.CustomerEmail) && !string.IsNullOrEmpty(slot.QrToken))
                 {
-                    var scanLink = $"https://smartslot-fkc6.onrender.com/Parking/ExitScan?token={slot.QrToken}&bid={booking.Id}";
+                    var scanLink = $"https://smartslot-sc9u.onrender.com/Parking/ExitScan?token={slot.QrToken}&bid={booking.Id}";
                     await _emailService.SendExitScanEmail(
                         toEmail: booking.CustomerEmail, customerName: booking.CustomerName,
                         bookingTo: booking.BookingTo, scanLink: scanLink, bookingId: booking.Id);
@@ -453,7 +462,7 @@ namespace SmartSlot.Controllers
                 BookingId = BookingId,
                 Rating = Rating,
                 Comment = Comment,
-                CreatedAt = DateTime.Now
+                CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow.AddHours(5.5), DateTimeKind.Utc)
             });
             booking.ReviewSubmitted = true;
             _context.Bookings.Update(booking);
@@ -707,7 +716,6 @@ namespace SmartSlot.Controllers
         {
             if (HttpContext.Session.GetString("UserId") == null)
                 return RedirectToAction("Signin", "Auth", new { returnUrl = HttpContext.Request.Path });
-
             ViewBag.Lat = lat; ViewBag.Lon = lon;
             ViewBag.Radius = radius;
             ViewBag.FromTime = fromTime; ViewBag.ToTime = toTime;
@@ -719,7 +727,6 @@ namespace SmartSlot.Controllers
         {
             if (HttpContext.Session.GetString("UserId") == null)
                 return RedirectToAction("Signin", "Auth", new { returnUrl = HttpContext.Request.Path });
-
             ViewBag.Lat = lat; ViewBag.Lon = lon;
             ViewBag.Radius = radius;
             ViewBag.FromTime = fromTime; ViewBag.ToTime = toTime;
@@ -730,28 +737,8 @@ namespace SmartSlot.Controllers
         public IActionResult DebugTest() => Content("ParkingController is working on Render.");
     }
 
-    public class NotifyMeRequest
-    {
-        public int SlotId { get; set; }
-        public int BookingId { get; set; }
-    }
-
-    public class ExitConfirmRequest
-    {
-        public string Token { get; set; }
-        public int BookingId { get; set; }
-        public string CustomerEmail { get; set; }
-    }
-
-    public class PushSubscriptionPayload
-    {
-        public string Endpoint { get; set; }
-        public PushKeys Keys { get; set; }
-    }
-
-    public class PushKeys
-    {
-        public string P256dh { get; set; }
-        public string Auth { get; set; }
-    }
+    public class NotifyMeRequest { public int SlotId { get; set; } public int BookingId { get; set; } }
+    public class ExitConfirmRequest { public string Token { get; set; } public int BookingId { get; set; } public string CustomerEmail { get; set; } }
+    public class PushSubscriptionPayload { public string Endpoint { get; set; } public PushKeys Keys { get; set; } }
+    public class PushKeys { public string P256dh { get; set; } public string Auth { get; set; } }
 }

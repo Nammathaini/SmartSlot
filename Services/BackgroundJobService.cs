@@ -51,8 +51,10 @@ namespace SmartSlot.Services
             IHubContext<ParkingHub> hub,
             PushNotificationService pushService)
         {
-            var istNow = DateTime.UtcNow.AddHours(5.5);
-            Console.WriteLine($"⏰ Background check at (IST): {istNow:MM/dd/yyyy HH:mm:ss}");
+            // ✅ FIX: Use real UTC now — bookings are stored as UTC in DB
+            var now = DateTime.UtcNow;
+            var istNow = now.AddHours(5.5); // only used for display in logs/emails
+            Console.WriteLine($"⏰ Background check — UTC: {now:HH:mm:ss}  IST: {istNow:HH:mm:ss}");
 
             // ── 1. One-hour alert ─────────────────────────────────────────────
             var pendingOneHour = context.Bookings
@@ -63,36 +65,35 @@ namespace SmartSlot.Services
             {
                 var alertTime = booking.BookingTo.AddHours(-1);
 
-                if (booking.BookingTo <= istNow)
+                if (booking.BookingTo <= now)
                 {
                     booking.OneHourAlertSent = true;
                     context.Bookings.Update(booking);
                     continue;
                 }
 
-                if (istNow >= alertTime && istNow < booking.BookingTo)
+                if (now >= alertTime && now < booking.BookingTo)
                 {
                     try
                     {
-                        // Email
                         if (!string.IsNullOrEmpty(booking.CustomerEmail))
                         {
+                            // Show IST time in email
                             await emailService.SendOneHourAlertEmail(
                                 toEmail: booking.CustomerEmail,
                                 customerName: booking.CustomerName,
-                                bookingTo: booking.BookingTo,
+                                bookingTo: booking.BookingTo.AddHours(5.5),
                                 bookingId: booking.Id);
                             Console.WriteLine($"📧 1-hour alert sent → Booking #{booking.Id}");
                         }
 
-                        // ✅ Push → taps to /Parking/Extend/{bookingId}
                         var customer = context.Users.FirstOrDefault(u => u.PhoneNumber == booking.CustomerPhone);
                         if (customer != null)
                         {
                             await pushService.SendToUserAsync(
                                 customer.Id,
                                 "⏰ 1 Hour Left!",
-                                $"Your parking ends at {booking.BookingTo:hh:mm tt}. Tap to extend if needed.",
+                                $"Your parking ends at {booking.BookingTo.AddHours(5.5):hh:mm tt}. Tap to extend if needed.",
                                 $"/Parking/Extend/{booking.Id}");
                         }
 
@@ -105,14 +106,13 @@ namespace SmartSlot.Services
 
             // ── 2. Review email ───────────────────────────────────────────────
             var reviewPending = context.Bookings
-                .Where(b => !b.ReviewSmsSent && b.BookingTo <= istNow)
+                .Where(b => !b.ReviewSmsSent && b.BookingTo <= now)
                 .ToList();
 
             foreach (var booking in reviewPending)
             {
                 try
                 {
-                    // Email
                     if (!string.IsNullOrEmpty(booking.CustomerEmail))
                     {
                         await emailService.SendReviewEmail(
@@ -122,7 +122,6 @@ namespace SmartSlot.Services
                         Console.WriteLine($"📧 Review email sent → Booking #{booking.Id}");
                     }
 
-                    // ✅ Push → taps to /Parking/Review/{bookingId}
                     var customer = context.Users.FirstOrDefault(u => u.PhoneNumber == booking.CustomerPhone);
                     if (customer != null)
                     {
@@ -144,8 +143,8 @@ namespace SmartSlot.Services
                 .Where(b =>
                     !b.ExitScanAlertSent &&
                     !b.ExitConfirmed &&
-                    b.BookingTo <= istNow &&
-                    b.BookingTo >= istNow.AddMinutes(-15))
+                    b.BookingTo <= now &&
+                    b.BookingTo >= now.AddMinutes(-15))
                 .ToList();
 
             foreach (var booking in exitScanPending)
@@ -154,20 +153,18 @@ namespace SmartSlot.Services
                 {
                     var slot = context.ParkingSlots.Find(booking.ParkingSlotId);
 
-                    // Email
                     if (slot != null && !string.IsNullOrEmpty(booking.CustomerEmail))
                     {
                         var scanLink = $"https://smartslot-sc9u.onrender.com/Parking/ExitScan?token={slot.QrToken}&bid={booking.Id}";
                         await emailService.SendExitScanEmail(
                             toEmail: booking.CustomerEmail,
                             customerName: booking.CustomerName,
-                            bookingTo: booking.BookingTo,
+                            bookingTo: booking.BookingTo.AddHours(5.5), // show IST in email
                             scanLink: scanLink,
                             bookingId: booking.Id);
                         Console.WriteLine($"📧 Exit scan email sent → Booking #{booking.Id}");
                     }
 
-                    // ✅ Push → taps directly to /Parking/ExitScan?token=...&bid=...
                     var customer = context.Users.FirstOrDefault(u => u.PhoneNumber == booking.CustomerPhone);
                     if (customer != null && slot != null)
                     {
@@ -184,12 +181,12 @@ namespace SmartSlot.Services
                 catch (Exception ex) { Console.WriteLine($"📧 Exit scan email failed #{booking.Id}: {ex.Message}"); }
             }
 
-            // ── 4. Penalty check — email only, NO push ────────────────────────
+            // ── 4. Penalty — email only, NO push ─────────────────────────────
             var penaltyPending = context.Bookings
                 .Where(b =>
                     !b.ExitConfirmed &&
                     !b.PenaltyApplied &&
-                    b.BookingTo <= istNow.AddMinutes(-15))
+                    b.BookingTo <= now.AddMinutes(-15))
                 .ToList();
 
             foreach (var booking in penaltyPending)
@@ -202,11 +199,10 @@ namespace SmartSlot.Services
                         await emailService.SendPenaltyEmail(
                             toEmail: booking.CustomerEmail,
                             customerName: booking.CustomerName,
-                            bookingTo: booking.BookingTo,
+                            bookingTo: booking.BookingTo.AddHours(5.5), // show IST in email
                             bookingId: booking.Id,
                             slotOwner: slot?.OwnerName ?? "Owner");
                     }
-                    // ❌ No push notification for penalty
                     booking.PenaltyApplied = true;
                     context.Bookings.Update(booking);
                     Console.WriteLine($"⚠ Penalty applied → Booking #{booking.Id}");
@@ -224,8 +220,8 @@ namespace SmartSlot.Services
                 bool stillBooked = context.Bookings.Any(b =>
                     b.ParkingSlotId == waiter.ParkingSlotId &&
                     !b.ExitConfirmed &&
-                    b.BookingFrom <= istNow &&
-                    b.BookingTo > istNow);
+                    b.BookingFrom <= now &&
+                    b.BookingTo > now);
 
                 if (stillBooked) continue;
 
@@ -234,7 +230,6 @@ namespace SmartSlot.Services
 
                 try
                 {
-                    // Email
                     await emailService.SendSlotFreeNotificationEmail(
                         toEmail: waiter.CustomerEmail,
                         customerName: waiter.CustomerName,
@@ -243,7 +238,6 @@ namespace SmartSlot.Services
                         vehicleType: slot.VehicleType,
                         slotId: slot.Id);
 
-                    // ✅ Push → taps to /Parking/Book/{slotId} (that exact slot)
                     var waitingUser = context.Users.FirstOrDefault(u => u.Email == waiter.CustomerEmail);
                     if (waitingUser != null)
                     {
@@ -272,8 +266,8 @@ namespace SmartSlot.Services
                 {
                     bool hasActiveBooking = context.Bookings.Any(b =>
                         b.ParkingSlotId == s.Id &&
-                        b.BookingFrom <= istNow &&
-                        b.BookingTo > istNow &&
+                        b.BookingFrom <= now &&
+                        b.BookingTo > now &&
                         !b.ExitConfirmed);
                     return !hasActiveBooking;
                 })
@@ -286,14 +280,12 @@ namespace SmartSlot.Services
                     slot.IsBooked = false;
                     context.ParkingSlots.Update(slot);
 
-                    // SignalR — update map in real time
                     await hub.Clients.Group("map").SendAsync("SlotUpdated", new
                     {
                         slotId = slot.Id,
                         isBooked = false
                     });
 
-                    // ✅ Push to owner → taps to /Parking/Dashboard
                     var owner = context.Users.FirstOrDefault(u => u.PhoneNumber == slot.OwnerPhone);
                     if (owner != null)
                     {
