@@ -1,0 +1,44 @@
+﻿@{
+    Layout = null;
+    var success = ViewBag.Success as bool? ?? false;
+    var error = ViewBag.Error as string ?? "";
+    var ownerName = ViewBag.OwnerName as string ?? "";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>@(success ? "Booking Cancelled" : "Error") - SmartSlot</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+    *,*::before,*::after{box-sizing:border-box;}
+    body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#0F172A,#111827,#1E293B);min-height:100vh;display:flex;align-items:center;justify-content:center;margin:0;padding:20px;}
+    .card{background:rgba(30,41,59,0.8);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.09);border-radius:20px;padding:40px 36px;max-width:420px;width:100%;text-align:center;box-shadow:0 16px 60px rgba(0,0,0,0.4);}
+    .icon{font-size:56px;margin-bottom:16px;}
+    .title{font-family:'Poppins',sans-serif;font-size:22px;font-weight:700;color:#f1f5f9;margin-bottom:10px;}
+    .msg{font-size:14px;color:#94A3B8;line-height:1.7;margin-bottom:28px;}
+    .btn{display:inline-block;padding:12px 28px;background:linear-gradient(90deg,#3B82F6,#2563EB);color:#fff;text-decoration:none;border-radius:10px;font-weight:600;font-size:14px;transition:all 0.2s;}
+    .btn:hover{transform:translateY(-1px);}
+    .btn-green{background:linear-gradient(90deg,#10b981,#059669);}
+</style>
+</head>
+<body>
+<div class="card">
+    @if (success)
+    {
+        <div class="icon">&#10003;</div>
+        <div class="title">Booking Cancelled</div>
+        <div class="msg">Your booking has been successfully cancelled. The parking slot is now available for others.<br/><br/>If you paid via UPI, please contact <strong style="color:#f1f5f9;">@ownerName</strong> directly for any refund.</div>
+        <a href="/Parking/Search" class="btn btn-green">Find Another Slot</a>
+    }
+    else
+    {
+        <div class="icon">&#9888;&#65039;</div>
+        <div class="title">Could Not Cancel</div>
+        <div class="msg">@error</div>
+        <a href="/Parking/Search" class="btn">Back to Search</a>
+    }
+</div>
+</body>
+</html>

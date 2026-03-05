@@ -1,7 +1,9 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SmartSlot.Data;
+using SmartSlot.Hubs;
 using SmartSlot.Services;
 using System;
 using System.Linq;
@@ -31,7 +33,9 @@ namespace SmartSlot.Services
                     using var scope = _scopeFactory.CreateScope();
                     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                     var emailService = scope.ServiceProvider.GetRequiredService<EmailService>();
-                    await RunJobsAsync(context, emailService);
+                    // ✅ Resolve SignalR hub context
+                    var hub = scope.ServiceProvider.GetRequiredService<IHubContext<ParkingHub>>();
+                    await RunJobsAsync(context, emailService, hub);
                 }
                 catch (Exception ex)
                 {
@@ -41,35 +45,31 @@ namespace SmartSlot.Services
             }
         }
 
-        private async Task RunJobsAsync(ApplicationDbContext context, EmailService emailService)
+        private async Task RunJobsAsync(
+            ApplicationDbContext context,
+            EmailService emailService,
+            IHubContext<ParkingHub> hub)
         {
-            // ✅ DB stores IST — always compare against istNow, never raw utcNow
+            // DB stores IST — always compare against istNow
             var istNow = DateTime.UtcNow.AddHours(5.5);
             Console.WriteLine($"⏰ Background check at (IST): {istNow:MM/dd/yyyy HH:mm:ss}");
 
-            // ── 1. One-hour alert ─────────────────────────────────────────
+            // ── 1. One-hour alert ────────────────────────────────────────
             var pendingOneHour = context.Bookings
                 .Where(b => !b.OneHourAlertSent)
                 .ToList();
 
-            Console.WriteLine($"📦 Bookings pending 1-hour alert: {pendingOneHour.Count}");
-
             foreach (var booking in pendingOneHour)
             {
                 var alertTime = booking.BookingTo.AddHours(-1);
-                Console.WriteLine($"🔎 Booking {booking.Id} — BookingTo: {booking.BookingTo:MM/dd/yyyy HH:mm:ss}, AlertTime: {alertTime:MM/dd/yyyy HH:mm:ss}, istNow: {istNow:MM/dd/yyyy HH:mm:ss}");
 
-                // ✅ FIX: compare against istNow (DB stores IST)
-                // Already expired — mark done immediately so it clears from the queue
                 if (booking.BookingTo <= istNow)
                 {
-                    Console.WriteLine($"⏭ Booking {booking.Id} already expired (IST) — marking sent to clear from queue");
                     booking.OneHourAlertSent = true;
                     context.Bookings.Update(booking);
                     continue;
                 }
 
-                // ✅ FIX: send only within the 1-hour window — compare IST vs IST
                 if (istNow >= alertTime && istNow < booking.BookingTo)
                 {
                     try
@@ -80,27 +80,20 @@ namespace SmartSlot.Services
                                 toEmail: booking.CustomerEmail,
                                 customerName: booking.CustomerName,
                                 bookingTo: booking.BookingTo,
-                                bookingId: booking.Id
-                            );
+                                bookingId: booking.Id);
                             Console.WriteLine($"📧 1-hour alert sent → Booking #{booking.Id}");
                         }
                         booking.OneHourAlertSent = true;
                         context.Bookings.Update(booking);
                     }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"📧 1-hour alert failed #{booking.Id}: {ex.Message}");
-                    }
+                    catch (Exception ex) { Console.WriteLine($"📧 1-hour alert failed #{booking.Id}: {ex.Message}"); }
                 }
             }
 
-            // ── 2. Review email ───────────────────────────────────────────
-            // ✅ FIX: use istNow
+            // ── 2. Review email ──────────────────────────────────────────
             var reviewPending = context.Bookings
                 .Where(b => !b.ReviewSmsSent && b.BookingTo <= istNow)
                 .ToList();
-
-            Console.WriteLine($"📦 Bookings pending review email: {reviewPending.Count}");
 
             foreach (var booking in reviewPending)
             {
@@ -111,21 +104,16 @@ namespace SmartSlot.Services
                         await emailService.SendReviewEmail(
                             toEmail: booking.CustomerEmail,
                             customerName: booking.CustomerName,
-                            bookingId: booking.Id
-                        );
+                            bookingId: booking.Id);
                         Console.WriteLine($"📧 Review email sent → Booking #{booking.Id}");
                     }
                     booking.ReviewSmsSent = true;
                     context.Bookings.Update(booking);
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"📧 Review email failed #{booking.Id}: {ex.Message}");
-                }
+                catch (Exception ex) { Console.WriteLine($"📧 Review email failed #{booking.Id}: {ex.Message}"); }
             }
 
-            // ── 3. Exit scan alert ────────────────────────────────────────
-            // ✅ FIX: use istNow for all comparisons
+            // ── 3. Exit scan alert ───────────────────────────────────────
             var exitScanPending = context.Bookings
                 .Where(b =>
                     !b.ExitScanAlertSent &&
@@ -133,8 +121,6 @@ namespace SmartSlot.Services
                     b.BookingTo <= istNow &&
                     b.BookingTo >= istNow.AddMinutes(-15))
                 .ToList();
-
-            Console.WriteLine($"📦 Bookings pending exit scan email: {exitScanPending.Count}");
 
             foreach (var booking in exitScanPending)
             {
@@ -149,29 +135,22 @@ namespace SmartSlot.Services
                             customerName: booking.CustomerName,
                             bookingTo: booking.BookingTo,
                             scanLink: scanLink,
-                            bookingId: booking.Id
-                        );
+                            bookingId: booking.Id);
                         Console.WriteLine($"📧 Exit scan email sent → Booking #{booking.Id}");
                     }
                     booking.ExitScanAlertSent = true;
                     context.Bookings.Update(booking);
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"📧 Exit scan email failed #{booking.Id}: {ex.Message}");
-                }
+                catch (Exception ex) { Console.WriteLine($"📧 Exit scan email failed #{booking.Id}: {ex.Message}"); }
             }
 
-            // ── 4. Penalty check ──────────────────────────────────────────
-            // ✅ FIX: use istNow
+            // ── 4. Penalty check ─────────────────────────────────────────
             var penaltyPending = context.Bookings
                 .Where(b =>
                     !b.ExitConfirmed &&
                     !b.PenaltyApplied &&
                     b.BookingTo <= istNow.AddMinutes(-15))
                 .ToList();
-
-            Console.WriteLine($"📦 Bookings pending penalty check: {penaltyPending.Count}");
 
             foreach (var booking in penaltyPending)
             {
@@ -185,26 +164,19 @@ namespace SmartSlot.Services
                             customerName: booking.CustomerName,
                             bookingTo: booking.BookingTo,
                             bookingId: booking.Id,
-                            slotOwner: slot?.OwnerName ?? "Owner"
-                        );
+                            slotOwner: slot?.OwnerName ?? "Owner");
                     }
                     booking.PenaltyApplied = true;
                     context.Bookings.Update(booking);
                     Console.WriteLine($"⚠ Penalty applied → Booking #{booking.Id}");
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"⚠ Penalty failed #{booking.Id}: {ex.Message}");
-                }
+                catch (Exception ex) { Console.WriteLine($"⚠ Penalty failed #{booking.Id}: {ex.Message}"); }
             }
 
-            // ── 5. Slot-free notification (Notify Me) ─────────────────────
-            // ✅ FIX: use istNow
+            // ── 5. Slot-free notification (Notify Me) ────────────────────
             var notifyPending = context.SlotNotifyRequests
                 .Where(n => !n.NotificationSent)
                 .ToList();
-
-            Console.WriteLine($"🔔 Pending notify requests: {notifyPending.Count}");
 
             foreach (var waiter in notifyPending)
             {
@@ -227,20 +199,61 @@ namespace SmartSlot.Services
                         ownerName: slot.OwnerName,
                         pricePerHour: (decimal)slot.PricePerHour,
                         vehicleType: slot.VehicleType,
-                        slotId: slot.Id
-                    );
+                        slotId: slot.Id);
+
                     waiter.NotificationSent = true;
                     waiter.SentAt = DateTime.UtcNow;
                     context.SlotNotifyRequests.Update(waiter);
-                    Console.WriteLine($"📧 Slot-free alert sent → {waiter.CustomerEmail} for Slot #{waiter.ParkingSlotId}");
+                    Console.WriteLine($"📧 Slot-free alert sent → {waiter.CustomerEmail} Slot #{waiter.ParkingSlotId}");
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"📧 Slot-free alert failed: {ex.Message}");
-                }
+                catch (Exception ex) { Console.WriteLine($"📧 Slot-free alert failed: {ex.Message}"); }
             }
 
             context.SaveChanges();
+
+            // ✅ SIGNALR — auto-free slots whose BookingTo has passed (without page refresh)
+            // Find all slots that are marked IsBooked=true but have no active booking right now
+            var staleBookedSlots = context.ParkingSlots
+                .Where(s => s.IsBooked)
+                .ToList()
+                .Where(s =>
+                {
+                    // No active booking for this slot right now
+                    bool hasActiveBooking = context.Bookings.Any(b =>
+                        b.ParkingSlotId == s.Id &&
+                        b.BookingFrom <= istNow &&
+                        b.BookingTo > istNow &&
+                        !b.ExitConfirmed);
+                    return !hasActiveBooking;
+                })
+                .ToList();
+
+            foreach (var slot in staleBookedSlots)
+            {
+                try
+                {
+                    // Update DB: mark slot as available again
+                    slot.IsBooked = false;
+                    context.ParkingSlots.Update(slot);
+
+                    // ✅ SIGNALR: push "slot is now available" to all connected map viewers
+                    await hub.Clients.Group("map").SendAsync("SlotUpdated", new
+                    {
+                        slotId = slot.Id,
+                        isBooked = false
+                    });
+
+                    Console.WriteLine($"📡 SignalR: Slot #{slot.Id} auto-freed (booking expired)");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"📡 SignalR auto-free failed Slot #{slot.Id}: {ex.Message}");
+                }
+            }
+
+            // Save slot IsBooked updates
+            if (staleBookedSlots.Any())
+                context.SaveChanges();
         }
     }
 }

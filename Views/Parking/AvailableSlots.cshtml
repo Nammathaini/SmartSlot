@@ -8,6 +8,7 @@
     var toTime   = ViewBag.ToTime   as string;
 }
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 
 <style>
@@ -17,25 +18,23 @@
         --glass:rgba(20,30,48,0.72);--border:rgba(255,255,255,0.08);
         --text:#F1F5F9;--muted:#94A3B8;--green:#10b981;--red:#ef4444;
     }
-    /* No body background — _Layout handles the parking photo + blue overlay */
     .orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0;}
     .orb1{top:-10%;left:-8%;width:480px;height:480px;background:radial-gradient(circle,rgba(16,185,129,0.06) 0%,transparent 70%);}
     .orb2{bottom:-10%;right:-8%;width:420px;height:420px;background:radial-gradient(circle,rgba(37,99,235,0.07) 0%,transparent 70%);}
-
-    .main{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:36px 24px 80px;}
-
+    .main{position:relative;z-index:1;max-width:1380px;margin:0 auto;padding:36px 24px 80px;}
     .page-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:28px;flex-wrap:wrap;animation:fadeUp 0.45s ease both;}
     .page-top-left h1{font-family:'Poppins',sans-serif;font-weight:700;font-size:1.55rem;letter-spacing:-0.4px;margin-bottom:6px;}
     .page-top-left h1 em{font-style:normal;color:var(--green);}
     .filter-badge{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);border-radius:8px;font-size:0.78rem;color:var(--green);font-weight:500;}
     .back-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;background:rgba(20,30,48,0.75);border:1px solid var(--border);border-radius:10px;color:var(--muted);text-decoration:none;font-size:0.83rem;font-weight:500;transition:all 0.2s;flex-shrink:0;}
     .back-btn:hover{color:var(--text);border-color:rgba(255,255,255,0.16);text-decoration:none;}
-
+    .realtime-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);border-radius:20px;font-size:0.72rem;color:var(--green);font-weight:600;}
+    .rt-dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:rtPulse 1.5s ease infinite;}
+    @@keyframes rtPulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
     .controls{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap;animation:fadeUp 0.45s ease 0.1s both;}
     .sort-select{padding:9px 13px;background:rgba(20,30,48,0.75);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:'Inter',sans-serif;font-size:0.83rem;outline:none;cursor:pointer;transition:border-color 0.2s;}
     .sort-select:focus{border-color:var(--blue);}
     #countLabel{font-size:0.8rem;color:var(--muted);}
-
     .table-card{background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:18px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,0.3);animation:fadeUp 0.45s ease 0.15s both;}
     .t-wrap{overflow-x:auto;}
     table{width:100%;border-collapse:collapse;}
@@ -43,26 +42,45 @@
     tbody td{padding:13px 16px;font-size:0.87rem;color:var(--text);border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:middle;}
     tbody tr:last-child td{border-bottom:none;}
     tbody tr:hover{background:rgba(255,255,255,0.025);}
-
     .owner{font-weight:600;}
     .price{font-family:'Poppins',sans-serif;font-weight:700;color:var(--green);}
     .dist-val{color:var(--muted);font-size:0.82rem;}
     .date-val{color:var(--muted);font-size:0.79rem;}
-
     .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:0.72rem;font-weight:600;}
     .b-premium{background:rgba(234,179,8,0.15);color:#EAB308;border:1px solid rgba(234,179,8,0.2);}
     .b-gold{background:rgba(249,115,22,0.12);color:#F97316;border:1px solid rgba(249,115,22,0.2);}
     .b-silver{background:rgba(148,163,184,0.12);color:#94A3B8;border:1px solid rgba(148,163,184,0.2);}
     .b-basic{background:rgba(59,130,246,0.1);color:var(--blue-light);border:1px solid rgba(59,130,246,0.2);}
     .b-na{color:var(--muted);font-size:0.8rem;}
-
     .btn-book{display:inline-flex;align-items:center;gap:4px;padding:7px 13px;background:linear-gradient(90deg,var(--blue-light),var(--blue));color:#fff;border-radius:8px;text-decoration:none;font-family:'Inter',sans-serif;font-weight:600;font-size:0.78rem;box-shadow:0 3px 10px var(--blue-glow);transition:all 0.2s;white-space:nowrap;}
     .btn-book:hover{transform:translateY(-1px);box-shadow:0 5px 14px var(--blue-glow);color:#fff;text-decoration:none;}
-
+    .btn-nav{display:inline-flex;align-items:center;gap:4px;padding:6px 11px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.22);color:var(--green);border-radius:8px;text-decoration:none;font-size:0.75rem;font-weight:600;transition:all 0.2s;white-space:nowrap;}
+    .btn-nav:hover{background:rgba(16,185,129,0.2);transform:translateY(-1px);color:var(--green);text-decoration:none;}
+    /* Slot photo thumbnail */
+    .slot-thumb{width:54px;height:40px;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:pointer;transition:transform 0.2s;display:block;}
+    .slot-thumb:hover{transform:scale(1.08);}
+    .no-img{width:54px;height:40px;border-radius:6px;border:1px dashed rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:0.65rem;color:rgba(148,163,184,0.4);}
+    /* Image modal */
+    .img-modal-overlay{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.25s;}
+    .img-modal-overlay.open{opacity:1;pointer-events:all;}
+    .img-modal-inner{max-width:90vw;max-height:88vh;border-radius:16px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.6);position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);}
+    .img-modal-inner img{display:block;max-width:90vw;max-height:84vh;object-fit:contain;border-radius:16px;}
+    .img-modal-close{position:absolute;top:10px;right:12px;background:rgba(0,0,0,0.7);border:none;color:#fff;font-size:1.2rem;padding:4px 10px;border-radius:8px;cursor:pointer;font-weight:700;}
+    .img-modal-caption{padding:10px 16px;background:rgba(20,30,48,0.9);color:var(--muted);font-size:0.78rem;text-align:center;}
+    @@keyframes rowFlash{0%{background:rgba(16,185,129,0.18);}100%{background:transparent;}}
+    .row-flash{animation:rowFlash 1.2s ease;}
     .empty td{text-align:center;padding:44px;color:var(--muted);font-size:0.9rem;}
-
     @@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
 </style>
+
+<!-- Image preview modal -->
+<div class="img-modal-overlay" id="imgModal" onclick="closeImgModal(event)">
+    <div class="img-modal-inner">
+        <button class="img-modal-close" onclick="document.getElementById('imgModal').classList.remove('open')">&#10005;</button>
+        <img id="imgModalSrc" src="" alt="Parking Slot Photo"/>
+        <div class="img-modal-caption" id="imgModalCaption">Parking Slot Photo</div>
+    </div>
+</div>
 
 <div class="orb orb1"></div>
 <div class="orb orb2"></div>
@@ -78,7 +96,10 @@
                 </div>
             }
         </div>
-        <a href="/Parking/Search" class="back-btn">&#8592; Back to Search</a>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <div class="realtime-badge" id="rtBadge" style="display:none;"><span class="rt-dot"></span>Live</div>
+            <a href="/Parking/Search" class="back-btn">&#8592; Back to Search</a>
+        </div>
     </div>
 
     <div class="controls">
@@ -97,6 +118,7 @@
             <table>
                 <thead>
                     <tr>
+                        <th>Slot Photo</th>
                         <th>Owner</th>
                         <th>Phone</th>
                         <th>Price / hr</th>
@@ -106,11 +128,12 @@
                         <th>Distance</th>
                         <th>Rating</th>
                         <th>Status</th>
+                        <th>Navigate</th>
                         <th>Action</th>
                     </tr>
                 </thead>
                 <tbody id="slotBody">
-                    <tr class="empty"><td colspan="10">&#9203; Loading available slots&#8230;</td></tr>
+                    <tr class="empty"><td colspan="12">&#9203; Loading available slots&#8230;</td></tr>
                 </tbody>
             </table>
         </div>
@@ -118,14 +141,14 @@
 </div>
 
 <script>
-var allSlots=[];
-var fFrom="@fromTime", fTo="@toTime";
-var myLat=@lat, myLon=@lon;
+var allSlots = [];
+var fFrom = "@fromTime", fTo = "@toTime";
+var myLat = @lat, myLon = @lon;
 
 function km(a,b,c,d){var R=6371,dL=(c-a)*Math.PI/180,dO=(d-b)*Math.PI/180,x=Math.sin(dL/2)*Math.sin(dL/2)+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dO/2)*Math.sin(dO/2);return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
 
 function badgeHtml(b){
-    if(!b||b==='—') return '<span class="b-na">—</span>';
+    if(!b||b==='—'||b==='') return '<span class="b-na">—</span>';
     var cls='b-basic';
     if(b.includes('Premium')) cls='b-premium';
     else if(b.includes('Gold')) cls='b-gold';
@@ -133,30 +156,51 @@ function badgeHtml(b){
     return '<span class="badge '+cls+'">'+b+'</span>';
 }
 
+// ✅ FIX: use parkingImagePath (matches NearbySlots JSON field name)
+function photoHtml(slot) {
+    var imgPath = slot.slotImageUrl;
+    if (imgPath && imgPath.trim() !== '') {
+        // Build absolute URL — path starts with /uploads/slot-photos/...
+        var src = imgPath.startsWith('/') ? imgPath : '/' + imgPath;
+        return '<img class="slot-thumb" src="' + src + '" alt="Slot Photo" '
+            + 'onclick="openImgModal(\'' + src + '\',\'' + escapeQuote(slot.ownerName) + ' — Parking Slot\')" '
+            + 'onerror="this.outerHTML=\'<div class=no-img>No Photo</div>\'" />';
+    }
+    return '<div class="no-img">No Photo</div>';
+}
+
+function escapeQuote(s){ return (s||'').replace(/'/g, "\\'"); }
+
 function render(slots){
-    document.getElementById('countLabel').textContent=slots.length+' slot'+(slots.length!==1?'s':'')+' found';
-    var body=document.getElementById('slotBody');
-    if(!slots.length){body.innerHTML='<tr class="empty"><td colspan="10">No available slots for this time range</td></tr>';return;}
-    body.innerHTML=slots.map(function(s){
-        var rating=s.averageRating?'&#11088; '+s.averageRating.toFixed(1):'<span style="color:var(--muted);font-size:0.8rem">—</span>';
-        return '<tr>'+
-            '<td class="owner">'+s.ownerName+'</td>'+
-            '<td style="color:var(--muted)">'+(s.ownerPhone||'—')+'</td>'+
-            '<td class="price">&#8377;'+s.pricePerHour+'</td>'+
-            '<td>'+s.vehicleType+'</td>'+
-            '<td class="date-val">'+new Date(s.availableFrom).toLocaleString()+'</td>'+
-            '<td class="date-val">'+new Date(s.availableTo).toLocaleString()+'</td>'+
-            '<td class="dist-val">'+s._dist.toFixed(2)+' km</td>'+
-            '<td>'+rating+'</td>'+
-            '<td>'+badgeHtml(s.parkingBadge)+'</td>'+
-            '<td><a href="/Verification/Upload/'+s.id+'" class="btn-book">Book &#8594;</a></td>'+
-        '</tr>';
+    document.getElementById('countLabel').textContent = slots.length + ' slot' + (slots.length !== 1 ? 's' : '') + ' found';
+    var body = document.getElementById('slotBody');
+    if (!slots.length) {
+        body.innerHTML = '<tr class="empty"><td colspan="12">No available slots for this time range</td></tr>';
+        return;
+    }
+    body.innerHTML = slots.map(function(s){
+        var rating = s.averageRating ? '&#11088; ' + s.averageRating.toFixed(1) : '<span style="color:var(--muted);font-size:0.8rem">—</span>';
+        var navUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + s.latitude + ',' + s.longitude;
+        return '<tr id="row-' + s.id + '">'
+            + '<td>' + photoHtml(s) + '</td>'
+            + '<td class="owner">' + s.ownerName + '</td>'
+            + '<td style="color:var(--muted)">' + (s.ownerPhone || '—') + '</td>'
+            + '<td class="price">&#8377;' + s.pricePerHour + '</td>'
+            + '<td>' + s.vehicleType + '</td>'
+            + '<td class="date-val">' + new Date(s.availableFrom).toLocaleString() + '</td>'
+            + '<td class="date-val">' + new Date(s.availableTo).toLocaleString() + '</td>'
+            + '<td class="dist-val">' + s._dist.toFixed(2) + ' km</td>'
+            + '<td>' + rating + '</td>'
+            + '<td>' + badgeHtml(s.parkingBadge) + '</td>'
+            + '<td><a href="' + navUrl + '" target="_blank" class="btn-nav">&#128205; Go</a></td>'
+            + '<td><a href="/Verification/Upload/' + s.id + '" class="btn-book">Book &#8594;</a></td>'
+            + '</tr>';
     }).join('');
 }
 
 function applySort(){
-    var v=document.getElementById('sortSel').value;
-    var s=[...allSlots];
+    var v = document.getElementById('sortSel').value;
+    var s = [...allSlots];
     if(v==='price')  s.sort((a,b)=>a.pricePerHour-b.pricePerHour);
     if(v==='dist')   s.sort((a,b)=>a._dist-b._dist);
     if(v==='rating') s.sort((a,b)=>(b.averageRating||0)-(a.averageRating||0));
@@ -168,13 +212,54 @@ function applySort(){
 }
 
 function load(){
-    var url='/Parking/NearbySlots?lat=@lat&lon=@lon&radius=@radius';
-    if(fFrom&&fTo) url+='&fromTime='+encodeURIComponent(fFrom)+'&toTime='+encodeURIComponent(fTo);
+    var url = '/Parking/NearbySlots?lat=@lat&lon=@lon&radius=@radius';
+    if(fFrom && fTo) url += '&fromTime=' + encodeURIComponent(fFrom) + '&toTime=' + encodeURIComponent(fTo);
     fetch(url).then(r=>r.json()).then(function(data){
-        allSlots=data.filter(s=>!s.isBooked).map(function(s){s._dist=km(myLat,myLon,s.latitude,s.longitude);return s;});
+        allSlots = data.filter(s => !s.isBooked).map(function(s){
+            s._dist = km(myLat, myLon, s.latitude, s.longitude);
+            return s;
+        });
         render(allSlots);
-    }).catch(function(){document.getElementById('slotBody').innerHTML='<tr class="empty"><td colspan="10">Failed to load. Please refresh.</td></tr>';});
+    }).catch(function(){
+        document.getElementById('slotBody').innerHTML = '<tr class="empty"><td colspan="12">Failed to load. Please refresh.</td></tr>';
+    });
 }
+
+// SignalR live updates
+var connection = new signalR.HubConnectionBuilder()
+    .withUrl("/parkingHub").withAutomaticReconnect().build();
+
+connection.on("SlotUpdated", function(data) {
+    if (data.isBooked) {
+        allSlots = allSlots.filter(function(s){ return s.id !== data.slotId; });
+        var row = document.getElementById('row-' + data.slotId);
+        if (row) {
+            row.style.transition = 'opacity 0.6s';
+            row.style.opacity = '0';
+            setTimeout(function(){
+                row.remove();
+                document.getElementById('countLabel').textContent = allSlots.length + ' slot' + (allSlots.length !== 1 ? 's' : '') + ' found';
+            }, 650);
+        }
+    } else {
+        load();
+    }
+});
+connection.start().then(function(){
+    connection.invoke("JoinMap");
+    document.getElementById('rtBadge').style.display = 'inline-flex';
+}).catch(function(){});
+
+function openImgModal(url, caption) {
+    document.getElementById('imgModalSrc').src = url;
+    document.getElementById('imgModalCaption').textContent = caption || 'Parking Slot Photo';
+    document.getElementById('imgModal').classList.add('open');
+}
+function closeImgModal(e) {
+    if (e.target === document.getElementById('imgModal'))
+        document.getElementById('imgModal').classList.remove('open');
+}
+
 load();
-setInterval(load,30000);
+setInterval(load, 30000);
 </script>

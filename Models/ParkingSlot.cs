@@ -3,10 +3,6 @@
     public class ParkingSlot
     {
         public int Id { get; set; }
-
-        // ✅ NEW: links slot to the account that created it
-        public int UserId { get; set; } = 0;
-
         public string OwnerName { get; set; } = "";
         public string OwnerPhone { get; set; } = "";
         public bool IsBooked { get; set; } = false;
@@ -20,13 +16,19 @@
         public string PaymentMode { get; set; } = "Cash";
         public string? OwnerUpiId { get; set; }
 
-        // ── UPI QR Image (kept for backwards compat, no longer used) ──
+        // ── UPI QR Image (uploaded by owner) ──
         public string? UpiQrImagePath { get; set; }
+
+        // ── Parking Slot Photo (file path) ──
+        public string? ParkingImagePath { get; set; }
 
         public string? ParkingImageBase64 { get; set; }
         public int ParkingScore { get; set; } = 0;
         public string? ParkingBadge { get; set; } = "";
         public string? ParkingScoreDetails { get; set; } = "";
+
+        // ── Owner tracking by UserId ──
+        public int UserId { get; set; }
 
         // ── Exit Verification System ──
         public string ExitMethod { get; set; } = "Manual";

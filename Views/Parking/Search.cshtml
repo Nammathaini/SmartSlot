@@ -3,6 +3,8 @@
     Layout = "_Layout";
 }
 
+<!-- ✅ FEATURE 1: SignalR for real-time updates -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
@@ -13,82 +15,48 @@
         --glass:rgba(20,30,48,0.72); --border:rgba(255,255,255,0.08);
         --text:#F1F5F9; --muted:#94A3B8; --green:#10b981; --red:#ef4444;
     }
-    /* No body background — _Layout handles the parking photo + blue overlay */
     html, body { height: 100%; }
-
     .search-page { position:relative; z-index:1; max-width:960px; margin:0 auto; padding:32px 24px 0; }
-
     .sb-title { font-family:'Poppins',sans-serif; font-weight:700; font-size:1.25rem; letter-spacing:-0.4px; color:var(--text); }
     .sb-sub   { font-size:0.8rem; color:var(--muted); margin-top:3px; margin-bottom:16px; }
-
     .divider { height:1px; background:linear-gradient(90deg,transparent,var(--border),transparent); margin:4px 0; }
-
     .loc-row { display:flex; gap:10px; }
-    .loc-btn {
-        flex:1; padding:11px; border:none; border-radius:10px; cursor:pointer;
-        background:linear-gradient(90deg,var(--blue-light),var(--blue)); color:#fff;
-        font-family:'Inter',sans-serif; font-weight:600; font-size:0.875rem;
-        box-shadow:0 4px 14px var(--blue-glow); transition:all 0.2s ease;
-    }
+    .loc-btn { flex:1; padding:11px; border:none; border-radius:10px; cursor:pointer; background:linear-gradient(90deg,var(--blue-light),var(--blue)); color:#fff; font-family:'Inter',sans-serif; font-weight:600; font-size:0.875rem; box-shadow:0 4px 14px var(--blue-glow); transition:all 0.2s ease; }
     .loc-btn:hover { transform:translateY(-1px); }
-
     .addr-row { display:flex; gap:8px; }
-    .addr-input {
-        flex:1; padding:11px 13px;
-        background:rgba(15,23,42,0.7); border:1px solid var(--border); border-radius:10px;
-        color:var(--text); font-family:'Inter',sans-serif; font-size:0.85rem; outline:none; transition:all 0.2s;
-    }
+    .addr-input { flex:1; padding:11px 13px; background:rgba(15,23,42,0.7); border:1px solid var(--border); border-radius:10px; color:var(--text); font-family:'Inter',sans-serif; font-size:0.85rem; outline:none; transition:all 0.2s; }
     .addr-input:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(37,99,235,0.18); }
     .addr-input::placeholder { color:rgba(148,163,184,0.45); }
-    .addr-btn {
-        padding:11px 18px; background:rgba(37,99,235,0.15); border:1px solid rgba(37,99,235,0.28);
-        border-radius:10px; color:var(--blue-light); font-family:'Inter',sans-serif;
-        font-weight:600; font-size:0.85rem; cursor:pointer; white-space:nowrap; transition:all 0.2s;
-    }
+    .addr-btn { padding:11px 18px; background:rgba(37,99,235,0.15); border:1px solid rgba(37,99,235,0.28); border-radius:10px; color:var(--blue-light); font-family:'Inter',sans-serif; font-weight:600; font-size:0.85rem; cursor:pointer; white-space:nowrap; transition:all 0.2s; }
     .addr-btn:hover { background:rgba(37,99,235,0.25); }
-
-    .filter-card {
-        background:var(--glass); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
-        border:1px solid var(--border); border-radius:14px; padding:20px 22px;
-    }
+    .filter-card { background:var(--glass); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border:1px solid var(--border); border-radius:14px; padding:20px 22px; }
     .fc-title { font-family:'Poppins',sans-serif; font-weight:600; font-size:0.9rem; margin-bottom:14px; color:var(--text); }
     .filter-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
     .fg label { display:block; font-size:0.72rem; font-weight:500; color:var(--muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.4px; }
-    .filter-input {
-        width:100%; padding:10px 12px; background:rgba(15,23,42,0.7); border:1px solid var(--border);
-        border-radius:9px; color:var(--text); font-family:'Inter',sans-serif; font-size:0.83rem;
-        outline:none; transition:all 0.2s; color-scheme:dark;
-    }
+    .filter-input { width:100%; padding:10px 12px; background:rgba(15,23,42,0.7); border:1px solid var(--border); border-radius:9px; color:var(--text); font-family:'Inter',sans-serif; font-size:0.83rem; outline:none; transition:all 0.2s; color-scheme:dark; }
     .filter-input:focus { border-color:var(--blue); box-shadow:0 0 0 2px rgba(37,99,235,0.18); }
-    .proceed-btn {
-        width:100%; padding:13px; border:none; border-radius:10px; cursor:pointer;
-        background:linear-gradient(90deg,var(--blue-light),var(--blue)); color:#fff;
-        font-family:'Inter',sans-serif; font-weight:600; font-size:0.92rem;
-        box-shadow:0 4px 14px var(--blue-glow); transition:all 0.2s;
-    }
+    .proceed-btn { width:100%; padding:13px; border:none; border-radius:10px; cursor:pointer; background:linear-gradient(90deg,var(--blue-light),var(--blue)); color:#fff; font-family:'Inter',sans-serif; font-weight:600; font-size:0.92rem; box-shadow:0 4px 14px var(--blue-glow); transition:all 0.2s; }
     .proceed-btn:hover { transform:translateY(-1px); box-shadow:0 7px 20px var(--blue-glow); }
-
     #status { font-size:0.84rem; font-weight:500; min-height:18px; padding:2px 0; color:var(--text); }
     .s-loading { color:#F59E0B; } .s-ok { color:var(--green); } .s-err { color:var(--red); }
-
+    /* ✅ FEATURE 1: Live badge */
+    .realtime-badge { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); border-radius:20px; font-size:0.72rem; color:var(--green); font-weight:600; }
+    .rt-dot { width:7px; height:7px; background:var(--green); border-radius:50%; animation:rtPulse 1.5s ease infinite; }
+    @@keyframes rtPulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.4;transform:scale(0.7);} }
+    /* ✅ FEATURE 5: Legend */
+    .map-legend { display:flex; gap:16px; padding:8px 14px; background:var(--glass); border:1px solid var(--border); border-radius:10px; font-size:0.75rem; color:var(--muted); flex-wrap:wrap; }
+    .legend-item { display:flex; align-items:center; gap:6px; }
+    .legend-dot { width:11px; height:11px; border-radius:50%; flex-shrink:0; }
     .toggle-row { display:flex; gap:10px; }
     .toggle-btn { flex:1; padding:13px; border:none; border-radius:10px; font-family:'Inter',sans-serif; font-weight:600; font-size:0.9rem; cursor:pointer; transition:all 0.2s; }
     .btn-avail  { background:rgba(16,185,129,0.14); color:var(--green); border:1px solid rgba(16,185,129,0.25); }
     .btn-avail:hover { background:rgba(16,185,129,0.25); transform:translateY(-1px); }
     .btn-booked { background:rgba(239,68,68,0.12); color:var(--red); border:1px solid rgba(239,68,68,0.22); }
     .btn-booked:hover { background:rgba(239,68,68,0.2); transform:translateY(-1px); }
-
     .ext-error { background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.28); border-radius:10px; padding:10px 14px; color:#f87171; font-size:0.83rem; font-weight:500; }
-
     .controls-stack { display:flex; flex-direction:column; gap:14px; margin-bottom:20px; }
-
-    .map-panel {
-        width: 100%; height: 520px; border-radius: 18px; overflow: hidden;
-        border: 1px solid var(--border); box-shadow: 0 12px 40px rgba(0,0,0,0.3);
-        margin-bottom: 40px;
-    }
+    .map-panel { width:100%; height:520px; border-radius:18px; overflow:hidden; border:1px solid var(--border); box-shadow:0 12px 40px rgba(0,0,0,0.3); margin-bottom:40px; }
     #map { width:100%; height:100%; }
-
     @@media (max-width:768px) {
         .filter-grid { grid-template-columns:1fr; }
         .map-panel { height:380px; border-radius:14px; }
@@ -105,10 +73,15 @@
 
 <div class="search-page">
     <div class="controls-stack">
-
-        <div>
-            <div class="sb-title">&#128269; Find Parking</div>
-            <div class="sb-sub">Set your location, pick a time range, then proceed to see slots</div>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <div>
+                <div class="sb-title">&#128269; Find Parking</div>
+                <div class="sb-sub">Set your location, pick a time range, then proceed to see slots</div>
+            </div>
+            <!-- ✅ FEATURE 1: Live badge -->
+            <div class="realtime-badge" id="rtBadge" style="display:none;">
+                <span class="rt-dot"></span> Live Updates
+            </div>
         </div>
 
         <div class="loc-row">
@@ -132,11 +105,17 @@
 
         <div id="status"></div>
 
+        <!-- ✅ FEATURE 5: Legend for map markers -->
+        <div class="map-legend" id="mapLegend" style="display:none;">
+            <div class="legend-item"><div class="legend-dot" style="background:#10b981;"></div>Available</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ef4444;"></div>Booked (3km)</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#3B82F6;"></div>You</div>
+        </div>
+
         <div class="toggle-row" id="toggleSection" style="display:none;">
             <button class="toggle-btn btn-avail"  onclick="goAvailable()">&#128994; View Available Slots</button>
             <button class="toggle-btn btn-booked" onclick="goBooked()">&#128308; View Booked Slots</button>
         </div>
-
     </div>
 
     <div class="map-panel" id="mapPanel" style="display:none;">
@@ -152,20 +131,58 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'�
 var markerGroup = L.layerGroup().addTo(map);
 var radiusCircle = null;
 var userLat, userLon, fFrom, fTo;
+var slotMarkers = {}; // ✅ FEATURE 1: track by slot ID
 
-var gIcon = L.icon({iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',shadowUrl:'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',iconSize:[25,41],iconAnchor:[12,41]});
-var rIcon = L.icon({iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',shadowUrl:'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',iconSize:[25,41],iconAnchor:[12,41]});
+var gIcon = L.icon({iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',shadowUrl:'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',iconSize:[25,41],iconAnchor:[12,41],popupAnchor:[1,-34]});
+var rIcon = L.icon({iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',shadowUrl:'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',iconSize:[25,41],iconAnchor:[12,41],popupAnchor:[1,-34]});
+var bIcon = L.icon({iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',shadowUrl:'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',iconSize:[25,41],iconAnchor:[12,41],popupAnchor:[1,-34]});
 
 function km(a,b,c,d){var R=6371,dL=(c-a)*Math.PI/180,dO=(d-b)*Math.PI/180,x=Math.sin(dL/2)*Math.sin(dL/2)+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dO/2)*Math.sin(dO/2);return(R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x))).toFixed(2);}
 function setStatus(m,c){var e=document.getElementById('status');e.className=c||'';e.innerHTML=m;}
-function clearMap(){markerGroup.clearLayers();if(radiusCircle){map.removeLayer(radiusCircle);radiusCircle=null;}}
+function clearMap(){markerGroup.clearLayers();slotMarkers={};if(radiusCircle){map.removeLayer(radiusCircle);radiusCircle=null;}}
+
+function buildPopup(name, price, vehicle, isBooked, dist, lat, lon) {
+    var navLink = 'https://www.google.com/maps/dir/?api=1&destination='+lat+','+lon; // ✅ FEATURE 2
+    var statusHtml = isBooked
+        ? '<span style="color:#ef4444;font-weight:600;">&#128308; Booked</span>'
+        : '<span style="color:#10b981;font-weight:600;">&#128994; Available</span>';
+    return '<b>'+name+'</b><br>&#8377;'+price+'/hr &middot; '+vehicle
+        +'<br>'+statusHtml
+        +'<br><small style="color:#94A3B8;">'+dist+' km away</small>'
+        +'<br><a href="'+navLink+'" target="_blank" style="color:#3B82F6;font-size:11px;font-weight:600;text-decoration:none;">&#128205; Navigate Here &#8594;</a>';
+}
+
+// ✅ FEATURE 1: SignalR connection
+var connection = new signalR.HubConnectionBuilder()
+    .withUrl("/parkingHub")
+    .withAutomaticReconnect()
+    .build();
+
+connection.on("SlotUpdated", function(data) {
+    var info = slotMarkers[data.slotId];
+    if (!info) return;
+    info.isBooked = data.isBooked;
+    info.marker.setIcon(data.isBooked ? rIcon : gIcon);
+    info.marker.setPopupContent(buildPopup(info.name, info.price, info.vehicle, data.isBooked, info.dist, info.lat, info.lon));
+    // Flash effect
+    var m = info.marker;
+    [200,600,1000].forEach(function(t,i){ setTimeout(function(){ m.setOpacity(i%2===0?0.3:1); },t); });
+    setTimeout(function(){ m.setOpacity(1); },1200);
+});
+
+connection.start()
+    .then(function(){
+        connection.invoke("JoinMap");
+        document.getElementById('rtBadge').style.display = 'inline-flex';
+    })
+    .catch(function(e){ console.log('SignalR failed:', e); });
 
 function useLiveLocation(){
     setStatus('Fetching location&#8230;','s-loading');
     navigator.geolocation.getCurrentPosition(function(p){
         userLat=p.coords.latitude; userLon=p.coords.longitude;
         map.setView([userLat,userLon],15); clearMap();
-        markerGroup.addLayer(L.marker([userLat,userLon]).bindPopup('<b>You are here</b>').openPopup());
+        markerGroup.addLayer(L.marker([userLat,userLon],{icon:bIcon}).bindPopup('<b>You are here</b>').openPopup());
         setStatus('Location set. Choose parking time and click Proceed.','s-ok');
     },function(){setStatus('Location denied. Try address search.','s-err');});
 }
@@ -173,32 +190,19 @@ function useLiveLocation(){
 function searchByAddress(){
     var addr=document.getElementById('searchAddress').value.trim(); if(!addr) return;
     setStatus('Finding address&#8230;','s-loading');
-
-    // Split by comma, clean each part
     var rawParts = addr.split(',').map(function(p){ return p.trim(); }).filter(function(p){ return p.length>0; });
-
-    // Remove leading door/house number tokens e.g. "no 30", "30", "#45", "No.30"
-    var cleaned = rawParts.filter(function(p){
-        return !/^(no\.?\s*\d+|\d+[\s\-a-zA-Z]{0,3}|#\s*\d+)$/i.test(p.trim());
-    });
-    if(!cleaned.length) cleaned = rawParts; // fallback if all removed
-
-    // Build progressive fallback queries (more parts -> fewer parts)
+    var cleaned = rawParts.filter(function(p){ return !/^(no\.?\s*\d+|\d+[\s\-a-zA-Z]{0,3}|#\s*\d+)$/i.test(p.trim()); });
+    if(!cleaned.length) cleaned = rawParts;
     var queries = [];
     if(cleaned.length >= 1) queries.push(cleaned.join(', '));
     if(cleaned.length >= 2) queries.push(cleaned.slice(1).join(', '));
     if(cleaned.length >= 3) queries.push(cleaned.slice(2).join(', '));
     if(cleaned.length >= 4) queries.push(cleaned.slice(-3).join(', '));
     if(cleaned.length >= 3) queries.push(cleaned.slice(-2).join(', '));
-    // Deduplicate
     queries = queries.filter(function(q,i,a){ return a.indexOf(q)===i && q.length>0; });
-
     var idx = 0;
     function tryNext(){
-        if(idx >= queries.length){
-            setStatus('Address not found. Try less detail e.g. "Royapettah, Chennai"','s-err');
-            return;
-        }
+        if(idx >= queries.length){ setStatus('Address not found. Try less detail e.g. "Royapettah, Chennai"','s-err'); return; }
         var q = queries[idx++];
         fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(q)+'&format=json&limit=1&addressdetails=1&countrycodes=in')
         .then(function(r){ return r.json(); })
@@ -207,11 +211,9 @@ function searchByAddress(){
                 userLat=parseFloat(d[0].lat); userLon=parseFloat(d[0].lon);
                 map.setView([userLat,userLon],17); clearMap();
                 var label = d[0].display_name ? d[0].display_name.split(',').slice(0,4).join(', ') : q;
-                markerGroup.addLayer(L.marker([userLat,userLon]).bindPopup('<b>&#128205; '+label+'</b>').openPopup());
+                markerGroup.addLayer(L.marker([userLat,userLon],{icon:bIcon}).bindPopup('<b>&#128205; '+label+'</b>').openPopup());
                 setStatus('&#10003; Location found. Choose parking time and click Proceed.','s-ok');
-            } else {
-                tryNext();
-            }
+            } else { tryNext(); }
         }).catch(function(){ tryNext(); });
     }
     tryNext();
@@ -231,12 +233,13 @@ function doSearch(){
     var panel=document.getElementById('mapPanel');
     if(panel.style.display==='none'){
         panel.style.display='block';
+        document.getElementById('mapLegend').style.display='flex';
         setTimeout(function(){ map.invalidateSize(); },100);
     }
     clearMap();
     map.setView([userLat,userLon],14);
-    markerGroup.addLayer(L.marker([userLat,userLon]).bindPopup('<b>You</b>').openPopup());
-    radiusCircle=L.circle([userLat,userLon],{color:'#3B82F6',fillColor:'#3B82F6',fillOpacity:0.07,radius:3000}).addTo(map);
+    markerGroup.addLayer(L.marker([userLat,userLon],{icon:bIcon}).bindPopup('<b>You</b>').openPopup());
+    radiusCircle=L.circle([userLat,userLon],{color:'#3B82F6',fillColor:'#3B82F6',fillOpacity:0.06,radius:3000}).addTo(map);
     setStatus('Scanning nearby slots&#8230;','s-loading');
 
     var url='/Parking/NearbySlots?lat='+userLat+'&lon='+userLon+'&radius=3';
@@ -250,13 +253,18 @@ function doSearch(){
             if(isNaN(la)||isNaN(lo)) return;
             var key=la.toFixed(5)+','+lo.toFixed(5); off[key]=(off[key]||0)+1;
             var o=off[key]*0.00013;
-            var icon=s.isBooked?rIcon:gIcon;
-            var label=s.isBooked?'Booked':'Available';
+            var distVal = km(userLat,userLon,la,lo);
+            // ✅ FEATURE 5: green available, red booked
+            var icon = s.isBooked ? rIcon : gIcon;
             if(s.isBooked) bk++; else av++;
-            markerGroup.addLayer(L.marker([la+o,lo+o],{icon:icon}).bindPopup('<b>'+s.ownerName+'</b><br>&#8377;'+s.pricePerHour+'/hr · '+s.vehicleType+'<br>'+label+'<br>'+km(userLat,userLon,la,lo)+' km'));
+            var marker = L.marker([la+o,lo+o],{icon:icon})
+                .bindPopup(buildPopup(s.ownerName, s.pricePerHour, s.vehicleType, s.isBooked, distVal, la, lo));
+            markerGroup.addLayer(marker);
+            // ✅ FEATURE 1: store for live updates
+            slotMarkers[s.id] = { marker:marker, lat:la, lon:lo, name:s.ownerName, price:s.pricePerHour, vehicle:s.vehicleType, dist:distVal, isBooked:s.isBooked };
         });
         var tf=fFrom&&fTo?' for selected time':'';
-        setStatus('<b>'+av+' available</b> · <b>'+bk+' booked</b>'+tf,'s-ok');
+        setStatus('<b>'+av+' available</b> &middot; <b style="color:#ef4444;">'+bk+' booked</b>'+tf+' within 3 km','s-ok');
         document.getElementById('toggleSection').style.display='flex';
     }).catch(function(){setStatus('Failed to load slots.','s-err');});
 }
@@ -271,5 +279,5 @@ function goBooked(){
     if(fFrom&&fTo) url+='&fromTime='+encodeURIComponent(fFrom)+'&toTime='+encodeURIComponent(fTo);
     window.location.href=url;
 }
-setInterval(function(){if(userLat&&userLon&&fFrom&&fTo) doSearch();},60000);
+setInterval(function(){if(userLat&&userLon&&fFrom&&fTo) doSearch();},30000);
 </script>

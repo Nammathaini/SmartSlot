@@ -4,8 +4,8 @@ using SmartSlot.Models;
 
 namespace SmartSlot.Data
 {
-    // ✅ Implement IDataProtectionKeyContext so EF stores DataProtection keys in PostgreSQL
-    // This prevents users getting logged out on every Render redeploy
+    // ✅ IDataProtectionKeyContext — stores DataProtection keys in PostgreSQL
+    // Prevents users being logged out on every Render redeploy
     public class ApplicationDbContext : DbContext, IDataProtectionKeyContext
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
@@ -20,7 +20,10 @@ namespace SmartSlot.Data
         public DbSet<SlotNotifyRequest> SlotNotifyRequests { get; set; }
         public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
 
-        // ✅ Required by IDataProtectionKeyContext — stores encryption keys in DB
+        // ✅ Browser Web Push subscriptions (VAPID)
+        public DbSet<PushSubscription> PushSubscriptions { get; set; }
+
+        // ✅ Required by IDataProtectionKeyContext
         public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
     }
 }

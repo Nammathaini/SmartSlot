@@ -4,6 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] — SmartSlot</title>
+    <!-- ✅ PWA manifest + theme -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0F172A" />
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
@@ -22,232 +25,225 @@
         }
         *{margin:0;padding:0;box-sizing:border-box;}
         html{scroll-behavior:smooth;}
-
-        body {
-            font-family:'Inter',sans-serif;
-            color:var(--text);
-            min-height:100vh;
-            position:relative;
-            background-color:#0F172A;
-        }
-
-        /* ── Parking lot background image ── */
-        body::before {
-            content:'';
-            position:fixed;
-            inset:0;
-            z-index:0;
-            pointer-events:none;
-            /* Same parking lot photo used on home page — stored in wwwroot/images/ */
-            background-image: url('/images/parking-bg.jpg');
-            background-size:cover;
-            background-position:center;
-            background-repeat:no-repeat;
-            /* Dark overlay so text stays readable — tweak opacity to taste */
-            filter: brightness(0.28) saturate(0.7);
-        }
-
-        /* ── Blue-tinted gradient wash on top of photo ── */
-        body::after {
-            content:'';
-            position:fixed;
-            inset:0;
-            z-index:0;
-            pointer-events:none;
-            background:
-                linear-gradient(160deg,
-                    rgba(15,23,42,0.72) 0%,
-                    rgba(17,24,39,0.55) 50%,
-                    rgba(30,41,59,0.65) 100%),
-                radial-gradient(ellipse 600px 400px at 15% 15%, rgba(37,99,235,0.12) 0%, transparent 65%),
-                radial-gradient(ellipse 500px 300px at 85% 85%, rgba(16,185,129,0.06) 0%, transparent 65%);
-        }
-
-        /* Noise texture grain — Vercel/Stripe style */
-        .noise-overlay {
-            position:fixed;inset:0;z-index:0;pointer-events:none;
-            opacity:0.03;
-            background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-            background-repeat:repeat;background-size:128px 128px;
-        }
-
+        body{font-family:'Inter',sans-serif;color:var(--text);min-height:100vh;position:relative;background-color:#0F172A;}
+        body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background-image:url('/images/parking-bg.jpg');background-size:cover;background-position:center;background-repeat:no-repeat;filter:brightness(0.28) saturate(0.7);}
+        body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background:linear-gradient(160deg,rgba(15,23,42,0.72) 0%,rgba(17,24,39,0.55) 50%,rgba(30,41,59,0.65) 100%),radial-gradient(ellipse 600px 400px at 15% 15%,rgba(37,99,235,0.12) 0%,transparent 65%),radial-gradient(ellipse 500px 300px at 85% 85%,rgba(16,185,129,0.06) 0%,transparent 65%);}
+        .noise-overlay{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");background-repeat:repeat;background-size:128px 128px;}
         .page-wrapper{position:relative;z-index:1;animation:pageIn 0.35s ease both;}
         @@keyframes pageIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
-
-        /* Global Toast */
-        #globalToast{
-            position:fixed;bottom:28px;left:50%;
-            transform:translateX(-50%) translateY(20px);
-            background:rgba(30,41,59,0.92);
-            backdrop-filter:blur(14px);
-            border:1px solid var(--border);
-            color:var(--text);padding:13px 24px;
-            border-radius:14px;font-size:14px;
-            font-family:'Inter',sans-serif;
-            z-index:99999;opacity:0;
-            transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);
-            pointer-events:none;white-space:nowrap;
-            box-shadow:0 12px 40px rgba(0,0,0,0.4);
-        }
+        #globalToast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(30,41,59,0.92);backdrop-filter:blur(14px);border:1px solid var(--border);color:var(--text);padding:13px 24px;border-radius:14px;font-size:14px;font-family:'Inter',sans-serif;z-index:99999;opacity:0;transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);pointer-events:none;white-space:nowrap;box-shadow:0 12px 40px rgba(0,0,0,0.4);}
         #globalToast.show{opacity:1;transform:translateX(-50%) translateY(0);}
         #globalToast.success{border-color:rgba(16,185,129,0.35);box-shadow:0 12px 40px rgba(16,185,129,0.1);}
         #globalToast.error{border-color:rgba(239,68,68,0.35);box-shadow:0 12px 40px rgba(239,68,68,0.1);}
         #globalToast.info{border-color:rgba(37,99,235,0.35);}
-
-        /* Progress bar */
-        #pageProgress{
-            position:fixed;top:0;left:0;height:2px;
-            background:linear-gradient(90deg,var(--primary),#60a5fa);
-            z-index:99999;width:0%;
-            transition:width 0.3s ease;
-            box-shadow:0 0 10px var(--primary);
-        }
-
-        /* Shared glass card */
-        .glass-card{
-            background:rgba(30,41,59,0.65);
-            backdrop-filter:blur(14px);
-            -webkit-backdrop-filter:blur(14px);
-            border:1px solid rgba(255,255,255,0.08);
-            border-radius:18px;
-        }
-
-        /* Bootstrap/nav overrides */
-        .navbar{display:none!important;}
-        footer{display:none!important;}
+        #pageProgress{position:fixed;top:0;left:0;height:2px;background:linear-gradient(90deg,var(--primary),#60a5fa);z-index:99999;width:0%;transition:width 0.3s ease;box-shadow:0 0 10px var(--primary);}
+        .glass-card{background:rgba(30,41,59,0.65);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.08);border-radius:18px;}
+        .navbar{display:none!important;}footer{display:none!important;}
         .container{max-width:100%!important;padding:0!important;}
-
-        /* Scrollbar */
-        ::-webkit-scrollbar{width:4px;}
-        ::-webkit-scrollbar-track{background:transparent;}
-        ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:4px;}
-        ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.14);}
+        ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:4px;}::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.14);}
         ::selection{background:rgba(37,99,235,0.3);}
-
-        /* Shared topbar */
-        .ss-topbar{
-            position:sticky;top:0;z-index:100;
-            background:rgba(15,23,42,0.82);
-            backdrop-filter:blur(20px);
-            -webkit-backdrop-filter:blur(20px);
-            border-bottom:1px solid var(--border);
-            padding:14px 24px;
-            display:flex;align-items:center;gap:14px;
-        }
-        .ss-back-btn{
-            width:38px;height:38px;
-            background:rgba(255,255,255,0.04);
-            border:1px solid var(--border);
-            border-radius:10px;color:var(--text);
-            font-size:16px;display:flex;
-            align-items:center;justify-content:center;
-            text-decoration:none;
-            transition:all 0.2s;flex-shrink:0;
-        }
+        .ss-topbar{position:sticky;top:0;z-index:100;background:rgba(15,23,42,0.82);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:14px;}
+        .ss-back-btn{width:38px;height:38px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:16px;display:flex;align-items:center;justify-content:center;text-decoration:none;transition:all 0.2s;flex-shrink:0;}
         .ss-back-btn:hover{background:rgba(255,255,255,0.09);color:var(--text);transform:translateX(-1px);}
         .ss-logo{display:flex;align-items:center;gap:9px;}
-        .ss-logo-mark{
-            width:30px;height:30px;
-            background:linear-gradient(135deg,var(--primary),#60a5fa);
-            color:#fff;font-family:'Poppins',sans-serif;
-            font-weight:700;font-size:14px;
-            border-radius:8px;
-            display:flex;align-items:center;justify-content:center;
-            box-shadow:0 4px 12px rgba(37,99,235,0.35);
-            filter:drop-shadow(0 0 6px rgba(59,130,246,0.4));
-        }
+        .ss-logo-mark{width:30px;height:30px;background:linear-gradient(135deg,var(--primary),#60a5fa);color:#fff;font-family:'Poppins',sans-serif;font-weight:700;font-size:14px;border-radius:8px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(37,99,235,0.35);filter:drop-shadow(0 0 6px rgba(59,130,246,0.4));}
         .ss-logo-text{font-family:'Poppins',sans-serif;font-size:16px;font-weight:700;}
         .ss-logo-text span{color:var(--primary);}
-
-        /* Shared buttons */
-        .btn-primary-ss{
-            display:inline-flex;align-items:center;justify-content:center;gap:8px;
-            padding:13px 22px;
-            background:linear-gradient(90deg,#3B82F6,#2563EB);
-            color:#fff;border:none;border-radius:12px;
-            font-family:'Inter',sans-serif;font-size:14px;font-weight:600;
-            cursor:pointer;text-decoration:none;
-            transition:all 0.2s;
-            box-shadow:0 6px 16px rgba(37,99,235,0.35);
-        }
-        .btn-primary-ss:hover{
-            transform:translateY(-1px);
-            box-shadow:0 10px 24px rgba(37,99,235,0.45);
-            color:#fff;
-        }
-        .btn-secondary-ss{
-            display:inline-flex;align-items:center;justify-content:center;gap:8px;
-            padding:12px 22px;
-            background:rgba(255,255,255,0.04);
-            color:var(--text-dim);
-            border:1px solid var(--border);
-            border-radius:12px;
-            font-family:'Inter',sans-serif;font-size:14px;font-weight:500;
-            cursor:pointer;text-decoration:none;
-            transition:all 0.2s;
-        }
+        .btn-primary-ss{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 22px;background:linear-gradient(90deg,#3B82F6,#2563EB);color:#fff;border:none;border-radius:12px;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;transition:all 0.2s;box-shadow:0 6px 16px rgba(37,99,235,0.35);}
+        .btn-primary-ss:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(37,99,235,0.45);color:#fff;}
+        .btn-secondary-ss{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 22px;background:rgba(255,255,255,0.04);color:var(--text-dim);border:1px solid var(--border);border-radius:12px;font-family:'Inter',sans-serif;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none;transition:all 0.2s;}
         .btn-secondary-ss:hover{background:rgba(255,255,255,0.08);color:var(--text);}
-
-        /* Shared input */
-        .ss-input{
-            width:100%;padding:12px 14px;
-            background:#1F2937;
-            border:1px solid rgba(255,255,255,0.06);
-            border-radius:10px;color:var(--text);
-            font-family:'Inter',sans-serif;font-size:14px;
-            outline:none;transition:border-color 0.2s,box-shadow 0.2s;
-        }
-        .ss-input:focus{
-            border-color:#3B82F6;
-            box-shadow:0 0 0 2px rgba(59,130,246,0.25);
-        }
-        .ss-label{
-            display:block;font-size:10px;font-weight:600;
-            color:var(--text-dim);letter-spacing:1px;
-            text-transform:uppercase;margin-bottom:6px;
-        }
-
+        .ss-input{width:100%;padding:12px 14px;background:#1F2937;border:1px solid rgba(255,255,255,0.06);border-radius:10px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;transition:border-color 0.2s,box-shadow 0.2s;}
+        .ss-input:focus{border-color:#3B82F6;box-shadow:0 0 0 2px rgba(59,130,246,0.25);}
+        .ss-label{display:block;font-size:10px;font-weight:600;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
         @@keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
         @@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
         @@keyframes popIn{0%{transform:scale(0.8);opacity:0;}70%{transform:scale(1.05);}100%{transform:scale(1);opacity:1;}}
         @@keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
         @@keyframes spin{to{transform:rotate(360deg);}}
         @@keyframes pulse{0%{transform:scale(1);opacity:0.6;}100%{transform:scale(1.8);opacity:0;}}
+
+        /* ✅ Push permission banner (shown once) */
+        #pushBanner{
+            position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);
+            background:rgba(30,41,59,0.97);backdrop-filter:blur(16px);
+            border:1px solid rgba(37,99,235,0.35);border-radius:16px;
+            padding:16px 20px;display:flex;align-items:center;gap:14px;
+            z-index:99998;opacity:0;pointer-events:none;
+            transition:all 0.4s cubic-bezier(0.34,1.56,0.64,1);
+            max-width:360px;width:calc(100vw - 40px);
+            box-shadow:0 16px 48px rgba(0,0,0,0.5);
+        }
+        #pushBanner.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:all;}
+        #pushBanner .pb-icon{font-size:24px;flex-shrink:0;}
+        #pushBanner .pb-text{flex:1;min-width:0;}
+        #pushBanner .pb-title{font-family:'Poppins',sans-serif;font-weight:700;font-size:13px;color:#f1f5f9;margin-bottom:2px;}
+        #pushBanner .pb-sub{font-size:11px;color:rgba(241,245,249,0.5);line-height:1.4;}
+        #pushBanner .pb-btns{display:flex;gap:6px;flex-shrink:0;}
+        #pushBanner .pb-allow{padding:7px 14px;background:linear-gradient(90deg,#3B82F6,#2563EB);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;}
+        #pushBanner .pb-allow:hover{transform:translateY(-1px);}
+        #pushBanner .pb-later{padding:7px 10px;background:transparent;color:rgba(241,245,249,0.4);border:none;font-size:12px;cursor:pointer;transition:color 0.2s;}
+        #pushBanner .pb-later:hover{color:rgba(241,245,249,0.7);}
     </style>
 </head>
 <body>
 <div class="noise-overlay"></div>
 <div id="pageProgress"></div>
 <div id="globalToast"></div>
+
+<!-- ✅ Push permission banner -->
+<div id="pushBanner">
+    <div class="pb-icon">🔔</div>
+    <div class="pb-text">
+        <div class="pb-title">Enable Notifications</div>
+        <div class="pb-sub">Get alerts when your slot is booked or booking is confirmed</div>
+    </div>
+    <div class="pb-btns">
+        <button class="pb-allow" onclick="allowPush()">Allow</button>
+        <button class="pb-later" onclick="dismissPushBanner()">Later</button>
+    </div>
+</div>
+
 <div class="page-wrapper">
     <div class="container">
         <main role="main">@RenderBody()</main>
     </div>
 </div>
+
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script src="~/js/site.js" asp-append-version="true"></script>
+
 <script>
-    window.showToast=function(msg,type){
-        var t=document.getElementById('globalToast');
-        t.textContent=msg;t.className='show '+(type||'');
+    // ── Global toast ─────────────────────────────────────────────────────
+    window.showToast = function(msg, type) {
+        var t = document.getElementById('globalToast');
+        t.textContent = msg;
+        t.className = 'show ' + (type || '');
         clearTimeout(window._toastTimer);
-        window._toastTimer=setTimeout(function(){t.className='';},3500);
+        window._toastTimer = setTimeout(function() { t.className = ''; }, 3500);
     };
-    document.addEventListener('click',function(e){
-        var link=e.target.closest('a[href]');
-        if(!link)return;
-        var href=link.getAttribute('href');
-        if(!href||href.startsWith('#')||href.startsWith('javascript')||href.startsWith('upi://'))return;
-        if(link.getAttribute('target')==='_blank')return;
-        var bar=document.getElementById('pageProgress');
-        bar.style.width='0%';
-        setTimeout(function(){bar.style.width='60%';},10);
-        setTimeout(function(){bar.style.width='88%';},250);
+
+    // ── Page progress bar on navigation ──────────────────────────────────
+    document.addEventListener('click', function(e) {
+        var link = e.target.closest('a[href]');
+        if (!link) return;
+        var href = link.getAttribute('href');
+        if (!href || href.startsWith('#') || href.startsWith('javascript') || href.startsWith('upi://')) return;
+        if (link.getAttribute('target') === '_blank') return;
+        var bar = document.getElementById('pageProgress');
+        bar.style.width = '0%';
+        setTimeout(function() { bar.style.width = '60%'; }, 10);
+        setTimeout(function() { bar.style.width = '88%'; }, 250);
     });
-    @if(TempData["ToastSuccess"]!=null){<text>window.showToast('@TempData["ToastSuccess"]','success');</text>}
-    @if(TempData["ToastError"]!=null){<text>window.showToast('@TempData["ToastError"]','error');</text>}
+
+    @if(TempData["ToastSuccess"] != null) { <text>window.showToast('@TempData["ToastSuccess"]', 'success');</text> }
+    @if(TempData["ToastError"]   != null) { <text>window.showToast('@TempData["ToastError"]',   'error');</text>   }
+
+    // ════════════════════════════════════════════════════════════════════
+    // ✅ WEB PUSH — Service Worker + VAPID Subscription
+    // ════════════════════════════════════════════════════════════════════
+
+    // Your real VAPID public key (generated 2025)
+    var VAPID_PUBLIC_KEY = 'BG8j4PCOXZbci2J2dnsEhQt1hDyr0NVvQiKGyNjXA_-mMBOX2Aamg_w45ZLKpZAw-oUkY2BZKvdoTJGrx3ZLKno';
+
+    // Is user logged in? Check session hint injected below
+    var isLoggedIn = @Html.Raw(Context.Session.GetString("UserId") != null ? "true" : "false");
+
+
+    // Only run push logic for logged-in users
+    if (isLoggedIn && 'serviceWorker' in navigator && 'PushManager' in window) {
+        // Register service worker
+        navigator.serviceWorker.register('/sw.js').then(function(reg) {
+            console.log('✅ SW registered, scope:', reg.scope);
+
+            // Check current permission
+            if (Notification.permission === 'granted') {
+                // Already allowed — silently subscribe
+                subscribeToPush(reg);
+            } else if (Notification.permission === 'default') {
+                // Not asked yet — show our custom banner after 3s
+                var dismissed = sessionStorage.getItem('pushBannerDismissed');
+                if (!dismissed) {
+                    setTimeout(function() {
+                        document.getElementById('pushBanner').classList.add('show');
+                    }, 3000);
+                }
+            }
+            // 'denied' — do nothing, respect user choice
+        }).catch(function(err) {
+            console.log('SW registration failed:', err);
+        });
+    }
+
+    function allowPush() {
+        dismissPushBanner();
+        Notification.requestPermission().then(function(permission) {
+            if (permission === 'granted') {
+                navigator.serviceWorker.ready.then(function(reg) {
+                    subscribeToPush(reg);
+                    window.showToast('🔔 Notifications enabled!', 'success');
+                });
+            } else {
+                window.showToast('Notifications blocked. You can enable them in browser settings.', '');
+            }
+        });
+    }
+
+    function dismissPushBanner() {
+        document.getElementById('pushBanner').classList.remove('show');
+        sessionStorage.setItem('pushBannerDismissed', '1');
+    }
+
+    function subscribeToPush(reg) {
+        var appKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+
+        reg.pushManager.getSubscription().then(function(existing) {
+            if (existing) {
+                // Already subscribed — re-save to server (in case user changed account)
+                savePushSubscription(existing);
+                return;
+            }
+            // Subscribe fresh
+            reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: appKey
+            }).then(function(sub) {
+                savePushSubscription(sub);
+                console.log('✅ Push subscribed');
+            }).catch(function(err) {
+                console.log('Push subscribe failed:', err);
+            });
+        });
+    }
+
+    function savePushSubscription(sub) {
+        var subJson = sub.toJSON();
+        fetch('/Parking/SavePushSubscription', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                endpoint: subJson.endpoint,
+                keys: {
+                    p256dh: subJson.keys ? subJson.keys.p256dh : '',
+                    auth:   subJson.keys ? subJson.keys.auth   : ''
+                }
+            })
+        }).then(function(r) { return r.json(); })
+          .then(function(d) { if (d.success) console.log('✅ Push subscription saved to server'); })
+          .catch(function(e) { console.log('Save push sub failed:', e); });
+    }
+
+    // Helper: convert base64url → Uint8Array for applicationServerKey
+    function urlBase64ToUint8Array(base64String) {
+        var padding = '='.repeat((4 - base64String.length % 4) % 4);
+        var base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        var raw     = window.atob(base64);
+        var output  = new Uint8Array(raw.length);
+        for (var i = 0; i < raw.length; ++i) output[i] = raw.charCodeAt(i);
+        return output;
+    }
 </script>
-@await RenderSectionAsync("Scripts",required:false)
+@await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

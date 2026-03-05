@@ -8,6 +8,7 @@
     var toTime   = ViewBag.ToTime   as string;
 }
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 
 <style>
@@ -20,13 +21,16 @@
     .orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0;}
     .orb1{top:-10%;right:-8%;width:480px;height:480px;background:radial-gradient(circle,rgba(239,68,68,0.05) 0%,transparent 70%);}
     .orb2{bottom:-10%;left:-8%;width:420px;height:420px;background:radial-gradient(circle,rgba(37,99,235,0.06) 0%,transparent 70%);}
-    .main{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:36px 24px 80px;}
+    .main{position:relative;z-index:1;max-width:1380px;margin:0 auto;padding:36px 24px 80px;}
     .page-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:28px;flex-wrap:wrap;animation:fadeUp 0.45s ease both;}
     .page-top-left h1{font-family:'Poppins',sans-serif;font-weight:700;font-size:1.55rem;letter-spacing:-0.4px;margin-bottom:6px;}
     .page-top-left h1 em{font-style:normal;color:var(--red);}
     .filter-badge{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;font-size:0.78rem;color:#f87171;font-weight:500;}
     .back-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;background:rgba(20,30,48,0.75);border:1px solid var(--border);border-radius:10px;color:var(--muted);text-decoration:none;font-size:0.83rem;font-weight:500;transition:all 0.2s;flex-shrink:0;}
     .back-btn:hover{color:var(--text);border-color:rgba(255,255,255,0.16);}
+    .realtime-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);border-radius:20px;font-size:0.72rem;color:var(--green);font-weight:600;}
+    .rt-dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:rtPulse 1.5s ease infinite;}
+    @@keyframes rtPulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
     .controls{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap;animation:fadeUp 0.45s ease 0.1s both;}
     .sort-select{padding:9px 13px;background:rgba(20,30,48,0.75);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:'Inter',sans-serif;font-size:0.83rem;outline:none;cursor:pointer;}
     #countLabel{font-size:0.8rem;color:var(--muted);}
@@ -42,8 +46,6 @@
     .dist-val{color:var(--muted);font-size:0.82rem;}
     .date-val{color:var(--muted);font-size:0.79rem;}
     .booked-until{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.22);border-radius:20px;font-size:0.75rem;font-weight:600;color:#f87171;}
-
-    /* Time remaining */
     .time-remaining{display:flex;flex-direction:column;gap:5px;min-width:130px;}
     .tr-bar-wrap{height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;}
     .tr-bar{height:100%;border-radius:3px;transition:background 1s;}
@@ -53,20 +55,28 @@
     .tr-label.ok{color:#facc15;}
     .tr-label.plenty{color:var(--green);}
     @@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.4;}}
-
-    /* Notify Me button */
     .btn-notify{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:8px;border:1px solid;cursor:pointer;font-family:'Inter',sans-serif;font-size:0.78rem;font-weight:600;transition:all 0.2s;white-space:nowrap;}
     .btn-notify.idle{background:rgba(37,99,235,0.1);border-color:rgba(37,99,235,0.3);color:var(--blue-light);}
     .btn-notify.idle:hover{background:rgba(37,99,235,0.2);transform:translateY(-1px);}
     .btn-notify.loading{background:rgba(148,163,184,0.08);border-color:rgba(148,163,184,0.15);color:var(--muted);cursor:not-allowed;}
     .btn-notify.done{background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.25);color:var(--green);cursor:default;}
-
-    /* Toast */
+    /* ✅ FEATURE 2: Navigation */
+    .btn-nav{display:inline-flex;align-items:center;gap:4px;padding:6px 11px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.22);color:var(--green);border-radius:8px;text-decoration:none;font-size:0.75rem;font-weight:600;transition:all 0.2s;white-space:nowrap;}
+    .btn-nav:hover{background:rgba(16,185,129,0.2);transform:translateY(-1px);color:var(--green);text-decoration:none;}
+    /* ✅ FEATURE 7: Parking image */
+    .slot-thumb{width:54px;height:40px;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:pointer;transition:transform 0.2s;display:block;}
+    .slot-thumb:hover{transform:scale(1.08);}
+    .no-img{width:54px;height:40px;border-radius:6px;border:1px dashed rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:0.65rem;color:rgba(148,163,184,0.4);}
+    .img-modal-overlay{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.25s;}
+    .img-modal-overlay.open{opacity:1;pointer-events:all;}
+    .img-modal-inner{max-width:90vw;max-height:88vh;border-radius:16px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.6);position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);}
+    .img-modal-inner img{display:block;max-width:90vw;max-height:84vh;object-fit:contain;border-radius:16px;}
+    .img-modal-close{position:absolute;top:10px;right:12px;background:rgba(0,0,0,0.7);border:none;color:#fff;font-size:1.2rem;padding:4px 10px;border-radius:8px;cursor:pointer;font-weight:700;}
+    .img-modal-caption{padding:10px 16px;background:rgba(20,30,48,0.9);color:var(--muted);font-size:0.78rem;text-align:center;}
     #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);padding:13px 22px;border-radius:12px;font-size:0.875rem;font-weight:600;backdrop-filter:blur(16px);box-shadow:0 8px 32px rgba(0,0,0,0.4);transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1),opacity 0.3s;opacity:0;z-index:9999;pointer-events:none;}
     #toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
     #toast.success{background:rgba(16,185,129,0.18);border:1px solid rgba(16,185,129,0.3);color:#6ee7b7;}
     #toast.error{background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.25);color:#fca5a5;}
-
     .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:0.72rem;font-weight:600;}
     .b-premium{background:rgba(234,179,8,0.15);color:#EAB308;border:1px solid rgba(234,179,8,0.2);}
     .b-gold{background:rgba(249,115,22,0.12);color:#F97316;border:1px solid rgba(249,115,22,0.2);}
@@ -75,7 +85,17 @@
     .b-na{color:var(--muted);font-size:0.8rem;}
     .empty td{text-align:center;padding:44px;color:var(--muted);font-size:0.9rem;}
     @@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+    @@keyframes rowGreen{0%{background:rgba(16,185,129,0.18);}100%{background:transparent;}}
+    .row-flash{animation:rowGreen 1.5s ease;}
 </style>
+
+<div class="img-modal-overlay" id="imgModal" onclick="closeImgModal(event)">
+    <div class="img-modal-inner">
+        <button class="img-modal-close" onclick="document.getElementById('imgModal').classList.remove('open')">&#10005;</button>
+        <img id="imgModalSrc" src="" alt="Parking Slot Photo"/>
+        <div class="img-modal-caption" id="imgModalCaption">Parking Slot Photo</div>
+    </div>
+</div>
 
 <div class="orb orb1"></div>
 <div class="orb orb2"></div>
@@ -90,7 +110,10 @@
                 <div class="filter-badge">&#128197; @DateTime.Parse(fromTime).ToString("dd MMM, hh:mm tt") &nbsp;&#8594;&nbsp; @DateTime.Parse(toTime).ToString("dd MMM, hh:mm tt")</div>
             }
         </div>
-        <a href="/Parking/Search" class="back-btn">&#8592; Back to Search</a>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <div class="realtime-badge" id="rtBadge" style="display:none;"><span class="rt-dot"></span>Live</div>
+            <a href="/Parking/Search" class="back-btn">&#8592; Back to Search</a>
+        </div>
     </div>
 
     <div class="controls">
@@ -110,6 +133,8 @@
             <table>
                 <thead>
                     <tr>
+                        <!-- ✅ FEATURE 7: Slot Photo column -->
+                        <th>Slot Photo</th>
                         <th>Owner</th>
                         <th>Phone</th>
                         <th>Price / hr</th>
@@ -121,11 +146,13 @@
                         <th>Distance</th>
                         <th>Rating</th>
                         <th>Status</th>
+                        <!-- ✅ FEATURE 2: Navigate -->
+                        <th>Navigate</th>
                         <th>Notify Me</th>
                     </tr>
                 </thead>
                 <tbody id="slotBody">
-                    <tr class="empty"><td colspan="12">&#9203; Loading booked slots&#8230;</td></tr>
+                    <tr class="empty"><td colspan="14">&#9203; Loading booked slots&#8230;</td></tr>
                 </tbody>
             </table>
         </div>
@@ -136,7 +163,7 @@
 var allSlots = [];
 var fFrom = "@fromTime", fTo = "@toTime";
 var myLat = @lat, myLon = @lon;
-var notifiedSlots = {}; // remember which slots this session
+var notifiedSlots = {};
 
 function km(a,b,c,d){var R=6371,dL=(c-a)*Math.PI/180,dO=(d-b)*Math.PI/180,x=Math.sin(dL/2)*Math.sin(dL/2)+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dO/2)*Math.sin(dO/2);return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
 
@@ -152,6 +179,15 @@ function badgeHtml(b){
 function fmtDate(iso){
     if(!iso) return '—';
     return new Date(iso).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true});
+}
+
+function photoHtml(slot) {
+    if (slot.slotImageUrl) {
+        return '<img class="slot-thumb" src="'+slot.slotImageUrl+'" alt="Slot Photo" '
+            +'onclick="openImgModal(\''+slot.slotImageUrl+'\',\''+slot.ownerName+' — Parking Slot\')" '
+            +'onerror="this.parentNode.innerHTML=\'<div class=no-img>No Photo</div>\'" />';
+    }
+    return '<div class="no-img">No Photo</div>';
 }
 
 function timeRemainingHtml(bookingToIso, slotId) {
@@ -184,11 +220,13 @@ function notifyBtnHtml(slotId, bookingId) {
 function render(slots) {
     document.getElementById('countLabel').textContent = slots.length+' slot'+(slots.length!==1?'s':'')+' currently booked';
     var body = document.getElementById('slotBody');
-    if (!slots.length) { body.innerHTML='<tr class="empty"><td colspan="12">No slots are currently booked in your area</td></tr>'; return; }
+    if (!slots.length) { body.innerHTML='<tr class="empty"><td colspan="14">No slots are currently booked in your area</td></tr>'; return; }
     body.innerHTML = slots.map(function(s){
         var rating = s.averageRating ? '&#11088; '+s.averageRating.toFixed(1) : '<span style="color:var(--muted);font-size:0.8rem">—</span>';
         var bid = s.bookingId || 0;
-        return '<tr>'
+        var navUrl = 'https://www.google.com/maps/dir/?api=1&destination='+s.latitude+','+s.longitude; // ✅ FEATURE 2
+        return '<tr id="brow-'+s.id+'">'
+            +'<td>'+photoHtml(s)+'</td>'
             +'<td class="owner">'+s.ownerName+'</td>'
             +'<td style="color:var(--muted)">'+(s.ownerPhone||'—')+'</td>'
             +'<td class="price">&#8377;'+s.pricePerHour+'</td>'
@@ -200,12 +238,12 @@ function render(slots) {
             +'<td class="dist-val">'+s._dist.toFixed(2)+' km</td>'
             +'<td>'+rating+'</td>'
             +'<td>'+badgeHtml(s.parkingBadge)+'</td>'
+            +'<td><a href="'+navUrl+'" target="_blank" class="btn-nav">&#128205; Go</a></td>'
             +'<td>'+notifyBtnHtml(s.id, bid)+'</td>'
             +'</tr>';
     }).join('');
 }
 
-// Live second-by-second countdown ticker
 function tickCountdowns() {
     document.querySelectorAll('.time-remaining').forEach(function(el){
         var endMs  = parseInt(el.getAttribute('data-end'));
@@ -226,7 +264,6 @@ function tickCountdowns() {
         if (bar) { bar.style.width=pct+'%'; bar.style.background=barColor; }
         if (lbl) {
             lbl.className = 'tr-label '+cls;
-            // Show seconds only when under 1 hour
             lbl.textContent = totalMins<=60
                 ? '⏱ '+(hrs>0?hrs+'h ':'')+mins+'m '+secs+'s'
                 : '⏳ '+hrs+'h '+mins+'m remaining';
@@ -235,67 +272,66 @@ function tickCountdowns() {
 }
 setInterval(tickCountdowns, 1000);
 
-// Notify Me — POST to controller
 function notifyMe(slotId, bookingId, btn) {
-    btn.className   = 'btn-notify loading';
-    btn.disabled    = true;
-    btn.textContent = '⏳ Registering…';
-    fetch('/Parking/NotifyMe', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ slotId: slotId, bookingId: bookingId })
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-        if (d.success) {
-            notifiedSlots[slotId] = true;
-            btn.className = 'btn-notify done';
-            btn.disabled  = true;
-            btn.innerHTML = '&#10003; Notified';
-            showToast('&#128276; We\'ll email you when this slot is free!', 'success');
-        } else {
-            btn.className = 'btn-notify idle';
-            btn.disabled  = false;
-            btn.innerHTML = '&#128276; Notify Me';
-            showToast('&#9888; '+(d.message||'Could not register. Please try again.'), 'error');
-        }
-    })
-    .catch(function(){
-        btn.className = 'btn-notify idle';
-        btn.disabled  = false;
-        btn.innerHTML = '&#128276; Notify Me';
-        showToast('&#9888; Network error. Please try again.', 'error');
-    });
+    btn.className='btn-notify loading'; btn.disabled=true; btn.textContent='⏳ Registering…';
+    fetch('/Parking/NotifyMe', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({slotId:slotId,bookingId:bookingId}) })
+    .then(r=>r.json()).then(function(d){
+        if(d.success){ notifiedSlots[slotId]=true; btn.className='btn-notify done'; btn.disabled=true; btn.innerHTML='&#10003; Notified'; showToast('&#128276; We\'ll email you when this slot is free!','success'); }
+        else{ btn.className='btn-notify idle'; btn.disabled=false; btn.innerHTML='&#128276; Notify Me'; showToast('&#9888; '+(d.message||'Could not register.'),'error'); }
+    }).catch(function(){ btn.className='btn-notify idle'; btn.disabled=false; btn.innerHTML='&#128276; Notify Me'; showToast('&#9888; Network error.','error'); });
 }
 
 function showToast(msg, type) {
-    var t = document.getElementById('toast');
-    t.innerHTML = msg; t.className = 'show '+type;
-    clearTimeout(window._tt);
-    window._tt = setTimeout(function(){ t.className = type; }, 3500);
+    var t=document.getElementById('toast'); t.innerHTML=msg; t.className='show '+type;
+    clearTimeout(window._tt); window._tt=setTimeout(function(){ t.className=type; },3500);
 }
 
 function applySort() {
-    var v = document.getElementById('sortSel').value;
-    var s = [...allSlots];
-    if (v==='price')  s.sort((a,b)=>a.pricePerHour-b.pricePerHour);
-    if (v==='dist')   s.sort((a,b)=>a._dist-b._dist);
-    if (v==='rating') s.sort((a,b)=>(b.averageRating||0)-(a.averageRating||0));
-    if (v==='time')   s.sort((a,b)=>new Date(a.bookingTo||0)-new Date(b.bookingTo||0));
-    if (v==='badge')  { var r={'Premium':1,'Gold':2,'Silver':3,'Basic':4,'Poor':5}; s.sort((a,b)=>(r[a.parkingBadge]||6)-(r[b.parkingBadge]||6)); }
+    var v=document.getElementById('sortSel').value;
+    var s=[...allSlots];
+    if(v==='price')  s.sort((a,b)=>a.pricePerHour-b.pricePerHour);
+    if(v==='dist')   s.sort((a,b)=>a._dist-b._dist);
+    if(v==='rating') s.sort((a,b)=>(b.averageRating||0)-(a.averageRating||0));
+    if(v==='time')   s.sort((a,b)=>new Date(a.bookingTo||0)-new Date(b.bookingTo||0));
+    if(v==='badge')  { var r={'Premium':1,'Gold':2,'Silver':3,'Basic':4,'Poor':5}; s.sort((a,b)=>(r[a.parkingBadge]||6)-(r[b.parkingBadge]||6)); }
     render(s);
 }
 
 function load() {
-    var url = '/Parking/NearbySlots?lat=@lat&lon=@lon&radius=@radius';
-    if (fFrom&&fTo) url += '&fromTime='+encodeURIComponent(fFrom)+'&toTime='+encodeURIComponent(fTo);
+    var url='/Parking/NearbySlots?lat=@lat&lon=@lon&radius=@radius';
+    if(fFrom&&fTo) url+='&fromTime='+encodeURIComponent(fFrom)+'&toTime='+encodeURIComponent(fTo);
     fetch(url).then(r=>r.json()).then(function(data){
-        allSlots = data.filter(s=>s.isBooked).map(function(s){ s._dist=km(myLat,myLon,s.latitude,s.longitude); return s; });
+        allSlots=data.filter(s=>s.isBooked).map(function(s){ s._dist=km(myLat,myLon,s.latitude,s.longitude); return s; });
         render(allSlots);
-    }).catch(function(){
-        document.getElementById('slotBody').innerHTML='<tr class="empty"><td colspan="12">Failed to load. Please refresh.</td></tr>';
-    });
+    }).catch(function(){ document.getElementById('slotBody').innerHTML='<tr class="empty"><td colspan="14">Failed to load. Please refresh.</td></tr>'; });
 }
+
+// ✅ FEATURE 1: SignalR - if slot freed up, flash row green then reload
+var connection = new signalR.HubConnectionBuilder()
+    .withUrl("/parkingHub").withAutomaticReconnect().build();
+connection.on("SlotUpdated", function(data) {
+    if (!data.isBooked) {
+        // Slot just became free — flash then reload
+        var row = document.getElementById('brow-'+data.slotId);
+        if (row) { row.classList.add('row-flash'); setTimeout(function(){ load(); }, 1500); }
+        else { load(); }
+    }
+});
+connection.start().then(function(){ 
+    connection.invoke("JoinMap"); 
+    document.getElementById('rtBadge').style.display='inline-flex';
+}).catch(function(){});
+
+// ✅ FEATURE 7: Image modal
+function openImgModal(url, caption) {
+    document.getElementById('imgModalSrc').src = url;
+    document.getElementById('imgModalCaption').textContent = caption || 'Parking Slot Photo';
+    document.getElementById('imgModal').classList.add('open');
+}
+function closeImgModal(e) {
+    if(e.target===document.getElementById('imgModal')) document.getElementById('imgModal').classList.remove('open');
+}
+
 load();
 setInterval(load, 30000);
 </script>

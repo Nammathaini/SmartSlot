@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using SmartSlot.Data;
+using SmartSlot.Hubs;
 using SmartSlot.Models;
 using SmartSlot.Services;
 using System;
@@ -19,6 +21,9 @@ namespace SmartSlot.Controllers
         private readonly SmsService _smsService;
         private readonly EmailService _emailService;
         private readonly IWebHostEnvironment _env;
+        // ✅ NEW: SignalR + Push
+        private readonly IHubContext<ParkingHub> _hub;
+        private readonly PushNotificationService _pushService;
 
         public ParkingController(
             ApplicationDbContext context,
@@ -26,7 +31,9 @@ namespace SmartSlot.Controllers
             ParkingAIService parkingAIService,
             SmsService smsService,
             EmailService emailService,
-            IWebHostEnvironment env)
+            IWebHostEnvironment env,
+            IHubContext<ParkingHub> hub,
+            PushNotificationService pushService)
         {
             _context = context;
             _distanceService = distanceService;
@@ -34,6 +41,8 @@ namespace SmartSlot.Controllers
             _smsService = smsService;
             _emailService = emailService;
             _env = env;
+            _hub = hub;
+            _pushService = pushService;
         }
 
         public IActionResult Index()
@@ -51,27 +60,22 @@ namespace SmartSlot.Controllers
             ViewBag.Username = HttpContext.Session.GetString("Username");
 
             var user = _context.Users.FirstOrDefault(u => u.Id.ToString() == userId);
-            if (user == null)
-                return RedirectToAction("Signin", "Auth");
+            if (user == null) return RedirectToAction("Signin", "Auth");
 
-            // ✅ FIX: query by UserId — whoever is logged in sees their own slots/bookings
-            // No phone/name matching needed — UserId is set at slot creation time
             var userIdInt = int.Parse(userId);
 
             var mySlots = _context.ParkingSlots
-                .Where(s => s.UserId == userIdInt)
+                .Where(s => s.UserId == userIdInt || s.OwnerPhone == user.PhoneNumber)
                 .OrderByDescending(s => s.Id)
                 .ToList();
 
-            // Bookings matched by CustomerEmail — set at booking time from session
             var myBookings = _context.Bookings
-                .Where(b => b.CustomerEmail == user.Email)
+                .Where(b => b.CustomerPhone == user.PhoneNumber)
                 .OrderByDescending(b => b.BookingFrom)
                 .ToList();
 
             ViewBag.MySlots = mySlots;
             ViewBag.MyBookings = myBookings;
-
             return View();
         }
 
@@ -85,7 +89,6 @@ namespace SmartSlot.Controllers
 
             ViewBag.Username = HttpContext.Session.GetString("Username");
             ViewBag.User = user;
-
             return View();
         }
 
@@ -94,51 +97,86 @@ namespace SmartSlot.Controllers
         {
             if (HttpContext.Session.GetString("UserId") == null)
                 return RedirectToAction("Signin", "Auth");
-
             return View();
         }
 
         [HttpPost]
-        public async Task<IActionResult> AddSlot(ParkingSlot slot)
+        public async Task<IActionResult> AddSlot(ParkingSlot slot, IFormFile upiQrImage, IFormFile parkingImage)
         {
             if (HttpContext.Session.GetString("UserId") == null)
                 return RedirectToAction("Signin", "Auth", new { returnUrl = HttpContext.Request.Path });
 
-            // ✅ Save UserId from session — links slot to logged-in account
-            if (int.TryParse(HttpContext.Session.GetString("UserId"), out int parsedUserId))
-                slot.UserId = parsedUserId;
+            // ── UPI QR image ──
+            if (upiQrImage != null && upiQrImage.Length > 0)
+            {
+                var dir = Path.Combine(_env.WebRootPath, "uploads", "upi-qr");
+                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+                var ext = Path.GetExtension(upiQrImage.FileName).ToLower();
+                var fileName = $"upi_{Guid.NewGuid():N}{ext}";
+                using (var fs = new FileStream(Path.Combine(dir, fileName), FileMode.Create))
+                    await upiQrImage.CopyToAsync(fs);
+                slot.UpiQrImagePath = $"/uploads/upi-qr/{fileName}";
+            }
+
+            // ── Parking slot photo ──
+            if (parkingImage != null && parkingImage.Length > 0)
+            {
+                var dir = Path.Combine(_env.WebRootPath, "uploads", "slot-photos");
+                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+                var ext2 = Path.GetExtension(parkingImage.FileName).ToLower();
+                if (string.IsNullOrEmpty(ext2)) ext2 = ".jpg";
+                var fn2 = $"slot_{Guid.NewGuid():N}{ext2}";
+                using (var fs = new FileStream(Path.Combine(dir, fn2), FileMode.Create))
+                    await parkingImage.CopyToAsync(fs);
+                slot.ParkingImagePath = $"/uploads/slot-photos/{fn2}";
+            }
 
             slot.ExitMethod = "QR";
             slot.QrToken = Guid.NewGuid().ToString("N");
-            Console.WriteLine($"📷 QR Exit — Token generated: {slot.QrToken}");
-
             slot.IsBooked = false;
+
             _context.ParkingSlots.Add(slot);
             _context.SaveChanges();
 
+            var userId = HttpContext.Session.GetString("UserId");
+            var user = _context.Users.FirstOrDefault(u => u.Id.ToString() == userId);
+
+            // ── Email ──
             try
             {
-                var userId = HttpContext.Session.GetString("UserId");
-                var user = _context.Users.FirstOrDefault(u => u.Id.ToString() == userId);
-
                 if (user != null && !string.IsNullOrEmpty(user.Email))
-                {
                     await _emailService.SendSlotAddedEmail(
-                        toEmail: user.Email,
-                        ownerName: slot.OwnerName,
-                        vehicleType: slot.VehicleType,
-                        pricePerHour: slot.PricePerHour,
-                        availableFrom: slot.AvailableFrom,
-                        availableTo: slot.AvailableTo,
-                        paymentMode: slot.PaymentMode,
-                        qrToken: slot.QrToken
-                    );
-                }
+                        toEmail: user.Email, ownerName: slot.OwnerName,
+                        vehicleType: slot.VehicleType, pricePerHour: slot.PricePerHour,
+                        availableFrom: slot.AvailableFrom, availableTo: slot.AvailableTo,
+                        paymentMode: slot.PaymentMode, qrToken: slot.QrToken);
             }
-            catch (Exception ex)
+            catch (Exception ex) { Console.WriteLine($"📧 Slot email failed: {ex.Message}"); }
+
+            // ✅ PUSH NOTIFICATION — owner: slot is live
+            if (user != null)
             {
-                Console.WriteLine($"📧 Slot added email failed: {ex.Message}");
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _pushService.SendToUserAsync(
+                            userId: user.Id,
+                            title: "✅ Slot Listed Successfully!",
+                            body: $"Your ₹{slot.PricePerHour}/hr {slot.VehicleType} slot is now live on SmartSlot!",
+                            icon: "/images/icon-192.png",
+                            url: "/Parking/Dashboard");
+                    }
+                    catch (Exception ex) { Console.WriteLine($"🔔 Push (slot added) failed: {ex.Message}"); }
+                });
             }
+
+            // ✅ SIGNALR — broadcast new available slot to all map viewers
+            _ = Task.Run(async () =>
+            {
+                try { await _hub.Clients.Group("map").SendAsync("SlotUpdated", new { slotId = slot.Id, isBooked = false }); }
+                catch (Exception ex) { Console.WriteLine($"📡 SignalR (add slot) failed: {ex.Message}"); }
+            });
 
             return RedirectToAction("SlotAdded");
         }
@@ -147,19 +185,13 @@ namespace SmartSlot.Controllers
         {
             if (HttpContext.Session.GetString("UserId") == null)
                 return RedirectToAction("Signin", "Auth", new { returnUrl = HttpContext.Request.Path });
-
             return View();
         }
 
         [HttpPost]
         public async Task<IActionResult> ConfirmBooking(
-            int ParkingSlotId,
-            string CustomerName,
-            string CustomerPhone,
-            string VehicleNumber,
-            DateTime BookingFrom,
-            DateTime BookingTo,
-            decimal totalAmount)
+            int ParkingSlotId, string CustomerName, string CustomerPhone,
+            string VehicleNumber, DateTime BookingFrom, DateTime BookingTo, decimal totalAmount)
         {
             if (HttpContext.Session.GetString("UserId") == null)
                 return RedirectToAction("Signin", "Auth");
@@ -170,7 +202,9 @@ namespace SmartSlot.Controllers
             var userId = HttpContext.Session.GetString("UserId");
             var user = _context.Users.FirstOrDefault(u => u.Id.ToString() == userId);
 
-            // ✅ DB stores IST — save as-is, no UTC conversion
+            var bookingFromUtc = DateTime.SpecifyKind(BookingFrom.AddHours(-5.5), DateTimeKind.Utc);
+            var bookingToUtc = DateTime.SpecifyKind(BookingTo.AddHours(-5.5), DateTimeKind.Utc);
+
             var booking = new Booking
             {
                 ParkingSlotId = ParkingSlotId,
@@ -178,8 +212,8 @@ namespace SmartSlot.Controllers
                 CustomerPhone = CustomerPhone,
                 CustomerEmail = user?.Email ?? "",
                 VehicleNumber = VehicleNumber,
-                BookingFrom = BookingFrom,
-                BookingTo = BookingTo,
+                BookingFrom = bookingFromUtc,
+                BookingTo = bookingToUtc,
                 ReviewSmsSent = false,
                 ReviewSubmitted = false,
                 OneHourAlertSent = false,
@@ -189,79 +223,68 @@ namespace SmartSlot.Controllers
             };
 
             _context.Bookings.Add(booking);
+
+            // Mark slot as booked
+            slot.IsBooked = true;
+            _context.ParkingSlots.Update(slot);
             _context.SaveChanges();
 
-            Console.WriteLine($"✅ Booking saved — Id:{booking.Id} From:{BookingFrom} To:{BookingTo}");
+            Console.WriteLine($"✅ Booking saved — Id:{booking.Id}");
 
+            // ── Email ──
             try
             {
                 if (user != null && !string.IsNullOrEmpty(user.Email))
-                {
-                    // ✅ Customer confirmation mail
                     await _emailService.SendBookingConfirmationEmail(
-                        toEmail: user.Email,
-                        customerName: booking.CustomerName,
-                        ownerName: slot.OwnerName,
-                        ownerPhone: slot.OwnerPhone,
-                        vehicleType: slot.VehicleType,
-                        vehicleNumber: booking.VehicleNumber,
-                        pricePerHour: slot.PricePerHour,
-                        totalAmount: (double)totalAmount,
-                        bookingFrom: BookingFrom,
-                        bookingTo: BookingTo,
-                        paymentMode: slot.PaymentMode,
-                        qrToken: slot.QrToken,
-                        latitude: slot.Latitude,
-                        longitude: slot.Longitude
-                    );
-                }
-
-                // ✅ NEW: Owner notification mail — look up owner's account by UserId on slot
-                if (slot.UserId > 0)
-                {
-                    var ownerUser = _context.Users.FirstOrDefault(u => u.Id == slot.UserId);
-                    if (ownerUser != null && !string.IsNullOrEmpty(ownerUser.Email))
-                    {
-                        await _emailService.SendOwnerBookingNotificationEmail(
-                            toEmail: ownerUser.Email,
-                            ownerName: slot.OwnerName,
-                            customerName: booking.CustomerName,
-                            customerPhone: booking.CustomerPhone,
-                            customerEmail: user?.Email ?? "",
-                            vehicleType: slot.VehicleType,
-                            vehicleNumber: booking.VehicleNumber,
-                            pricePerHour: slot.PricePerHour,
-                            totalAmount: (double)totalAmount,
-                            bookingFrom: BookingFrom,
-                            bookingTo: BookingTo,
-                            paymentMode: slot.PaymentMode
-                        );
-                        Console.WriteLine($"📧 Owner notification sent → {ownerUser.Email}");
-                    }
-                }
+                        toEmail: user.Email, customerName: booking.CustomerName,
+                        ownerName: slot.OwnerName, ownerPhone: slot.OwnerPhone,
+                        vehicleType: slot.VehicleType, vehicleNumber: booking.VehicleNumber,
+                        pricePerHour: slot.PricePerHour, totalAmount: (double)totalAmount,
+                        bookingFrom: bookingFromUtc, bookingTo: bookingToUtc,
+                        paymentMode: slot.PaymentMode, qrToken: slot.QrToken ?? "",
+                        latitude: slot.Latitude, longitude: slot.Longitude,
+                        bookingId: booking.Id);
             }
-            catch (Exception ex)
+            catch (Exception ex) { Console.WriteLine($"📧 Booking email failed: {ex.Message}"); }
+
+            // ✅ PUSH NOTIFICATION — customer: booking confirmed
+            if (user != null)
             {
-                Console.WriteLine($"📧 Booking email failed: {ex.Message}");
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _pushService.SendToUserAsync(
+                            userId: user.Id,
+                            title: "🎉 Booking Confirmed!",
+                            body: $"{slot.OwnerName} · {BookingFrom:hh:mm tt} – {BookingTo:hh:mm tt} · ₹{totalAmount}",
+                            icon: "/images/icon-192.png",
+                            url: "/Parking/Dashboard");
+                    }
+                    catch (Exception ex) { Console.WriteLine($"🔔 Push (booking confirmed) failed: {ex.Message}"); }
+                });
             }
 
-            // ✅ TempData stored as strings (cannot serialize double)
+            // ✅ SIGNALR — broadcast slot is now booked
+            _ = Task.Run(async () =>
+            {
+                try { await _hub.Clients.Group("map").SendAsync("SlotUpdated", new { slotId = ParkingSlotId, isBooked = true }); }
+                catch (Exception ex) { Console.WriteLine($"📡 SignalR (confirm booking) failed: {ex.Message}"); }
+            });
+
             TempData["PaymentMode"] = slot.PaymentMode;
             TempData["OwnerUpiId"] = slot.OwnerUpiId ?? "";
             TempData["OwnerName"] = slot.OwnerName;
-            TempData["TotalAmount"] = totalAmount.ToString("F2");
-            // ✅ UpiQrImagePath removed — no longer needed
+            TempData["TotalAmount"] = (double)totalAmount;
+            TempData["UpiQrImagePath"] = slot.UpiQrImagePath ?? "";
 
             return RedirectToAction("BookingSuccess");
         }
 
         [HttpPost]
         public async Task<IActionResult> ConfirmExtension(
-            int ExistingBookingId,
-            int ParkingSlotId,
-            DateTime BookingFrom,
-            DateTime BookingTo,
-            decimal totalAmount)
+            int ExistingBookingId, int ParkingSlotId,
+            DateTime BookingFrom, DateTime BookingTo, decimal totalAmount)
         {
             if (HttpContext.Session.GetString("UserId") == null)
                 return RedirectToAction("Signin", "Auth");
@@ -272,13 +295,13 @@ namespace SmartSlot.Controllers
             var slot = _context.ParkingSlots.Find(ParkingSlotId);
             if (slot == null) return NotFound();
 
-            var conflict = _context.Bookings
-                .Where(b =>
-                    b.ParkingSlotId == ParkingSlotId &&
-                    b.Id != ExistingBookingId &&
-                    b.BookingFrom < BookingTo &&
-                    b.BookingTo > booking.BookingTo)
-                .FirstOrDefault();
+            var bookingToUtc = DateTime.SpecifyKind(BookingTo.AddHours(-5.5), DateTimeKind.Utc);
+
+            var conflict = _context.Bookings.FirstOrDefault(b =>
+                b.ParkingSlotId == ParkingSlotId &&
+                b.Id != ExistingBookingId &&
+                b.BookingFrom < bookingToUtc &&
+                b.BookingTo > booking.BookingTo);
 
             if (conflict != null)
             {
@@ -286,8 +309,7 @@ namespace SmartSlot.Controllers
                 return RedirectToAction("Search");
             }
 
-            // ✅ DB stores IST — save as-is
-            booking.BookingTo = BookingTo;
+            booking.BookingTo = bookingToUtc;
             booking.OneHourAlertSent = false;
             booking.ReviewSmsSent = false;
             booking.ExitConfirmed = false;
@@ -296,42 +318,33 @@ namespace SmartSlot.Controllers
             _context.Bookings.Update(booking);
             _context.SaveChanges();
 
+            // ✅ SIGNALR — slot stays booked
+            _ = Task.Run(async () =>
+            {
+                try { await _hub.Clients.Group("map").SendAsync("SlotUpdated", new { slotId = ParkingSlotId, isBooked = true }); }
+                catch (Exception ex) { Console.WriteLine($"📡 SignalR (extend) failed: {ex.Message}"); }
+            });
+
             try
             {
                 var userId = HttpContext.Session.GetString("UserId");
                 var user = _context.Users.FirstOrDefault(u => u.Id.ToString() == userId);
-
                 if (user != null && !string.IsNullOrEmpty(user.Email))
-                {
                     await _emailService.SendBookingConfirmationEmail(
-                        toEmail: user.Email,
-                        customerName: booking.CustomerName,
-                        ownerName: slot.OwnerName,
-                        ownerPhone: slot.OwnerPhone,
-                        vehicleType: slot.VehicleType,
-                        vehicleNumber: booking.VehicleNumber,
-                        pricePerHour: slot.PricePerHour,
-                        totalAmount: (double)totalAmount,
-                        bookingFrom: booking.BookingFrom,
-                        bookingTo: BookingTo,
-                        paymentMode: slot.PaymentMode,
-                        qrToken: slot.QrToken,
-                        latitude: slot.Latitude,
-                        longitude: slot.Longitude
-                    );
-                }
+                        toEmail: user.Email, customerName: booking.CustomerName,
+                        ownerName: slot.OwnerName, ownerPhone: slot.OwnerPhone,
+                        vehicleType: slot.VehicleType, vehicleNumber: booking.VehicleNumber,
+                        pricePerHour: slot.PricePerHour, totalAmount: (double)totalAmount,
+                        bookingFrom: booking.BookingFrom, bookingTo: bookingToUtc,
+                        paymentMode: slot.PaymentMode, qrToken: slot.QrToken);
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"📧 Extension email failed: {ex.Message}");
-            }
+            catch (Exception ex) { Console.WriteLine($"📧 Extension email failed: {ex.Message}"); }
 
-            // ✅ Store as strings
             TempData["PaymentMode"] = slot.PaymentMode;
             TempData["OwnerUpiId"] = slot.OwnerUpiId ?? "";
             TempData["OwnerName"] = slot.OwnerName;
-            TempData["TotalAmount"] = totalAmount.ToString("F2");
-            // ✅ UpiQrImagePath removed
+            TempData["TotalAmount"] = (double)totalAmount;
+            TempData["UpiQrImagePath"] = slot.UpiQrImagePath ?? "";
 
             return RedirectToAction("BookingSuccess");
         }
@@ -344,10 +357,8 @@ namespace SmartSlot.Controllers
             ViewBag.PaymentMode = TempData["PaymentMode"] as string ?? "";
             ViewBag.OwnerUpiId = TempData["OwnerUpiId"] as string ?? "";
             ViewBag.OwnerName = TempData["OwnerName"] as string ?? "";
-            // ✅ Parse back from string
-            ViewBag.TotalAmount = double.TryParse(TempData["TotalAmount"] as string, out double amt) ? amt : 0;
-            // ✅ UpiQrImagePath removed from ViewBag — not needed
-
+            ViewBag.TotalAmount = TempData["TotalAmount"] as double? ?? 0;
+            ViewBag.UpiQrImagePath = TempData["UpiQrImagePath"] as string ?? "";
             return View();
         }
 
@@ -358,32 +369,19 @@ namespace SmartSlot.Controllers
         [HttpGet]
         public IActionResult ExitScan(string token, int bid)
         {
-            if (string.IsNullOrEmpty(token))
-            {
-                ViewBag.Error = "Invalid exit link. Please use the link sent in your email.";
-                return View();
-            }
+            if (string.IsNullOrEmpty(token)) { ViewBag.Error = "Invalid exit link."; return View(); }
 
             var slot = _context.ParkingSlots.FirstOrDefault(s => s.QrToken == token);
-            if (slot == null)
-            {
-                ViewBag.Error = "QR code not recognised. Please contact the slot owner.";
-                return View();
-            }
+            if (slot == null) { ViewBag.Error = "QR code not recognised."; return View(); }
 
             var booking = _context.Bookings.FirstOrDefault(b => b.Id == bid && b.ParkingSlotId == slot.Id);
-            if (booking == null)
-            {
-                ViewBag.Error = "This link is not valid for your booking.";
-                return View();
-            }
+            if (booking == null) { ViewBag.Error = "This link is not valid for your booking."; return View(); }
 
             ViewBag.Token = token;
             ViewBag.BookingId = booking.Id;
             ViewBag.CustomerEmail = booking.CustomerEmail;
             ViewBag.SlotOwner = slot.OwnerName;
-            // ✅ DB stores IST — no AddHours needed
-            ViewBag.BookingTo = booking.BookingTo.ToString("hh:mm tt, dd MMM");
+            ViewBag.BookingTo = booking.BookingTo.AddHours(5.5).ToString("hh:mm tt, dd MMM");
             return View();
         }
 
@@ -394,15 +392,10 @@ namespace SmartSlot.Controllers
                 return Json(new { success = false, message = "Invalid request." });
 
             var slot = _context.ParkingSlots.FirstOrDefault(s => s.QrToken == request.Token);
-            if (slot == null)
-                return Json(new { success = false, message = "QR code not recognised." });
+            if (slot == null) return Json(new { success = false, message = "QR code not recognised." });
 
-            var booking = _context.Bookings.FirstOrDefault(b =>
-                b.Id == request.BookingId &&
-                b.ParkingSlotId == slot.Id);
-
-            if (booking == null)
-                return Json(new { success = false, message = "Invalid booking." });
+            var booking = _context.Bookings.FirstOrDefault(b => b.Id == request.BookingId && b.ParkingSlotId == slot.Id);
+            if (booking == null) return Json(new { success = false, message = "Invalid booking." });
 
             if (!string.IsNullOrEmpty(request.CustomerEmail) &&
                 !string.IsNullOrEmpty(booking.CustomerEmail) &&
@@ -413,12 +406,20 @@ namespace SmartSlot.Controllers
                 return Json(new { success = true, message = "Exit already confirmed. Safe journey!" });
 
             booking.ExitConfirmed = true;
-            booking.ExitConfirmedAt = DateTime.Now;
+            booking.ExitConfirmedAt = DateTime.UtcNow.AddHours(5.5);
             booking.PenaltyApplied = false;
             _context.Bookings.Update(booking);
+
             slot.IsBooked = false;
             _context.ParkingSlots.Update(slot);
             _context.SaveChanges();
+
+            // ✅ SIGNALR — slot is free after exit scan
+            _ = Task.Run(async () =>
+            {
+                try { await _hub.Clients.Group("map").SendAsync("SlotUpdated", new { slotId = slot.Id, isBooked = false }); }
+                catch (Exception ex) { Console.WriteLine($"📡 SignalR (exit confirm) failed: {ex.Message}"); }
+            });
 
             Console.WriteLine($"✅ Exit confirmed — Booking #{booking.Id}, Slot #{slot.Id}");
             return Json(new { success = true, message = "Exit confirmed! The slot is now free. Safe journey!" });
@@ -433,34 +434,24 @@ namespace SmartSlot.Controllers
             {
                 if (!string.IsNullOrEmpty(booking.CustomerEmail) && !string.IsNullOrEmpty(slot.QrToken))
                 {
-                    var scanLink = $"https://smartslot-sc9u.onrender.com/Parking/ExitScan?token={slot.QrToken}&bid={booking.Id}";
+                    var scanLink = $"https://smartslot-fkc6.onrender.com/Parking/ExitScan?token={slot.QrToken}&bid={booking.Id}";
                     await _emailService.SendExitScanEmail(
-                        toEmail: booking.CustomerEmail,
-                        customerName: booking.CustomerName,
-                        bookingTo: booking.BookingTo,
-                        scanLink: scanLink,
-                        bookingId: booking.Id
-                    );
+                        toEmail: booking.CustomerEmail, customerName: booking.CustomerName,
+                        bookingTo: booking.BookingTo, scanLink: scanLink, bookingId: booking.Id);
                     booking.ExitScanAlertSent = true;
                     _context.Bookings.Update(booking);
                     _context.SaveChanges();
-                    Console.WriteLine($"📧 Exit scan email sent — Booking #{booking.Id}");
                 }
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"📧 Exit scan email failed: {ex.Message}");
-            }
+            catch (Exception ex) { Console.WriteLine($"📧 Exit scan email failed: {ex.Message}"); }
         }
 
-        // ✅ Route attribute catches /Parking/Review/26
         [HttpGet]
-        [Route("Parking/Review/{id:int}")]
-        public IActionResult Review(int id)
+        public IActionResult Review(int bookingId)
         {
-            if (id <= 0) return Content("Invalid booking ID");
-            var booking = _context.Bookings.FirstOrDefault(b => b.Id == id);
-            if (booking == null) return Content("Invalid booking ID");
+            if (bookingId <= 0) return NotFound();
+            var booking = _context.Bookings.FirstOrDefault(b => b.Id == bookingId);
+            if (booking == null) return NotFound();
             if (booking.ReviewSubmitted) return RedirectToAction("ReviewSuccess");
             ViewBag.BookingId = booking.Id;
             ViewBag.ParkingSlotId = booking.ParkingSlotId;
@@ -474,16 +465,14 @@ namespace SmartSlot.Controllers
             if (booking == null) return NotFound();
             if (booking.ReviewSubmitted) return RedirectToAction("ReviewSuccess");
 
-            var review = new Review
+            _context.Reviews.Add(new Review
             {
                 ParkingSlotId = ParkingSlotId,
                 BookingId = BookingId,
                 Rating = Rating,
                 Comment = Comment,
-                CreatedAt = DateTime.Now
-            };
-
-            _context.Reviews.Add(review);
+                CreatedAt = DateTime.UtcNow
+            });
             booking.ReviewSubmitted = true;
             _context.Bookings.Update(booking);
             _context.SaveChanges();
@@ -497,24 +486,18 @@ namespace SmartSlot.Controllers
         public IActionResult NotifyMe([FromBody] NotifyMeRequest request)
         {
             var userId = HttpContext.Session.GetString("UserId");
-            if (string.IsNullOrEmpty(userId))
-                return Json(new { success = false, message = "Please sign in first." });
+            if (string.IsNullOrEmpty(userId)) return Json(new { success = false, message = "Please sign in first." });
 
             var user = _context.Users.FirstOrDefault(u => u.Id.ToString() == userId);
-            if (user == null)
-                return Json(new { success = false, message = "User not found." });
+            if (user == null) return Json(new { success = false, message = "User not found." });
+            if (string.IsNullOrEmpty(user.Email)) return Json(new { success = false, message = "No email found on your account." });
 
-            if (string.IsNullOrEmpty(user.Email))
-                return Json(new { success = false, message = "No email found on your account." });
+            var existing = _context.SlotNotifyRequests.FirstOrDefault(n =>
+                n.ParkingSlotId == request.SlotId &&
+                n.CustomerEmail == user.Email &&
+                !n.NotificationSent);
 
-            var existing = _context.SlotNotifyRequests
-                .FirstOrDefault(n =>
-                    n.ParkingSlotId == request.SlotId &&
-                    n.CustomerEmail == user.Email &&
-                    !n.NotificationSent);
-
-            if (existing != null)
-                return Json(new { success = true, message = "Already registered." });
+            if (existing != null) return Json(new { success = true, message = "Already registered." });
 
             _context.SlotNotifyRequests.Add(new SlotNotifyRequest
             {
@@ -529,12 +512,49 @@ namespace SmartSlot.Controllers
             return Json(new { success = true });
         }
 
+        // ✅ PUSH: save browser subscription from frontend
+        [HttpPost]
+        public IActionResult SavePushSubscription([FromBody] PushSubscriptionPayload payload)
+        {
+            var userId = HttpContext.Session.GetString("UserId");
+            if (string.IsNullOrEmpty(userId) || payload == null)
+                return Json(new { success = false });
+
+            var userIdInt = int.Parse(userId);
+
+            var existing = _context.PushSubscriptions
+                .FirstOrDefault(s => s.Endpoint == payload.Endpoint);
+
+            if (existing != null)
+            {
+                existing.UserId = userIdInt;
+                existing.P256dh = payload.Keys?.P256dh ?? "";
+                existing.Auth = payload.Keys?.Auth ?? "";
+                existing.UpdatedAt = DateTime.UtcNow;
+                _context.PushSubscriptions.Update(existing);
+            }
+            else
+            {
+                _context.PushSubscriptions.Add(new PushSubscription
+                {
+                    UserId = userIdInt,
+                    Endpoint = payload.Endpoint,
+                    P256dh = payload.Keys?.P256dh ?? "",
+                    Auth = payload.Keys?.Auth ?? "",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                });
+            }
+
+            _context.SaveChanges();
+            return Json(new { success = true });
+        }
+
         [HttpPost]
         public async Task<JsonResult> AnalyzeParking(IFormFile image)
         {
             if (HttpContext.Session.GetString("UserId") == null)
                 return Json(new { error = "Unauthorized" });
-
             if (image == null)
                 return Json(new { score = 0, badge = "No image", details = "No image uploaded" });
 
@@ -557,16 +577,12 @@ namespace SmartSlot.Controllers
             if (HttpContext.Session.GetString("UserId") == null)
                 return Json(new { error = "Unauthorized" });
 
-            // ✅ DB stores IST — use UtcNow+5.5 so Render (UTC) compares correctly against IST dates
             var istNow = DateTime.UtcNow.AddHours(5.5);
 
-            // ✅ Browser sends IST — parse directly, NO .AddHours(-5.5)
             DateTime? filterFrom = null;
             DateTime? filterTo = null;
             if (!string.IsNullOrEmpty(fromTime)) filterFrom = DateTime.Parse(fromTime);
             if (!string.IsNullOrEmpty(toTime)) filterTo = DateTime.Parse(toTime);
-
-            Console.WriteLine($"[NearbySlots] istNow={istNow} filterFrom={filterFrom} filterTo={filterTo}");
 
             var allSlots = _context.ParkingSlots
                 .Where(s => s.AvailableTo > istNow)
@@ -577,7 +593,6 @@ namespace SmartSlot.Controllers
                 {
                     if (_distanceService.GetDistance(lat, lon, slot.Latitude, slot.Longitude) > radius)
                         return false;
-
                     if (filterFrom.HasValue && filterTo.HasValue)
                     {
                         if (slot.AvailableFrom > filterFrom.Value) return false;
@@ -606,11 +621,9 @@ namespace SmartSlot.Controllers
                     }
 
                     var activeBookingInfo = _context.Bookings
-                        .Where(b =>
-                            b.ParkingSlotId == slot.Id &&
-                            b.BookingFrom <= istNow &&
-                            b.BookingTo > istNow &&
-                            !b.ExitConfirmed)
+                        .Where(b => b.ParkingSlotId == slot.Id &&
+                                    b.BookingFrom <= istNow && b.BookingTo > istNow &&
+                                    !b.ExitConfirmed)
                         .OrderByDescending(b => b.BookingFrom)
                         .FirstOrDefault();
 
@@ -619,7 +632,7 @@ namespace SmartSlot.Controllers
                         .OrderByDescending(b => b.BookingTo)
                         .FirstOrDefault();
 
-                    DateTime displayAvailableFrom = slot.AvailableFrom;
+                    var displayAvailableFrom = slot.AvailableFrom;
                     if (latestBooking != null &&
                         latestBooking.BookingTo > slot.AvailableFrom &&
                         latestBooking.BookingTo < slot.AvailableTo)
@@ -642,16 +655,15 @@ namespace SmartSlot.Controllers
                         exitMethod = slot.ExitMethod,
                         averageRating = _context.Reviews
                             .Where(r => r.ParkingSlotId == slot.Id)
-                            .Select(r => (double?)r.Rating)
-                            .Average() ?? 0,
+                            .Select(r => (double?)r.Rating).Average() ?? 0,
                         bookingFrom = activeBookingInfo?.BookingFrom,
                         bookingTo = activeBookingInfo?.BookingTo,
-                        bookingId = activeBookingInfo?.Id
+                        bookingId = activeBookingInfo?.Id,
+                        slotImageUrl = slot.ParkingImagePath ?? ""
                     };
                 })
                 .ToList();
 
-            Console.WriteLine($"[NearbySlots] Slots returned: {nearbySlots.Count}");
             return Json(nearbySlots);
         }
 
@@ -688,17 +700,14 @@ namespace SmartSlot.Controllers
             var slot = _context.ParkingSlots.FirstOrDefault(s => s.Id == booking.ParkingSlotId);
             if (slot == null) return NotFound();
 
-            var conflictingBooking = _context.Bookings
-                .Where(b =>
-                    b.ParkingSlotId == slot.Id &&
-                    b.Id != booking.Id &&
-                    b.BookingFrom < slot.AvailableTo &&
-                    b.BookingTo > booking.BookingTo &&
-                    !b.ExitConfirmed)
+            var conflict = _context.Bookings
+                .Where(b => b.ParkingSlotId == slot.Id && b.Id != booking.Id &&
+                            b.BookingFrom < slot.AvailableTo && b.BookingTo > booking.BookingTo &&
+                            !b.ExitConfirmed)
                 .OrderBy(b => b.BookingFrom)
                 .FirstOrDefault();
 
-            if (conflictingBooking != null)
+            if (conflict != null)
             {
                 TempData["ExtensionError"] = "Sorry, this slot is already reserved after your booking.";
                 return RedirectToAction("Search");
@@ -737,10 +746,10 @@ namespace SmartSlot.Controllers
         }
 
         [HttpGet]
-        public IActionResult DebugTest() =>
-            Content("ParkingController is working on Render.");
+        public IActionResult DebugTest() => Content("ParkingController is working on Render.");
     }
 
+    // ── Request / Payload models ──────────────────────────────────────────
     public class NotifyMeRequest
     {
         public int SlotId { get; set; }
@@ -752,5 +761,17 @@ namespace SmartSlot.Controllers
         public string Token { get; set; }
         public int BookingId { get; set; }
         public string CustomerEmail { get; set; }
+    }
+
+    public class PushSubscriptionPayload
+    {
+        public string Endpoint { get; set; }
+        public PushKeys Keys { get; set; }
+    }
+
+    public class PushKeys
+    {
+        public string P256dh { get; set; }
+        public string Auth { get; set; }
     }
 }
