@@ -46,41 +46,36 @@ namespace SmartSlot.Services
             }
         }
 
-
         private async Task RunJobsAsync(
             ApplicationDbContext context,
             EmailService emailService,
             IHubContext<ParkingHub> hub,
             PushNotificationService pushService)
         {
-            // ✅ FIX: Use real UTC now — bookings are stored as UTC in DB
             var now = DateTime.UtcNow;
-            var istNow = now.AddHours(5.5); // only used for display in logs/emails
+            var istNow = now.AddHours(5.5);
             Console.WriteLine($"⏰ Background check — UTC: {now:HH:mm:ss}  IST: {istNow:HH:mm:ss}");
 
             // ── 1. One-hour alert ─────────────────────────────────────────────
             var pendingOneHour = context.Bookings
-                .Where(b => !b.OneHourAlertSent)
+                .Where(b => !b.OneHourAlertSent && !b.IsCancelled && !b.ExitConfirmed)
                 .ToList();
 
             foreach (var booking in pendingOneHour)
             {
                 var alertTime = booking.BookingTo.AddHours(-1);
-
                 if (booking.BookingTo <= now)
                 {
                     booking.OneHourAlertSent = true;
                     context.Bookings.Update(booking);
                     continue;
                 }
-
                 if (now >= alertTime && now < booking.BookingTo)
                 {
                     try
                     {
                         if (!string.IsNullOrEmpty(booking.CustomerEmail))
                         {
-                            // Show IST time in email
                             await emailService.SendOneHourAlertEmail(
                                 toEmail: booking.CustomerEmail,
                                 customerName: booking.CustomerName,
@@ -88,7 +83,6 @@ namespace SmartSlot.Services
                                 bookingId: booking.Id);
                             Console.WriteLine($"📧 1-hour alert sent → Booking #{booking.Id}");
                         }
-
                         var customer = context.Users.FirstOrDefault(u => u.PhoneNumber == booking.CustomerPhone);
                         if (customer != null)
                         {
@@ -98,7 +92,6 @@ namespace SmartSlot.Services
                                 $"Your parking ends at {booking.BookingTo.AddHours(5.5):hh:mm tt}. Tap to extend if needed.",
                                 $"/Parking/Extend/{booking.Id}");
                         }
-
                         booking.OneHourAlertSent = true;
                         context.Bookings.Update(booking);
                     }
@@ -118,7 +111,6 @@ namespace SmartSlot.Services
                 try
                 {
                     Console.WriteLine($"📧 Attempting review email → Booking #{booking.Id} Email:{booking.CustomerEmail}");
-
                     if (!string.IsNullOrEmpty(booking.CustomerEmail))
                     {
                         await emailService.SendReviewEmail(
@@ -131,7 +123,6 @@ namespace SmartSlot.Services
                     {
                         Console.WriteLine($"⚠️ Review email skipped — no email for Booking #{booking.Id}");
                     }
-
                     var customer = context.Users.FirstOrDefault(u => u.PhoneNumber == booking.CustomerPhone);
                     if (customer != null)
                     {
@@ -141,7 +132,6 @@ namespace SmartSlot.Services
                             "How was your parking? Tap to leave a quick review.",
                             $"/Parking/Review/{booking.Id}");
                     }
-
                     booking.ReviewSmsSent = true;
                     context.Bookings.Update(booking);
                 }
@@ -152,11 +142,12 @@ namespace SmartSlot.Services
                 }
             }
 
-            // ── 3. Exit scan alert ────────────────────────────────────────────
+            // ── 3. Exit scan alert — fires once at BookingTo ──────────────────
             var exitScanPending = context.Bookings
                 .Where(b =>
                     !b.ExitScanAlertSent &&
                     !b.ExitConfirmed &&
+                    !b.IsCancelled &&
                     b.BookingTo <= now &&
                     b.BookingTo >= now.AddMinutes(-15))
                 .ToList();
@@ -166,41 +157,40 @@ namespace SmartSlot.Services
                 try
                 {
                     var slot = context.ParkingSlots.Find(booking.ParkingSlotId);
-
                     if (slot != null && !string.IsNullOrEmpty(booking.CustomerEmail))
                     {
                         var scanLink = $"https://smartslot-sc9u.onrender.com/Parking/ExitScan?token={slot.QrToken}&bid={booking.Id}";
                         await emailService.SendExitScanEmail(
                             toEmail: booking.CustomerEmail,
                             customerName: booking.CustomerName,
-                            bookingTo: booking.BookingTo.AddHours(5.5), // show IST in email
+                            bookingTo: booking.BookingTo.AddHours(5.5),
                             scanLink: scanLink,
                             bookingId: booking.Id);
                         Console.WriteLine($"📧 Exit scan email sent → Booking #{booking.Id}");
                     }
-
-                    var customer = context.Users.FirstOrDefault(u => u.PhoneNumber == booking.CustomerPhone);
-                    if (customer != null && slot != null)
+                    var customer2 = context.Users.FirstOrDefault(u => u.PhoneNumber == booking.CustomerPhone);
+                    if (customer2 != null && context.ParkingSlots.Find(booking.ParkingSlotId) is { } sl)
                     {
                         await pushService.SendToUserAsync(
-                            customer.Id,
+                            customer2.Id,
                             "🚗 Time to Exit!",
                             "Your booking has ended. Tap to scan QR and confirm exit.",
-                            $"/Parking/ExitScan?token={slot.QrToken}&bid={booking.Id}");
+                            $"/Parking/ExitScan?token={sl.QrToken}&bid={booking.Id}");
                     }
-
                     booking.ExitScanAlertSent = true;
                     context.Bookings.Update(booking);
                 }
                 catch (Exception ex) { Console.WriteLine($"📧 Exit scan email failed #{booking.Id}: {ex.Message}"); }
             }
 
-            // ── 4. Penalty — email only, NO push ─────────────────────────────
+            // ── 4. Penalty — starts 15 mins after BookingTo, rate = 2x PricePerHour ──
+            // ✅ Slot stays BOOKED until QR scan — penalty accumulates over time
+            // ✅ PenaltyApplied flag = penalty has been CALCULATED and saved (not that it's done)
             var penaltyPending = context.Bookings
                 .Where(b =>
                     !b.ExitConfirmed &&
-                    !b.PenaltyApplied &&
-                    b.BookingTo <= now.AddMinutes(-15))
+                    !b.IsCancelled &&
+                    b.BookingTo <= now.AddMinutes(-15)) // grace period = 15 mins
                 .ToList();
 
             foreach (var booking in penaltyPending)
@@ -208,20 +198,43 @@ namespace SmartSlot.Services
                 try
                 {
                     var slot = context.ParkingSlots.Find(booking.ParkingSlotId);
-                    if (!string.IsNullOrEmpty(booking.CustomerEmail))
-                    {
-                        await emailService.SendPenaltyEmail(
-                            toEmail: booking.CustomerEmail,
-                            customerName: booking.CustomerName,
-                            bookingTo: booking.BookingTo.AddHours(5.5), // show IST in email
-                            bookingId: booking.Id,
-                            slotOwner: slot?.OwnerName ?? "Owner");
-                    }
+                    if (slot == null) continue;
+
+                    // Calculate how many minutes overdue (after 15-min grace)
+                    var overdueMinutes = (now - booking.BookingTo).TotalMinutes - 15;
+                    if (overdueMinutes < 0) overdueMinutes = 0;
+
+                    // Penalty = 2x PricePerHour, calculated per minute
+                    var penaltyRate = slot.PricePerHour * 2.0; // per hour
+                    var penaltyAmount = Math.Round((overdueMinutes / 60.0) * penaltyRate, 2);
+
+                    // Save penalty amount to booking
+                    booking.PenaltyAmount = (decimal)penaltyAmount;
                     booking.PenaltyApplied = true;
                     context.Bookings.Update(booking);
-                    Console.WriteLine($"⚠ Penalty applied → Booking #{booking.Id}");
+
+                    // Send penalty email only once (first time penalty kicks in)
+                    if (!booking.PenaltyEmailSent && overdueMinutes >= 1)
+                    {
+                        if (!string.IsNullOrEmpty(booking.CustomerEmail))
+                        {
+                            await emailService.SendPenaltyEmail(
+                                toEmail: booking.CustomerEmail,
+                                customerName: booking.CustomerName,
+                                bookingTo: booking.BookingTo.AddHours(5.5),
+                                bookingId: booking.Id,
+                                slotOwner: slot.OwnerName ?? "Owner");
+                        }
+                        booking.PenaltyEmailSent = true;
+                        context.Bookings.Update(booking);
+                        Console.WriteLine($"⚠️ Penalty started → Booking #{booking.Id} Overdue:{overdueMinutes:F0}m Amount:₹{penaltyAmount}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"⚠️ Penalty updated → Booking #{booking.Id} Overdue:{overdueMinutes:F0}m Amount:₹{penaltyAmount}");
+                    }
                 }
-                catch (Exception ex) { Console.WriteLine($"⚠ Penalty failed #{booking.Id}: {ex.Message}"); }
+                catch (Exception ex) { Console.WriteLine($"⚠️ Penalty failed #{booking.Id}: {ex.Message}"); }
             }
 
             // ── 5. Owner exit notification — slot now free after customer exit ─
@@ -236,6 +249,10 @@ namespace SmartSlot.Services
                     var slot = context.ParkingSlots.Find(booking.ParkingSlotId);
                     if (slot != null)
                     {
+                        // ✅ hasPenalty = true if exit was confirmed after grace period
+                        bool hasPenalty = booking.PenaltyApplied && booking.PenaltyAmount > 0;
+                        var exitIst = (booking.ExitConfirmedAt ?? DateTime.UtcNow).AddHours(5.5);
+
                         var owner = context.Users.FirstOrDefault(u => u.Id == slot.UserId);
                         if (owner != null && !string.IsNullOrEmpty(owner.Email))
                         {
@@ -247,10 +264,25 @@ namespace SmartSlot.Services
                                 vehicleNumber: booking.VehicleNumber,
                                 bookingFrom: booking.BookingFrom.AddHours(5.5),
                                 bookingTo: booking.BookingTo.AddHours(5.5),
-                                exitConfirmedAt: (booking.ExitConfirmedAt ?? DateTime.UtcNow).AddHours(5.5));
-                            Console.WriteLine($"📧 Owner exit notification sent → Booking #{booking.Id} Owner:{owner.Email}");
+                                exitConfirmedAt: exitIst,
+                                hasPenalty: hasPenalty);
+                            Console.WriteLine($"📧 Owner exit notification sent → Booking #{booking.Id} Owner:{owner.Email} Penalty:{hasPenalty}");
                         }
 
+                        // ✅ Send customer exit confirmed email (with penalty notice if late)
+                        if (!string.IsNullOrEmpty(booking.CustomerEmail))
+                        {
+                            await emailService.SendCustomerExitConfirmedEmail(
+                                toEmail: booking.CustomerEmail,
+                                customerName: booking.CustomerName,
+                                ownerName: slot.OwnerName ?? "Owner",
+                                vehicleNumber: booking.VehicleNumber,
+                                bookingFrom: booking.BookingFrom.AddHours(5.5),
+                                bookingTo: booking.BookingTo.AddHours(5.5),
+                                exitConfirmedAt: exitIst,
+                                hasPenalty: hasPenalty);
+                            Console.WriteLine($"📧 Customer exit confirmed email sent → Booking #{booking.Id} Penalty:{hasPenalty}");
+                        }
                         if (owner != null)
                         {
                             await pushService.SendToUserAsync(
@@ -260,7 +292,6 @@ namespace SmartSlot.Services
                                 "/Parking/Dashboard");
                         }
                     }
-
                     booking.OwnerExitNotified = true;
                     context.Bookings.Update(booking);
                 }
@@ -274,11 +305,11 @@ namespace SmartSlot.Services
 
             foreach (var waiter in notifyPending)
             {
+                // ✅ Slot is only free when NO active unconfirmed booking exists
                 bool stillBooked = context.Bookings.Any(b =>
                     b.ParkingSlotId == waiter.ParkingSlotId &&
                     !b.ExitConfirmed &&
-                    b.BookingFrom <= now &&
-                    b.BookingTo > now);
+                    !b.IsCancelled);
 
                 if (stillBooked) continue;
 
@@ -315,17 +346,18 @@ namespace SmartSlot.Services
 
             context.SaveChanges();
 
-            // ── 7. SignalR — auto-free expired slots ──────────────────────────
+            // ── 7. SignalR — ONLY free slots where ExitConfirmed = true ────────
+            // ✅ REMOVED time-based auto-free — slot stays booked until QR scan
             var staleBookedSlots = context.ParkingSlots
                 .Where(s => s.IsBooked)
                 .ToList()
                 .Where(s =>
                 {
+                    // Only free if ALL bookings for this slot are either ExitConfirmed or Cancelled
                     bool hasActiveBooking = context.Bookings.Any(b =>
                         b.ParkingSlotId == s.Id &&
-                        b.BookingFrom <= now &&
-                        b.BookingTo > now &&
-                        !b.ExitConfirmed);
+                        !b.ExitConfirmed &&
+                        !b.IsCancelled);
                     return !hasActiveBooking;
                 })
                 .ToList();
@@ -343,7 +375,7 @@ namespace SmartSlot.Services
                         isBooked = false
                     });
 
-                    var owner = context.Users.FirstOrDefault(u => u.PhoneNumber == slot.OwnerPhone);
+                    var owner = context.Users.FirstOrDefault(u => u.Id == slot.UserId);
                     if (owner != null)
                     {
                         await pushService.SendToUserAsync(
@@ -353,11 +385,11 @@ namespace SmartSlot.Services
                             "/Parking/Dashboard");
                     }
 
-                    Console.WriteLine($"📡 SignalR: Slot #{slot.Id} auto-freed");
+                    Console.WriteLine($"📡 SignalR: Slot #{slot.Id} freed after exit confirmed");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"📡 SignalR auto-free failed Slot #{slot.Id}: {ex.Message}");
+                    Console.WriteLine($"📡 SignalR free failed Slot #{slot.Id}: {ex.Message}");
                 }
             }
 

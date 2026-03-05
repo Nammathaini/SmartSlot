@@ -13,6 +13,16 @@ namespace SmartSlot.Services
 
         public EmailService(HttpClient httpClient) { _httpClient = httpClient; }
 
+        private static string PenaltySection(string dashboardLink) => $@"
+    <div style='background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:16px 18px;margin-top:16px;'>
+      <div style='display:flex;align-items:center;gap:10px;margin-bottom:10px;'>
+        <span style='font-size:22px;'>⚠️</span>
+        <span style='font-size:14px;font-weight:700;color:#dc2626;'>Penalty Has Been Applied</span>
+      </div>
+      <p style='color:#b91c1c;font-size:13px;line-height:1.6;margin:0 0 14px;'>Exit was not confirmed within the 15-minute grace period. A penalty is running on your dashboard. Tap below to view the live penalty timer and amount.</p>
+      <a href='{dashboardLink}' style='display:block;text-align:center;background:linear-gradient(90deg,#dc2626,#b91c1c);color:white;text-decoration:none;padding:12px;border-radius:9px;font-size:14px;font-weight:700;'>View Penalty in Dashboard</a>
+    </div>";
+
         // ── Slot Added ──
         public async Task SendSlotAddedEmail(string toEmail, string ownerName, string vehicleType,
             double pricePerHour, DateTime availableFrom, DateTime availableTo, string paymentMode, string qrToken = "")
@@ -35,7 +45,7 @@ namespace SmartSlot.Services
       <h3>QR Code Generated for Your Slot!</h3>
       <p>A unique QR code has been generated for your slot and is available in your Dashboard.<br/><br/>
       <strong>What to do:</strong> Display this QR code at your parking spot so customers can scan it to confirm their exit.<br/><br/>
-      Customers who do not scan the QR within <strong>15 minutes</strong> after their booking ends will be penalised Rs.20/hour.</p>
+      Customers who do not scan the QR within <strong>15 minutes</strong> after their booking ends will be penalised.</p>
       <a href='{dashboardLink}' class='qr-btn'>View QR in Dashboard</a>
     </div>
   </div>
@@ -80,12 +90,15 @@ namespace SmartSlot.Services
         }
 
         // ── Owner Notified When Customer Exit is Confirmed ──
+        // ✅ hasPenalty = true → penalty section shown at bottom
         public async Task SendOwnerSlotFreeEmail(
             string toEmail, string ownerName,
             string customerName, string customerPhone,
-            string vehicleNumber, DateTime bookingFrom, DateTime bookingTo, DateTime exitConfirmedAt)
+            string vehicleNumber, DateTime bookingFrom, DateTime bookingTo,
+            DateTime exitConfirmedAt, bool hasPenalty = false)
         {
             var dashboardLink = "https://smartslot-sc9u.onrender.com/Parking/Dashboard";
+            var penaltyHtml = hasPenalty ? PenaltySection(dashboardLink) : "";
             var html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>
 <style>body{{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0;}}.container{{max-width:520px;margin:30px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.1);}}.header{{background:linear-gradient(135deg,#10b981,#059669);padding:30px;text-align:center;}}.header h1{{color:white;margin:0;font-size:24px;}}.header p{{color:rgba(255,255,255,0.85);margin:6px 0 0;font-size:14px;}}.body{{padding:28px 32px;}}.badge{{display:inline-block;background:#dcfce7;color:#16a34a;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:20px;}}.detail-row{{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid #f0f0f0;}}.detail-row:last-child{{border-bottom:none;}}.detail-label{{color:#888;font-size:13px;}}.detail-value{{color:#111;font-size:14px;font-weight:600;}}.info-note{{background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:14px;color:#16a34a;font-size:13px;line-height:1.6;margin-top:16px;}}.btn{{display:block;text-align:center;background:linear-gradient(90deg,#10b981,#059669);color:white;text-decoration:none;padding:13px;border-radius:10px;font-size:14px;font-weight:700;margin-top:20px;}}.footer{{background:#f9f9f9;padding:18px 32px;text-align:center;color:#aaa;font-size:12px;border-top:1px solid #eee;}}</style></head>
 <body><div class='container'>
@@ -101,11 +114,44 @@ namespace SmartSlot.Services
     <div class='detail-row'><span class='detail-label'>Booking To</span><span class='detail-value'>{bookingTo:dd MMM yyyy, hh:mm tt}</span></div>
     <div class='detail-row'><span class='detail-label'>Exit Confirmed At</span><span class='detail-value'>{exitConfirmedAt:dd MMM yyyy, hh:mm tt}</span></div>
     <div class='info-note'>🅿️ Your slot is now visible to other customers on SmartSlot and ready for new bookings.</div>
+    {penaltyHtml}
     <a href='{dashboardLink}' class='btn'>View Dashboard</a>
   </div>
   <div class='footer'>2025 SmartSlot. All rights reserved.</div>
 </div></body></html>";
             await SendEmail(toEmail, ownerName, "Your Slot is Now Free - Customer Exit Confirmed", html);
+        }
+
+        // ── Customer Exit Confirmed Email ──
+        // ✅ NEW: Sent to customer when they scan QR. hasPenalty = true → penalty section shown
+        public async Task SendCustomerExitConfirmedEmail(
+            string toEmail, string customerName,
+            string ownerName, string vehicleNumber,
+            DateTime bookingFrom, DateTime bookingTo,
+            DateTime exitConfirmedAt, bool hasPenalty = false)
+        {
+            var dashboardLink = "https://smartslot-sc9u.onrender.com/Parking/Dashboard";
+            var penaltyHtml = hasPenalty ? PenaltySection(dashboardLink) : "";
+            var html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>
+<style>body{{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0;}}.container{{max-width:520px;margin:30px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.1);}}.header{{background:linear-gradient(135deg,#10b981,#059669);padding:30px;text-align:center;}}.header h1{{color:white;margin:0;font-size:24px;}}.header p{{color:rgba(255,255,255,0.85);margin:6px 0 0;font-size:14px;}}.body{{padding:28px 32px;}}.badge{{display:inline-block;background:#dcfce7;color:#16a34a;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:20px;}}.detail-row{{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid #f0f0f0;}}.detail-row:last-child{{border-bottom:none;}}.detail-label{{color:#888;font-size:13px;}}.detail-value{{color:#111;font-size:14px;font-weight:600;}}.info-note{{background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:14px;color:#16a34a;font-size:13px;line-height:1.6;margin-top:16px;}}.btn{{display:block;text-align:center;background:linear-gradient(90deg,#10b981,#059669);color:white;text-decoration:none;padding:13px;border-radius:10px;font-size:14px;font-weight:700;margin-top:20px;}}.footer{{background:#f9f9f9;padding:18px 32px;text-align:center;color:#aaa;font-size:12px;border-top:1px solid #eee;}}</style></head>
+<body><div class='container'>
+  <div class='header'><h1>SmartSlot</h1><p>Exit Confirmed!</p></div>
+  <div class='body'>
+    <span class='badge'>Exit Confirmed ✅</span>
+    <h2 style='color:#111;font-size:18px;margin-bottom:6px;'>Hi {customerName},</h2>
+    <p style='color:#555;font-size:14px;'>Your exit has been successfully confirmed. Thank you for using SmartSlot!</p>
+    <div class='detail-row'><span class='detail-label'>Slot Owner</span><span class='detail-value'>{ownerName}</span></div>
+    <div class='detail-row'><span class='detail-label'>Vehicle No.</span><span class='detail-value'>{vehicleNumber}</span></div>
+    <div class='detail-row'><span class='detail-label'>Booking From</span><span class='detail-value'>{bookingFrom:dd MMM yyyy, hh:mm tt}</span></div>
+    <div class='detail-row'><span class='detail-label'>Booking To</span><span class='detail-value'>{bookingTo:dd MMM yyyy, hh:mm tt}</span></div>
+    <div class='detail-row'><span class='detail-label'>Exit Confirmed At</span><span class='detail-value'>{exitConfirmedAt:dd MMM yyyy, hh:mm tt}</span></div>
+    <div class='info-note'>✅ Your booking is now complete. We hope you had a great experience!</div>
+    {penaltyHtml}
+    <a href='{dashboardLink}' class='btn'>View Dashboard</a>
+  </div>
+  <div class='footer'>2025 SmartSlot. All rights reserved.</div>
+</div></body></html>";
+            await SendEmail(toEmail, customerName, "Exit Confirmed - SmartSlot", html);
         }
 
         // ── Customer Booking Confirmation (with Cancel button) ──
@@ -119,9 +165,7 @@ namespace SmartSlot.Services
                 ? $"https://www.google.com/maps?q={latitude},{longitude}" : "";
             var locationRow = !string.IsNullOrEmpty(locationLink)
                 ? $"<div class='detail-row'><span class='detail-label'>Slot Location</span><span class='detail-value'><a href='{locationLink}' style='color:#2563eb;'>View on Map</a></span></div>" : "";
-
             var cancelLink = $"https://smartslot-sc9u.onrender.com/Parking/CancelBooking?bookingId={bookingId}&token={qrToken}";
-
             var html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>
 <style>body{{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0;}}.container{{max-width:520px;margin:30px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.1);}}.header{{background:linear-gradient(135deg,#2563eb,#1d4ed8);padding:30px;text-align:center;}}.header h1{{color:white;margin:0;font-size:24px;}}.header p{{color:rgba(255,255,255,0.85);margin:6px 0 0;font-size:14px;}}.body{{padding:28px 32px;}}.body h2{{color:#111;font-size:18px;margin-bottom:6px;}}.body p{{color:#555;font-size:14px;margin-bottom:20px;}}.detail-row{{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f0f0f0;}}.detail-row:last-child{{border-bottom:none;}}.detail-label{{color:#888;font-size:13px;}}.detail-value{{color:#111;font-size:14px;font-weight:600;}}.badge{{display:inline-block;background:#dbeafe;color:#2563eb;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:20px;}}.section-title{{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#888;margin:20px 0 10px;}}.total-box{{background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:16px;text-align:center;margin:20px 0;}}.total-box .amount{{font-size:28px;font-weight:800;color:#16a34a;}}.total-box .label{{color:#555;font-size:13px;margin-top:4px;}}.qr-notice{{background:#faf5ff;border:1px solid #d8b4fe;border-radius:10px;padding:16px 18px;margin-top:20px;}}.qr-notice h4{{color:#7c3aed;font-size:14px;margin:0 0 8px;}}.qr-notice p{{color:#6d28d9;font-size:13px;line-height:1.7;margin:0;}}.cancel-box{{background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:16px 18px;margin-top:16px;text-align:center;}}.cancel-box p{{color:#888;font-size:12px;margin:0 0 10px;}}.cancel-btn{{display:inline-block;padding:10px 24px;background:#dc2626;color:white;text-decoration:none;border-radius:8px;font-weight:600;font-size:13px;}}.footer{{background:#f9f9f9;padding:18px 32px;text-align:center;color:#aaa;font-size:12px;border-top:1px solid #eee;}}</style></head>
 <body><div class='container'>
@@ -129,24 +173,23 @@ namespace SmartSlot.Services
   <div class='body'>
     <span class='badge'>Booking Confirmed</span>
     <h2>Hi {customerName},</h2>
-    <p>You successfully booked a parking slot .</p>
+    <p>You successfully booked a parking slot.</p>
     <div class='section-title'>Owner &amp; Slot Info</div>
-    <div class='detail-row'><span class='detail-label'>Owner Name: </span><span class='detail-value'>{ownerName}</span></div>
-    <div class='detail-row'><span class='detail-label'>Owner Phone: </span><span class='detail-value'>{ownerPhone}</span></div>
-    <div class='detail-row'><span class='detail-label'>Vehicle Type: </span><span class='detail-value'>{vehicleType}</span></div>
-    <div class='detail-row'><span class='detail-label'>Payment Mode: </span><span class='detail-value'>{paymentMode}</span></div>
+    <div class='detail-row'><span class='detail-label'>Owner Name</span><span class='detail-value'>{ownerName}</span></div>
+    <div class='detail-row'><span class='detail-label'>Owner Phone</span><span class='detail-value'>{ownerPhone}</span></div>
+    <div class='detail-row'><span class='detail-label'>Vehicle Type</span><span class='detail-value'>{vehicleType}</span></div>
+    <div class='detail-row'><span class='detail-label'>Payment Mode</span><span class='detail-value'>{paymentMode}</span></div>
     {locationRow}
     <div class='section-title'>Your Booking</div>
-    <div class='detail-row'><span class='detail-label'>Vehicle No.  </span><span class='detail-value'>{vehicleNumber}</span></div>
-    <div class='detail-row'><span class='detail-label'>From: </span><span class='detail-value'>{bookingFrom:dd MMM yyyy, hh:mm tt}</span></div>
-    <div class='detail-row'><span class='detail-label'>To: </span><span class='detail-value'>{bookingTo:dd MMM yyyy, hh:mm tt}</span></div>
-    <div class='detail-row'><span class='detail-label'>Rate: </span><span class='detail-value'>Rs.{pricePerHour}/hr</span></div>
+    <div class='detail-row'><span class='detail-label'>Vehicle No.</span><span class='detail-value'>{vehicleNumber}</span></div>
+    <div class='detail-row'><span class='detail-label'>From</span><span class='detail-value'>{bookingFrom:dd MMM yyyy, hh:mm tt}</span></div>
+    <div class='detail-row'><span class='detail-label'>To</span><span class='detail-value'>{bookingTo:dd MMM yyyy, hh:mm tt}</span></div>
+    <div class='detail-row'><span class='detail-label'>Rate</span><span class='detail-value'>Rs.{pricePerHour}/hr</span></div>
     <div class='total-box'><div class='amount'>Rs.{totalAmount:F0}</div><div class='label'>Total Amount</div></div>
     <div class='qr-notice'>
       <h4>QR Exit - Important</h4>
-      <p>A QR code is generated for this slot and displayed at the parking spot by the owner.<br/><br/>
-      When your booking ends, you will receive a personal scan link via email - use it to scan the QR at the slot to <strong>confirm your exit</strong>.<br/><br/>
-      If exit is not confirmed within <strong>15 minutes</strong> of your booking ending, a penalty of <strong>Rs.20/hour</strong> will be applied.</p>
+      <p>When your booking ends, you will receive a scan link via email. Use it to scan the QR at the slot to <strong>confirm your exit</strong>.<br/><br/>
+      If exit is not confirmed within <strong>15 minutes</strong> of booking end, a penalty will be applied.</p>
     </div>
     <div class='cancel-box'>
       <p>Need to cancel? Tap below to cancel your booking. The slot will be immediately freed for others.</p>
@@ -280,7 +323,7 @@ namespace SmartSlot.Services
     <h2 style='color:#111;'>Hi {customerName},</h2>
     <p style='color:#555;font-size:14px;'>Your parking slot expires in about 1 hour. Please make sure to clear the slot on time.</p>
     <div class='time-box'><div class='time'>{formattedTime}</div><div class='label'>Your parking ends at (IST)</div></div>
-    <div class='warning'>If exit QR is not scanned within 15 minutes of booking end, a Rs.20/hour penalty will apply.</div>
+    <div class='warning'>If exit QR is not scanned within 15 minutes of booking end, a penalty will apply.</div>
     <a href='{extendLink}' class='extend-btn'>Extend My Booking</a>
   </div>
   <div class='footer'>2025 SmartSlot. All rights reserved.</div>
@@ -301,7 +344,7 @@ namespace SmartSlot.Services
     <h2 style='color:#111;'>Hi {customerName},</h2>
     <p style='color:#555;font-size:14px;'>Your parking booking ended at <strong>{formattedTime} (IST)</strong>. Please confirm your exit by scanning the QR code at the slot.</p>
     <a href='{scanLink}' class='scan-btn'>Scan QR to Confirm Exit</a>
-    <div class='penalty-box'>If exit is not confirmed within <strong>15 minutes</strong> of your booking ending, a penalty of <strong>Rs.20 per hour</strong> will be applied.</div>
+    <div class='penalty-box'>If exit is not confirmed within <strong>15 minutes</strong> of your booking ending, a penalty will be applied.</div>
   </div>
   <div class='footer'>Booking #{bookingId} | 2025 SmartSlot. All rights reserved.</div>
 </div></body></html>";
@@ -357,21 +400,22 @@ namespace SmartSlot.Services
         {
             string formattedTime = bookingTo.ToString("hh:mm tt");
             string formattedDate = bookingTo.ToString("dd MMM yyyy");
+            var dashboardLink = "https://smartslot-sc9u.onrender.com/Parking/Dashboard";
             var html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>
-<style>body{{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0;}}.container{{max-width:520px;margin:30px auto;background:white;border-radius:12px;overflow:hidden;}}.header{{background:linear-gradient(135deg,#dc2626,#991b1b);padding:30px;text-align:center;}}.header h1{{color:white;margin:0;font-size:24px;}}.body{{padding:28px 32px;text-align:center;}}.penalty-box{{background:#fef2f2;border:2px solid #fca5a5;border-radius:10px;padding:20px;margin:20px 0;}}.penalty-box .amount{{font-size:28px;font-weight:800;color:#dc2626;}}.detail-row{{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:13px;text-align:left;}}.detail-label{{color:#888;}}.detail-value{{color:#111;font-weight:600;}}.footer{{background:#f9f9f9;padding:18px 32px;text-align:center;color:#aaa;font-size:12px;border-top:1px solid #eee;}}</style></head>
+<style>body{{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0;}}.container{{max-width:520px;margin:30px auto;background:white;border-radius:12px;overflow:hidden;}}.header{{background:linear-gradient(135deg,#dc2626,#991b1b);padding:30px;text-align:center;}}.header h1{{color:white;margin:0;font-size:24px;}}.body{{padding:28px 32px;text-align:center;}}.detail-row{{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:13px;text-align:left;}}.detail-label{{color:#888;}}.detail-value{{color:#111;font-weight:600;}}.btn{{display:block;text-align:center;background:linear-gradient(90deg,#dc2626,#b91c1c);color:white;text-decoration:none;padding:13px;border-radius:10px;font-size:14px;font-weight:700;margin-top:20px;}}.footer{{background:#f9f9f9;padding:18px 32px;text-align:center;color:#aaa;font-size:12px;border-top:1px solid #eee;}}</style></head>
 <body><div class='container'>
   <div class='header'><h1>SmartSlot</h1><p>Penalty Notice</p></div>
   <div class='body'>
     <div style='font-size:52px;margin:10px 0 16px;'>&#9888;&#65039;</div>
     <h2 style='color:#111;'>Hi {customerName},</h2>
-    <p style='color:#555;font-size:14px;'>Your booking ended at <strong>{formattedTime}</strong> on <strong>{formattedDate}</strong>, but exit was not confirmed within the 15-minute grace period.</p>
-    <div class='penalty-box'><div class='amount'>Rs.20 / hour</div><div style='color:#888;font-size:13px;margin-top:4px;'>Penalty rate applied</div></div>
-    <div style='text-align:left;'>
+    <p style='color:#555;font-size:14px;'>Your booking ended at <strong>{formattedTime}</strong> on <strong>{formattedDate}</strong>, but exit was not confirmed within the 15-minute grace period. A penalty is now running.</p>
+    <div style='text-align:left;margin:16px 0;'>
       <div class='detail-row'><span class='detail-label'>Booking #</span><span class='detail-value'>{bookingId}</span></div>
       <div class='detail-row'><span class='detail-label'>Slot Owner</span><span class='detail-value'>{slotOwner}</span></div>
       <div class='detail-row'><span class='detail-label'>Booking Ended</span><span class='detail-value'>{formattedTime}, {formattedDate} (IST)</span></div>
     </div>
-    <p style='color:#888;font-size:12px;margin-top:16px;'>Please contact the slot owner <strong>{slotOwner}</strong> to resolve this.</p>
+    <p style='color:#555;font-size:13px;'>The penalty amount is accumulating in your dashboard. Scan the QR at the slot immediately to stop the timer.</p>
+    <a href='{dashboardLink}' class='btn'>View Live Penalty in Dashboard</a>
   </div>
   <div class='footer'>Booking #{bookingId} | 2025 SmartSlot. All rights reserved.</div>
 </div></body></html>";

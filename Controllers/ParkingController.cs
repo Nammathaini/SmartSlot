@@ -666,7 +666,8 @@ namespace SmartSlot.Controllers
             if (HttpContext.Session.GetString("UserId") == null)
                 return Json(new { error = "Unauthorized" });
 
-            var istNow = DateTime.UtcNow.AddHours(5.5);
+            var utcNow = DateTime.UtcNow;
+            var istNow = utcNow.AddHours(5.5);
 
             // IST filter times — for slot AvailableFrom/AvailableTo (stored as IST in DB)
             DateTime? filterFromIst = null;
@@ -710,24 +711,28 @@ namespace SmartSlot.Controllers
                     }
                     else
                     {
-                        // ✅ FIX: added !b.IsCancelled so cancelled bookings don't block slot
+                        // ✅ Use UTC — BookingFrom/BookingTo stored as UTC in DB
                         isBooked = _context.Bookings.Any(b =>
                             b.ParkingSlotId == slot.Id &&
-                            b.BookingFrom <= istNow &&
-                            b.BookingTo > istNow &&
+                            b.BookingFrom <= utcNow &&
+                            b.BookingTo > utcNow &&
                             !b.ExitConfirmed &&
                             !b.IsCancelled);
                     }
 
+                    // ✅ Use UTC for booking queries — BookingFrom/BookingTo stored as UTC
                     var activeBookingInfo = _context.Bookings
                         .Where(b => b.ParkingSlotId == slot.Id &&
-                                    b.BookingFrom <= istNow && b.BookingTo > istNow &&
-                                    !b.ExitConfirmed)
+                                    b.BookingFrom <= utcNow && b.BookingTo > utcNow &&
+                                    !b.ExitConfirmed &&
+                                    !b.IsCancelled)
                         .OrderByDescending(b => b.BookingFrom)
                         .FirstOrDefault();
 
                     var latestBooking = _context.Bookings
-                        .Where(b => b.ParkingSlotId == slot.Id && !b.ExitConfirmed)
+                        .Where(b => b.ParkingSlotId == slot.Id &&
+                                    !b.ExitConfirmed &&
+                                    !b.IsCancelled)
                         .OrderByDescending(b => b.BookingTo)
                         .FirstOrDefault();
 
