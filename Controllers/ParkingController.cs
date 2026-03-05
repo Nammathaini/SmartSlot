@@ -365,6 +365,75 @@ namespace SmartSlot.Controllers
             ViewBag.UpiQrImagePath = TempData["UpiQrImagePath"] as string ?? "";
             return View();
         }
+        [HttpGet]
+        public async Task<IActionResult> CancelBooking(int bookingId, string token)
+        {
+            var booking = _context.Bookings.FirstOrDefault(b => b.Id == bookingId);
+            if (booking == null) return NotFound();
+
+            var slot = _context.ParkingSlots.FirstOrDefault(s => s.Id == booking.ParkingSlotId && s.QrToken == token);
+            if (slot == null) return NotFound();
+
+            if (booking.IsCancelled || booking.ExitConfirmed)
+            {
+                TempData["ToastError"] = "This booking is already cancelled or completed.";
+                return RedirectToAction("Dashboard");
+            }
+
+            // Mark booking cancelled
+            booking.IsCancelled = true;
+            booking.ExitConfirmed = true;
+            _context.Bookings.Update(booking);
+
+            // Free the slot
+            slot.IsBooked = false;
+            _context.ParkingSlots.Update(slot);
+            _context.SaveChanges();
+
+            // SignalR live update
+            _ = Task.Run(async () =>
+            {
+                try { await _hub.Clients.Group("map").SendAsync("SlotUpdated", new { slotId = slot.Id, isBooked = false }); }
+                catch (Exception ex) { Console.WriteLine($"📡 SignalR (cancel) failed: {ex.Message}"); }
+            });
+
+            // Email to customer
+            try
+            {
+                if (!string.IsNullOrEmpty(booking.CustomerEmail))
+                    await _emailService.SendBookingCancelledEmail(
+                        toEmail: booking.CustomerEmail,
+                        customerName: booking.CustomerName,
+                        ownerName: slot.OwnerName,
+                        vehicleNumber: booking.VehicleNumber,
+                        bookingFrom: booking.BookingFrom.AddHours(5.5),
+                        bookingTo: booking.BookingTo.AddHours(5.5),
+                        paymentMode: slot.PaymentMode);
+            }
+            catch (Exception ex) { Console.WriteLine($"📧 Cancel email failed: {ex.Message}"); }
+
+            // Email to owner
+            try
+            {
+                var owner = _context.Users.FirstOrDefault(u => u.PhoneNumber == slot.OwnerPhone);
+                if (owner != null && !string.IsNullOrEmpty(owner.Email))
+                    await _emailService.SendOwnerCancelNotificationEmail(
+     toEmail: owner.Email,
+     ownerName: slot.OwnerName,
+     customerName: booking.CustomerName,
+     customerPhone: booking.CustomerPhone,
+     vehicleNumber: booking.VehicleNumber,
+     bookingFrom: booking.BookingFrom.AddHours(5.5),
+     bookingTo: booking.BookingTo.AddHours(5.5),
+     paymentMode: slot.PaymentMode)
+            }
+            catch (Exception ex) { Console.WriteLine($"📧 Owner cancel email failed: {ex.Message}"); }
+
+            TempData["ToastSuccess"] = "Booking cancelled successfully!";
+            return RedirectToAction("CancelSuccess");
+        }
+
+        public IActionResult CancelSuccess() => View();
 
         [HttpGet]
         public IActionResult ExitScan(string token, int bid)

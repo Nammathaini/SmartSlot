@@ -23,5 +23,6 @@
         public DateTime? ExitConfirmedAt { get; set; }
         public bool ExitScanAlertSent { get; set; } = false;
         public bool PenaltyApplied { get; set; } = false;
+        public bool IsCancelled { get; set; } = false;
     }
 }

@@ -152,6 +152,32 @@ namespace SmartSlot.Services
 </div></body></html>";
             await SendEmail(toEmail, customerName, "Your Booking Has Been Cancelled - SmartSlot", html);
         }
+        // ── Owner Notified When Booking is Cancelled ──
+        public async Task SendOwnerCancelNotificationEmail(
+            string toEmail, string ownerName,
+            string customerName, string customerPhone,
+            string vehicleNumber, DateTime bookingFrom, DateTime bookingTo, string paymentMode)
+        {
+            var html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>
+<style>body{{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0;}}.container{{max-width:520px;margin:30px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.1);}}.header{{background:linear-gradient(135deg,#dc2626,#991b1b);padding:30px;text-align:center;}}.header h1{{color:white;margin:0;font-size:24px;}}.header p{{color:rgba(255,255,255,0.85);margin:6px 0 0;font-size:14px;}}.body{{padding:28px 32px;}}.badge{{display:inline-block;background:#fee2e2;color:#dc2626;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:20px;}}.detail-row{{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid #f0f0f0;}}.detail-row:last-child{{border-bottom:none;}}.detail-label{{color:#888;font-size:13px;}}.detail-value{{color:#111;font-size:14px;font-weight:600;}}.info-note{{background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:14px;color:#16a34a;font-size:13px;line-height:1.6;margin-top:16px;}}.footer{{background:#f9f9f9;padding:18px 32px;text-align:center;color:#aaa;font-size:12px;border-top:1px solid #eee;}}</style></head>
+<body><div class='container'>
+  <div class='header'><h1>SmartSlot</h1><p>Booking Cancelled</p></div>
+  <div class='body'>
+    <span class='badge'>Booking Cancelled</span>
+    <h2 style='color:#111;font-size:18px;margin-bottom:6px;'>Hi {ownerName},</h2>
+    <p style='color:#555;font-size:14px;'>A customer has cancelled their booking for your parking slot.</p>
+    <div class='detail-row'><span class='detail-label'>Customer Name</span><span class='detail-value'>{customerName}</span></div>
+    <div class='detail-row'><span class='detail-label'>Customer Phone</span><span class='detail-value'>{customerPhone}</span></div>
+    <div class='detail-row'><span class='detail-label'>Vehicle No.</span><span class='detail-value'>{vehicleNumber}</span></div>
+    <div class='detail-row'><span class='detail-label'>Was Booked From</span><span class='detail-value'>{bookingFrom:dd MMM yyyy, hh:mm tt}</span></div>
+    <div class='detail-row'><span class='detail-label'>Was Booked To</span><span class='detail-value'>{bookingTo:dd MMM yyyy, hh:mm tt}</span></div>
+    <div class='detail-row'><span class='detail-label'>Payment Mode</span><span class='detail-value'>{paymentMode}</span></div>
+    <div class='info-note'>✅ Your slot is now free and visible to other customers on SmartSlot.</div>
+  </div>
+  <div class='footer'>2025 SmartSlot. All rights reserved.</div>
+</div></body></html>";
+            await SendEmail(toEmail, ownerName, "Booking Cancelled - SmartSlot", html);
+        }
 
         // ── Slot Available Notification ──
         public async Task SendSlotAvailableEmail(string toEmail, string customerName,
