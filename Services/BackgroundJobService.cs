@@ -35,6 +35,16 @@ namespace SmartSlot.Services
                     var emailService = scope.ServiceProvider.GetRequiredService<EmailService>();
                     var hub = scope.ServiceProvider.GetRequiredService<IHubContext<ParkingHub>>();
                     var pushService = scope.ServiceProvider.GetRequiredService<PushNotificationService>();
+                    var now = DateTime.UtcNow;
+                    var istNow = now.AddHours(5.5);
+                    Console.WriteLine($"⏰ Background check — UTC: {now:HH:mm:ss}  IST: {istNow:HH:mm:ss}");
+
+                    // ADD THESE:
+                    Console.WriteLine($"📦 Bookings pending 1-hour alert: {context.Bookings.Count(b => !b.OneHourAlertSent)}");
+                    Console.WriteLine($"📦 Bookings pending review email: {context.Bookings.Count(b => !b.ReviewSmsSent && b.BookingTo <= now)}");
+                    Console.WriteLine($"📦 Bookings pending exit scan email: {context.Bookings.Count(b => !b.ExitScanAlertSent && !b.ExitConfirmed && b.BookingTo <= now)}");
+                    Console.WriteLine($"📦 Bookings pending penalty check: {context.Bookings.Count(b => !b.ExitConfirmed && !b.PenaltyApplied && b.BookingTo <= now.AddMinutes(-15))}");
+                    Console.WriteLine($"🔔 Pending notify requests: {context.SlotNotifyRequests.Count(n => !n.NotificationSent)}");
                     await RunJobsAsync(context, emailService, hub, pushService);
                 }
                 catch (Exception ex)
@@ -44,6 +54,7 @@ namespace SmartSlot.Services
                 await Task.Delay(TimeSpan.FromSeconds(60), stoppingToken);
             }
         }
+
 
         private async Task RunJobsAsync(
             ApplicationDbContext context,
