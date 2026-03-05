@@ -10,7 +10,7 @@
     var istNow = ViewBag.IstNow as string ?? DateTime.UtcNow.AddHours(5.5).ToString("yyyy-MM-ddTHH:mm");
     var locationName = ViewBag.LocationName as string ?? "";
 
-    // UPI deep link: owner has UPI ID, no QR image needed
+    // UPI: owner has UPI ID set
     var isUpi = slot != null && slot.PaymentMode?.ToLower().Contains("upi") == true && !string.IsNullOrEmpty(slot.OwnerUpiId);
 }
 
@@ -53,42 +53,24 @@
     .pp-price{font-family:'Poppins',sans-serif;font-weight:800;font-size:1.5rem;color:var(--green);}
     .pp-note{font-size:0.75rem;color:var(--muted);}
 
-    /* ── UPI DEEP LINK SECTION ── */
+    /* UPI SECTION */
     .upi-pay-box{padding:22px;background:rgba(139,92,246,0.07);border:1px solid rgba(139,92,246,0.22);border-radius:16px;margin-bottom:16px;}
     .upi-pay-title{font-size:0.95rem;font-weight:700;color:#a78bfa;margin-bottom:4px;display:flex;align-items:center;gap:8px;}
     .upi-pay-subtitle{font-size:0.75rem;color:var(--muted);margin-bottom:18px;}
-
-    /* Amount display */
     .upi-amount-row{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.15);border-radius:10px;margin-bottom:16px;}
     .upi-amount-label{font-size:0.8rem;color:var(--muted);}
     .upi-amount-val{font-family:'Poppins',sans-serif;font-size:1.25rem;font-weight:800;color:var(--green);}
-
-    /* Pay button */
-    .btn-upi-pay{
-        width:100%;padding:14px 20px;border:none;border-radius:12px;cursor:pointer;
-        background:linear-gradient(90deg,#7c3aed,#6d28d9);color:#fff;
-        font-family:'Inter',sans-serif;font-weight:700;font-size:0.95rem;
-        box-shadow:0 6px 20px rgba(109,40,217,0.35);transition:all 0.25s;
-        display:flex;align-items:center;justify-content:center;gap:10px;
-        margin-bottom:14px;
-    }
-    .btn-upi-pay:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(109,40,217,0.45);}
-    .btn-upi-pay:active{transform:translateY(0);}
-    .btn-upi-pay svg{width:22px;height:22px;flex-shrink:0;}
-
-    /* UPI ID copy row */
+    .btn-upi-pay{width:100%;padding:14px 20px;border:none;border-radius:12px;cursor:pointer;background:linear-gradient(90deg,#7c3aed,#6d28d9);color:#fff;font-family:'Inter',sans-serif;font-weight:700;font-size:0.95rem;box-shadow:0 6px 20px rgba(109,40,217,0.35);transition:all 0.25s;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:14px;}
+    .btn-upi-pay:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 10px 28px rgba(109,40,217,0.45);}
+    .btn-upi-pay:disabled{opacity:0.45;cursor:not-allowed;transform:none;}
     .upi-id-row{display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.07);border-radius:10px;margin-bottom:14px;}
     .upi-id-label{font-size:0.72rem;color:var(--muted);white-space:nowrap;}
     .upi-id-val{font-size:0.85rem;color:#c4b5fd;font-weight:600;flex:1;word-break:break-all;}
     .btn-copy-upi{padding:5px 12px;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.25);border-radius:7px;color:#a78bfa;font-size:0.72rem;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s;}
     .btn-copy-upi:hover{background:rgba(139,92,246,0.28);}
-
-    /* Steps */
     .upi-steps{list-style:none;padding:0;margin:0 0 14px;}
     .upi-steps li{font-size:0.78rem;color:var(--muted);margin-bottom:7px;display:flex;align-items:flex-start;gap:8px;}
     .upi-steps li .num{background:rgba(139,92,246,0.18);color:#a78bfa;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px;}
-
-    /* Confirmation area — shown after Pay button clicked */
     .upi-confirm-area{display:none;padding:14px 16px;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.18);border-radius:12px;margin-top:4px;}
     .upi-confirm-area.visible{display:block;animation:fadeUp 0.3s ease both;}
     .upi-paid-check{display:flex;align-items:center;gap:10px;margin-bottom:4px;}
@@ -96,12 +78,10 @@
     .upi-paid-check label{font-size:0.85rem;color:#6ee7b7;font-weight:600;cursor:pointer;}
     .upi-confirm-note{font-size:0.72rem;color:var(--muted);margin-top:6px;}
     .upi-warn{display:none;margin-top:8px;padding:8px 12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;font-size:0.75rem;color:#fca5a5;}
-
-    /* Lock notice */
     .payment-lock-notice{display:flex;align-items:center;gap:10px;padding:12px 16px;margin-bottom:8px;background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.18);border-radius:10px;font-size:0.8rem;color:#fca5a5;font-weight:500;}
     .payment-lock-notice .lock-icon{font-size:1.1rem;flex-shrink:0;}
 
-    /* Submit */
+    /* Submit button */
     .btn-submit{width:100%;padding:15px;border:none;border-radius:12px;cursor:pointer;background:linear-gradient(90deg,var(--blue-light),var(--blue));color:#fff;font-family:'Inter',sans-serif;font-weight:700;font-size:1rem;box-shadow:0 6px 20px var(--blue-glow);transition:all 0.25s;margin-top:4px;}
     .btn-submit:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 10px 28px var(--blue-glow);}
     .btn-submit:disabled{background:rgba(255,255,255,0.05)!important;color:rgba(148,163,184,0.4)!important;cursor:not-allowed!important;box-shadow:none!important;transform:none!important;border:1px solid rgba(255,255,255,0.07);}
@@ -200,7 +180,7 @@
                                value="@(ViewBag.ExtensionStart != null ? ((DateTime)ViewBag.ExtensionStart).ToString("dd MMM yyyy, hh:mm tt") : extensionStart)"
                                readonly disabled
                                style="cursor:not-allowed;opacity:0.6;border-color:rgba(249,115,22,0.3);background:rgba(249,115,22,0.06);color:#F97316;"/>
-                        <span class="locked-badge">&#128274; Locked &#8212; continues from your previous booking end time</span>
+                        <span class="locked-badge">&#128274; Locked — continues from your previous booking end time</span>
                     }
                     else
                     {
@@ -225,10 +205,9 @@
 
             @if (isUpi)
             {
-                <!-- ══ UPI DEEP LINK PAYMENT SECTION ══ -->
+                <!-- UPI DEEP LINK PAYMENT SECTION -->
                 <div class="upi-pay-box" id="upiPayBox">
                     <div class="upi-pay-title">
-                        <!-- UPI icon -->
                         <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
                             <rect x="2" y="5" width="20" height="14" rx="3" stroke="#a78bfa" stroke-width="1.5"/>
                             <path d="M7 12h4M7 12l2-2M7 12l2 2" stroke="#a78bfa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -238,30 +217,26 @@
                     </div>
                     <div class="upi-pay-subtitle">Tap the button below to open your UPI app and pay directly to the owner.</div>
 
-                    <!-- Amount row -->
                     <div class="upi-amount-row">
                         <span class="upi-amount-label">Amount to Pay</span>
                         <span class="upi-amount-val" id="upiAmountDisplay">&#8377;&#8212;</span>
                     </div>
 
-                    <!-- UPI ID row -->
                     <div class="upi-id-row">
                         <span class="upi-id-label">UPI ID:</span>
                         <span class="upi-id-val" id="upiIdDisplay">@slot.OwnerUpiId</span>
                         <button type="button" class="btn-copy-upi" onclick="copyUpiId()">&#128203; Copy</button>
                     </div>
 
-                    <!-- Steps -->
                     <ul class="upi-steps">
                         <li><span class="num">1</span>Select your booking time above to see the amount</li>
-                        <li><span class="num">2</span>Tap "Pay ₹X via UPI App" — your installed UPI apps will appear</li>
-                        <li><span class="num">3</span>Choose GPay / PhonePe / Paytm or any UPI app</li>
-                        <li><span class="num">4</span>Complete payment, then come back and tick the confirmation below</li>
+                        <li><span class="num">2</span>Tap "Pay via UPI App" — your installed UPI apps will appear</li>
+                        <li><span class="num">3</span>Choose GPay / PhonePe / Paytm or any UPI app and complete payment</li>
+                        <li><span class="num">4</span>Return here and tick the confirmation checkbox below</li>
                     </ul>
 
-                    <!-- Pay button — opens UPI deep link -->
                     <button type="button" class="btn-upi-pay" id="upiPayBtn" onclick="openUpiApp()" disabled>
-                        <svg viewBox="0 0 24 24" fill="none">
+                        <svg viewBox="0 0 24 24" fill="none" width="22" height="22">
                             <rect x="2" y="5" width="20" height="14" rx="3" fill="rgba(255,255,255,0.1)" stroke="white" stroke-width="1.5"/>
                             <path d="M7 12h4M7 12l2-2M7 12l2 2" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                             <path d="M13 9l4 3-4 3" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -269,28 +244,35 @@
                         <span id="upiPayBtnText">Select booking time first</span>
                     </button>
 
-                    <!-- Confirmation — shown after Pay button clicked -->
                     <div class="upi-confirm-area" id="upiConfirmArea">
                         <div class="upi-paid-check">
                             <input type="checkbox" id="upiPaidCheck" onchange="onPaymentChecked()"/>
-                            <label for="upiPaidCheck">&#10003;&nbsp; I have successfully completed the UPI payment</label>
+                            <label for="upiPaidCheck">I have successfully completed the UPI payment</label>
                         </div>
                         <div class="upi-confirm-note">Confirm Booking will unlock once you tick this.</div>
                     </div>
-                    <div class="upi-warn" id="upiWarn">&#9888; Please complete UPI payment first, then tick the checkbox.</div>
+                    <div class="upi-warn" id="upiWarn">&#9888; Please tap "Pay via UPI App" button first to open your UPI app.</div>
                 </div>
 
-                <!-- Lock notice above Confirm button -->
                 <div class="payment-lock-notice" id="paymentLockNotice">
                     <span class="lock-icon">&#128274;</span>
-                    <span><strong>Step 2 — Confirm Booking</strong> is locked until you tap Pay and complete the UPI payment above.</span>
+                    <span><strong>Step 2 — Confirm Booking</strong> is locked until you complete UPI payment above.</span>
                 </div>
             }
 
-            <!-- Submit — disabled for UPI until confirmed, immediately available for Cash -->
-            <button type="submit" class="btn-submit" id="submitBtn" @(isUpi ? "disabled" : "")>
-                @(isExtension ? "&#10003; Confirm Extension" : "&#10003; Confirm Booking")
-            </button>
+            <!-- ✅ FIX: button text as plain HTML, not inside Razor string expression -->
+            @if (isExtension)
+            {
+                <button type="submit" class="btn-submit" id="submitBtn" @(isUpi ? "disabled" : "")>
+                    &#10003; Confirm Extension
+                </button>
+            }
+            else
+            {
+                <button type="submit" class="btn-submit" id="submitBtn" @(isUpi ? "disabled" : "")>
+                    &#10003; Confirm Booking
+                </button>
+            }
 
         </form>
     </div>
@@ -328,17 +310,17 @@ function calcPrice() {
     if (!fr || !to) return;
     var d = (new Date(to) - new Date(fr)) / 3600000;
     if (d <= 0) {
-        document.getElementById('priceDisplay').textContent  = '₹--';
-        document.getElementById('durationNote').textContent  = 'End time must be after start';
-        document.getElementById('totalAmountField').value    = '0';
+        document.getElementById('priceDisplay').textContent = '₹--';
+        document.getElementById('durationNote').textContent = 'End time must be after start';
+        document.getElementById('totalAmountField').value   = '0';
         currentAmount = 0;
         updateUpiAmount();
         return;
     }
     currentAmount = Math.ceil(d * pricePerHour);
-    document.getElementById('priceDisplay').textContent  = '₹' + currentAmount;
-    document.getElementById('durationNote').textContent  = d.toFixed(1) + ' hr' + (d !== 1 ? 's' : '');
-    document.getElementById('totalAmountField').value    = currentAmount;
+    document.getElementById('priceDisplay').textContent = '₹' + currentAmount;
+    document.getElementById('durationNote').textContent = d.toFixed(1) + ' hr' + (d !== 1 ? 's' : '');
+    document.getElementById('totalAmountField').value   = currentAmount;
     updateUpiAmount();
 }
 
@@ -346,8 +328,7 @@ function updateUpiAmount() {
     var el = document.getElementById('upiAmountDisplay');
     if (el) el.textContent = currentAmount > 0 ? '₹' + currentAmount : '₹--';
 
-    // Enable/disable the UPI Pay button based on amount
-    var payBtn = document.getElementById('upiPayBtn');
+    var payBtn     = document.getElementById('upiPayBtn');
     var payBtnText = document.getElementById('upiPayBtnText');
     if (payBtn && isUpi) {
         if (currentAmount > 0) {
@@ -360,18 +341,11 @@ function updateUpiAmount() {
     }
 }
 
-// ── Open UPI deep link ──
+// Open UPI deep link
 function openUpiApp() {
-    if (currentAmount <= 0) {
-        alert('Please select booking times first to calculate the amount.');
-        return;
-    }
-    if (!ownerUpiId) {
-        alert('Owner UPI ID not found. Please contact support.');
-        return;
-    }
+    if (currentAmount <= 0) { alert('Please select booking times first.'); return; }
+    if (!ownerUpiId) { alert('Owner UPI ID not found. Please contact support.'); return; }
 
-    // Build UPI deep link
     var upiLink = 'upi://pay'
         + '?pa=' + encodeURIComponent(ownerUpiId)
         + '&pn=' + encodeURIComponent(ownerName)
@@ -379,44 +353,41 @@ function openUpiApp() {
         + '&cu=INR'
         + '&tn=' + encodeURIComponent('SmartSlot Parking Payment');
 
-    // Open UPI app
     window.location.href = upiLink;
     upiPayOpened = true;
 
-    // Show confirmation area after a short delay (user returns from UPI app)
+    // Show confirmation area after returning from UPI app
     setTimeout(function() {
         var confirmArea = document.getElementById('upiConfirmArea');
         if (confirmArea) {
             confirmArea.classList.add('visible');
             confirmArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-        // Change pay button style to "paid" look
         var payBtn = document.getElementById('upiPayBtn');
         if (payBtn) {
-            payBtn.style.background = 'linear-gradient(90deg,#059669,#10b981)';
-            payBtn.style.boxShadow = '0 6px 20px rgba(16,185,129,0.35)';
+            payBtn.style.background   = 'linear-gradient(90deg,#059669,#10b981)';
+            payBtn.style.boxShadow    = '0 6px 20px rgba(16,185,129,0.35)';
         }
-        var payBtnText = document.getElementById('upiPayBtnText');
-        if (payBtnText) payBtnText.textContent = '✓ Payment initiated — tick below to confirm';
+        if (document.getElementById('upiPayBtnText'))
+            document.getElementById('upiPayBtnText').textContent = 'Payment initiated — tick below to confirm';
     }, 1500);
 }
 
-// ── Copy UPI ID ──
+// Copy UPI ID
 function copyUpiId() {
     navigator.clipboard.writeText(ownerUpiId).then(function() {
         var btn = document.querySelector('.btn-copy-upi');
-        if (btn) { btn.textContent = '✓ Copied!'; setTimeout(function(){ btn.textContent = '📋 Copy'; }, 2000); }
+        if (btn) { btn.textContent = 'Copied!'; setTimeout(function(){ btn.textContent = '📋 Copy'; }, 2000); }
     }).catch(function() {
-        // Fallback
         var ta = document.createElement('textarea');
         ta.value = ownerUpiId; document.body.appendChild(ta);
         ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
         var btn = document.querySelector('.btn-copy-upi');
-        if (btn) { btn.textContent = '✓ Copied!'; setTimeout(function(){ btn.textContent = '📋 Copy'; }, 2000); }
+        if (btn) { btn.textContent = 'Copied!'; setTimeout(function(){ btn.textContent = '📋 Copy'; }, 2000); }
     });
 }
 
-// ── Checkbox unlock ──
+// Checkbox unlock — only works if Pay button was clicked first
 function onPaymentChecked() {
     var checked = document.getElementById('upiPaidCheck').checked;
     var btn     = document.getElementById('submitBtn');
@@ -424,10 +395,9 @@ function onPaymentChecked() {
     var notice  = document.getElementById('paymentLockNotice');
 
     if (checked && !upiPayOpened) {
-        // Warn if they never clicked Pay button
         document.getElementById('upiPaidCheck').checked = false;
-        document.getElementById('upiWarn').style.display = 'block';
-        document.getElementById('upiWarn').textContent = '⚠ Please tap "Pay via UPI App" button first to open your UPI app.';
+        warn.style.display = 'block';
+        warn.textContent = '⚠ Please tap "Pay via UPI App" button first to open your UPI app.';
         return;
     }
 
@@ -440,7 +410,7 @@ function onPaymentChecked() {
     }
 }
 
-// Time inputs
+// Time input listeners
 var fe = document.querySelector('input[name="BookingFrom"][type="hidden"]') || document.getElementById('bookingFrom');
 if (fe && fe.type !== 'hidden') {
     fe.addEventListener('change', function() {
@@ -450,7 +420,7 @@ if (fe && fe.type !== 'hidden') {
 }
 document.getElementById('bookingTo').addEventListener('change', calcPrice);
 
-// Form validation (safety net)
+// Form validation safety net
 function validateForm() {
     var fe = document.querySelector('input[name="BookingFrom"][type="hidden"]') || document.getElementById('bookingFrom');
     var fr = new Date(fe ? fe.value : '');
@@ -459,6 +429,11 @@ function validateForm() {
     if (to <= fr) { alert('End time must be after start time.'); return false; }
     if (isUpi) {
         var c = document.getElementById('upiPaidCheck');
+        if (!upiPayOpened) {
+            document.getElementById('upiWarn').style.display = 'block';
+            document.getElementById('upiPayBox').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return false;
+        }
         if (c && !c.checked) {
             document.getElementById('upiWarn').style.display = 'block';
             document.getElementById('upiPayBox').scrollIntoView({ behavior: 'smooth', block: 'center' });
