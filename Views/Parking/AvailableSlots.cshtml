@@ -159,14 +159,13 @@ function badgeHtml(b){
 // ✅ FIX: use parkingImagePath (matches NearbySlots JSON field name)
 function photoHtml(slot) {
     var imgPath = slot.slotImageUrl;
+    console.log('🖼 slotId:'+slot.id+' slotImageUrl:'+imgPath);
     if (imgPath && imgPath.trim() !== '') {
-        // Build absolute URL — path starts with /uploads/slot-photos/...
-        var src = imgPath.startsWith('/') ? imgPath : '/' + imgPath;
-        return '<img class="slot-thumb" src="' + src + '" alt="Slot Photo" '
-            + 'onclick="openImgModal(\'' + src + '\',\'' + escapeQuote(slot.ownerName) + ' — Parking Slot\')" '
-            + 'onerror="this.outerHTML=\'<div class=no-img>No Photo</div>\'" />';
+        return '<img class="slot-thumb" src="' + imgPath + '" alt="Slot Photo" '
+            + 'onclick="openImgModal(\'' + imgPath + '\',\'' + escapeQuote(slot.ownerName) + ' — Parking Slot\')" '
+            + 'onerror="this.outerHTML=\'<div class=no-img style=color:red;font-size:9px>IMG ERR</div>\'" />';
     }
-    return '<div class="no-img">No Photo</div>';
+    return '<div class="no-img" style="color:#f87171;font-size:9px;">NULL</div>';
 }
 
 function escapeQuote(s){ return (s||'').replace(/'/g, "\\'"); }

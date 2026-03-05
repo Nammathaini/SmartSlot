@@ -182,12 +182,14 @@ function fmtDate(iso){
 }
 
 function photoHtml(slot) {
-    if (slot.slotImageUrl) {
-        return '<img class="slot-thumb" src="'+slot.slotImageUrl+'" alt="Slot Photo" '
-            +'onclick="openImgModal(\''+slot.slotImageUrl+'\',\''+slot.ownerName+' — Parking Slot\')" '
-            +'onerror="this.parentNode.innerHTML=\'<div class=no-img>No Photo</div>\'" />';
+    var imgPath = slot.slotImageUrl;
+    console.log('🖼 slotId:'+slot.id+' slotImageUrl:'+imgPath);
+    if (imgPath && imgPath.trim() !== '') {
+        return '<img class="slot-thumb" src="' + imgPath + '" alt="Slot Photo" '
+            + 'onclick="openImgModal(\'' + imgPath + '\',\''+slot.ownerName+' — Parking Slot\')" '
+            + 'onerror="this.outerHTML=\'<div class=no-img style=color:red;font-size:9px>IMG ERR</div>\'" />';
     }
-    return '<div class="no-img">No Photo</div>';
+    return '<div class="no-img" style="color:#f87171;font-size:9px;">NULL</div>';
 }
 
 function timeRemainingHtml(bookingToIso, slotId) {
