@@ -50,7 +50,8 @@
     .pp-label{font-size:0.85rem;color:var(--muted);}
     .pp-price{font-family:'Poppins',sans-serif;font-weight:800;font-size:1.5rem;color:var(--green);}
     .pp-note{font-size:0.75rem;color:var(--muted);}
-    /* UPI QR Box — no icon, clean text only */
+
+    /* UPI QR Box */
     .upi-qr-box{padding:20px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.22);border-radius:14px;margin-bottom:16px;}
     .upi-qr-title{font-size:0.95rem;font-weight:700;color:#a78bfa;margin-bottom:3px;}
     .upi-qr-subtitle{font-size:0.75rem;color:var(--muted);margin-bottom:16px;}
@@ -66,16 +67,51 @@
     .upi-qr-steps{list-style:none;padding:0;margin:0;}
     .upi-qr-steps li{font-size:0.78rem;color:var(--muted);margin-bottom:6px;display:flex;align-items:flex-start;gap:7px;}
     .upi-qr-steps li span.num{background:rgba(139,92,246,0.18);color:#a78bfa;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px;}
+
+    /* Payment checkbox row */
     .upi-paid-check{margin-top:14px;display:flex;align-items:center;gap:8px;}
-    .upi-paid-check input[type=checkbox]{width:16px;height:16px;accent-color:#a78bfa;cursor:pointer;}
-    .upi-paid-check label{font-size:0.8rem;color:#c4b5fd;font-weight:600;cursor:pointer;}
+    .upi-paid-check input[type=checkbox]{width:18px;height:18px;accent-color:#a78bfa;cursor:pointer;flex-shrink:0;}
+    .upi-paid-check label{font-size:0.82rem;color:#c4b5fd;font-weight:600;cursor:pointer;}
     .upi-warn{display:none;margin-top:8px;padding:8px 12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;font-size:0.75rem;color:#fca5a5;}
-    .btn-submit{width:100%;padding:15px;border:none;border-radius:12px;cursor:pointer;background:linear-gradient(90deg,var(--blue-light),var(--blue));color:#fff;font-family:'Inter',sans-serif;font-weight:700;font-size:1rem;box-shadow:0 6px 20px var(--blue-glow);transition:all 0.2s;margin-top:8px;}
-    .btn-submit:hover{transform:translateY(-2px);box-shadow:0 10px 28px var(--blue-glow);}
+
+    /* Lock notice */
+    .payment-lock-notice{
+        display:flex;align-items:center;gap:10px;
+        padding:12px 16px;margin-bottom:8px;
+        background:rgba(239,68,68,0.07);
+        border:1px solid rgba(239,68,68,0.18);
+        border-radius:10px;font-size:0.8rem;color:#fca5a5;font-weight:500;
+    }
+    .payment-lock-notice .lock-icon{font-size:1.1rem;flex-shrink:0;}
+
+    /* Submit button */
+    .btn-submit{
+        width:100%;padding:15px;border:none;border-radius:12px;cursor:pointer;
+        background:linear-gradient(90deg,var(--blue-light),var(--blue));color:#fff;
+        font-family:'Inter',sans-serif;font-weight:700;font-size:1rem;
+        box-shadow:0 6px 20px var(--blue-glow);transition:all 0.25s;margin-top:4px;
+    }
+    .btn-submit:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 10px 28px var(--blue-glow);}
+    .btn-submit:disabled{
+        background:rgba(255,255,255,0.05) !important;
+        color:rgba(148,163,184,0.4) !important;
+        cursor:not-allowed !important;
+        box-shadow:none !important;
+        transform:none !important;
+        border:1px solid rgba(255,255,255,0.07);
+    }
+
     .back-link{display:inline-flex;align-items:center;gap:5px;color:var(--muted);text-decoration:none;font-size:0.83rem;margin-bottom:24px;transition:color 0.2s;}
     .back-link:hover{color:var(--text);}
     @@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
-    @@media(max-width:600px){.form-grid{grid-template-columns:1fr;}.slot-info{flex-direction:column;}.book-card{padding:24px 20px;}.upi-qr-layout{flex-direction:column;align-items:center;}.upi-qr-img-wrap{width:180px;height:180px;}.upi-qr-img-wrap img{width:160px;height:160px;}}
+    @@media(max-width:600px){
+        .form-grid{grid-template-columns:1fr;}
+        .slot-info{flex-direction:column;}
+        .book-card{padding:24px 20px;}
+        .upi-qr-layout{flex-direction:column;align-items:center;}
+        .upi-qr-img-wrap{width:180px;height:180px;}
+        .upi-qr-img-wrap img{width:160px;height:160px;}
+    }
 </style>
 
 <div class="orb orb1"></div>
@@ -83,18 +119,28 @@
 
 <div class="main">
     <a href="/Parking/Search" class="back-link">&#8592; Back to Search</a>
+
     <div class="page-header">
         <h1>@(isExtension ? "Extend Your Booking" : "Book Parking Slot")</h1>
         <p>@(isExtension ? "Extend your current parking duration" : "Complete your booking details below")</p>
     </div>
+
     @if (isExtension)
     {
-        <div class="ext-banner">Extension Mode &#8212; Booking starts from <strong style="margin:0 4px;">@(((DateTime)ViewBag.ExtensionStart).AddHours(5.5).ToString("dd MMM, hh:mm tt"))</strong>. Only select a new end time.</div>
+        <div class="ext-banner">
+            Extension Mode &#8212; Booking starts from
+            <strong style="margin:0 4px;">@(((DateTime)ViewBag.ExtensionStart).ToString("dd MMM, hh:mm tt"))</strong>.
+            Only select a new end time.
+        </div>
     }
+
     @if (TempData["Error"] != null)
     {
-        <div style="padding:13px 18px;margin-bottom:20px;background:rgba(220,38,38,0.1);border:1px solid rgba(220,38,38,0.28);border-radius:12px;color:#f87171;font-size:0.875rem;font-weight:500;">&#9888; @TempData["Error"]</div>
+        <div style="padding:13px 18px;margin-bottom:20px;background:rgba(220,38,38,0.1);border:1px solid rgba(220,38,38,0.28);border-radius:12px;color:#f87171;font-size:0.875rem;font-weight:500;">
+            &#9888; @TempData["Error"]
+        </div>
     }
+
     <div class="book-card">
         @if (slot != null)
         {
@@ -109,17 +155,37 @@
                 }
             </div>
         }
+
         @{ var formAction = isExtension ? "/Parking/ConfirmExtension" : "/Parking/ConfirmBooking"; }
+
         <form method="post" action="@formAction" onsubmit="return validateForm()">
-            @if (slot != null){ <input type="hidden" name="ParkingSlotId" value="@slot.Id"/><input type="hidden" name="PricePerHour" value="@slot.PricePerHour"/> }
-            @if (isExtension && existingBookingId.HasValue){ <input type="hidden" name="ExistingBookingId" value="@existingBookingId.Value"/> }
+            @if (slot != null)
+            {
+                <input type="hidden" name="ParkingSlotId" value="@slot.Id"/>
+                <input type="hidden" name="PricePerHour"  value="@slot.PricePerHour"/>
+            }
+            @if (isExtension && existingBookingId.HasValue)
+            {
+                <input type="hidden" name="ExistingBookingId" value="@existingBookingId.Value"/>
+            }
             <input type="hidden" name="totalAmount" id="totalAmountField" value="0"/>
+
             <div class="section-title">Personal Details</div>
             <div class="form-grid">
-                <div class="form-group"><label>Full Name</label><input type="text" name="CustomerName" class="form-control" placeholder="Your full name" required/></div>
-                <div class="form-group"><label>Phone Number</label><input type="tel" name="CustomerPhone" class="form-control" placeholder="+91 XXXXX XXXXX" required/></div>
-                <div class="form-group full"><label>Vehicle Number</label><input type="text" name="VehicleNumber" class="form-control" placeholder="e.g. TN 01 AB 1234" required/></div>
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" name="CustomerName" class="form-control" placeholder="Your full name" required/>
+                </div>
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <input type="tel" name="CustomerPhone" class="form-control" placeholder="+91 XXXXX XXXXX" required/>
+                </div>
+                <div class="form-group full">
+                    <label>Vehicle Number</label>
+                    <input type="text" name="VehicleNumber" class="form-control" placeholder="e.g. TN 01 AB 1234" required/>
+                </div>
             </div>
+
             <div class="divider"></div>
             <div class="section-title">Booking Duration</div>
             <div class="form-grid">
@@ -128,25 +194,39 @@
                     @if (isExtension)
                     {
                         <input type="hidden" name="BookingFrom" value="@extensionStart"/>
-                        <input type="text" id="bookingFrom" class="form-control" value="@(ViewBag.ExtensionStart != null ? ((DateTime)ViewBag.ExtensionStart).AddHours(5.5).ToString("dd MMM yyyy, hh:mm tt") : extensionStart)" readonly disabled style="cursor:not-allowed;opacity:0.6;border-color:rgba(249,115,22,0.3);background:rgba(249,115,22,0.06);color:#F97316;"/>
+                        <input type="text" id="bookingFrom" class="form-control"
+                               value="@(ViewBag.ExtensionStart != null ? ((DateTime)ViewBag.ExtensionStart).ToString("dd MMM yyyy, hh:mm tt") : extensionStart)"
+                               readonly disabled
+                               style="cursor:not-allowed;opacity:0.6;border-color:rgba(249,115,22,0.3);background:rgba(249,115,22,0.06);color:#F97316;"/>
                         <span class="locked-badge">&#128274; Locked &#8212; continues from your previous booking end time</span>
                     }
                     else
                     {
-                        <input type="datetime-local" name="BookingFrom" id="bookingFrom" class="form-control" value="@istNow" min="@istNow" required/>
+                        <input type="datetime-local" name="BookingFrom" id="bookingFrom"
+                               class="form-control" value="@istNow" min="@istNow" required/>
                     }
                 </div>
-                <div class="form-group"><label>To</label><input type="datetime-local" name="BookingTo" id="bookingTo" class="form-control" min="@(isExtension ? extensionStart : istNow)" required/></div>
+                <div class="form-group">
+                    <label>To</label>
+                    <input type="datetime-local" name="BookingTo" id="bookingTo"
+                           class="form-control" min="@(isExtension ? extensionStart : istNow)" required/>
+                </div>
             </div>
+
             <div class="price-preview">
-                <div><div class="pp-label">Estimated Cost</div><div class="pp-note" id="durationNote">Select times to calculate</div></div>
+                <div>
+                    <div class="pp-label">Estimated Cost</div>
+                    <div class="pp-note" id="durationNote">Select times to calculate</div>
+                </div>
                 <div class="pp-price" id="priceDisplay">&#8377;&#8212;</div>
             </div>
+
             @if (hasUpiQr)
             {
+                <!-- ══ STEP 1: Pay ══ -->
                 <div class="upi-qr-box" id="upiQrBox">
-                    <div class="upi-qr-title">Scan &amp; Pay via UPI</div>
-                    <div class="upi-qr-subtitle">Scan the QR below using GPay, PhonePe, Paytm or any UPI app and pay directly to the owner</div>
+                    <div class="upi-qr-title">&#128179; Step 1 — Scan &amp; Pay via UPI</div>
+                    <div class="upi-qr-subtitle">Pay the owner first using any UPI app. Confirm Booking button unlocks only after you tick the payment confirmation below.</div>
                     <div class="upi-qr-layout">
                         <div class="upi-qr-img-wrap">
                             <img src="@slot.UpiQrImagePath" alt="Owner UPI QR Code"/>
@@ -156,32 +236,127 @@
                             <div class="upi-qr-owner">Pay to: <strong>@slot.OwnerName</strong></div>
                             <ul class="upi-qr-steps">
                                 <li><span class="num">1</span>Open GPay / PhonePe / Paytm / any UPI app</li>
-                                <li><span class="num">2</span>Tap "Scan QR" and scan the code on the left</li>
+                                <li><span class="num">2</span>Tap "Scan QR" and scan the QR on the left</li>
                                 <li><span class="num">3</span>Enter the amount shown above and pay</li>
-                                <li><span class="num">4</span>Once payment is done, check the box below</li>
+                                <li><span class="num">4</span>After payment succeeds, tick the checkbox below</li>
                             </ul>
                             <div class="upi-paid-check">
-                                <input type="checkbox" id="upiPaidCheck" onchange="togglePaidCheck()"/>
-                                <label for="upiPaidCheck">I have completed the UPI payment</label>
+                                <input type="checkbox" id="upiPaidCheck" onchange="onPaymentChecked()"/>
+                                <label for="upiPaidCheck">&#10003;&nbsp; I have successfully completed the UPI payment</label>
                             </div>
-                            <div class="upi-warn" id="upiWarn">Please complete UPI payment and check the box before confirming your booking.</div>
+                            <div class="upi-warn" id="upiWarn">
+                                &#9888; Complete UPI payment first, then tick the box to unlock Confirm Booking.
+                            </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Lock notice above button -->
+                <div class="payment-lock-notice" id="paymentLockNotice">
+                    <span class="lock-icon">&#128274;</span>
+                    <span><strong>Step 2 — Confirm Booking</strong> is locked until you complete UPI payment above and tick the checkbox.</span>
+                </div>
             }
-            <button type="submit" class="btn-submit">@(isExtension ? "Confirm Extension" : "Confirm Booking")</button>
+
+            <!-- Submit — disabled for UPI until checkbox ticked, enabled immediately for non-UPI -->
+            <button type="submit" class="btn-submit" id="submitBtn" @(hasUpiQr ? "disabled" : "")>
+                @(isExtension ? "&#10003; Confirm Extension" : "&#10003; Confirm Booking")
+            </button>
+
         </form>
     </div>
 </div>
+
 <script>
-    var pricePerHour=@(slot?.PricePerHour??0),currentAmount=0,hasUpiQr=@(hasUpiQr?"true":"false");
-    (function(){var lat=@(slot?.Latitude??0),lon=@(slot?.Longitude??0);if(!lat||!lon)return;fetch('https://nominatim.openstreetmap.org/reverse?lat='+lat+'&lon='+lon+'&format=json').then(function(r){return r.json();}).then(function(d){var el=document.getElementById('locationDisplay');if(!el)return;var a=d.address||{},p=[];if(a.road)p.push(a.road);if(a.suburb||a.neighbourhood)p.push(a.suburb||a.neighbourhood);if(a.city||a.town||a.village)p.push(a.city||a.town||a.village);el.textContent=p.length?p.join(', '):(d.display_name||'Location found');}).catch(function(){});})();
-    function calcPrice(){var fe=document.querySelector('input[name="BookingFrom"][type="hidden"]')||document.getElementById('bookingFrom'),fr=fe?fe.value:'',to=document.getElementById('bookingTo').value;if(!fr||!to)return;var d=(new Date(to)-new Date(fr))/3600000;if(d<=0){document.getElementById('priceDisplay').textContent='Rs.--';document.getElementById('durationNote').textContent='End time must be after start';document.getElementById('totalAmountField').value='0';currentAmount=0;updateQrAmount();return;}currentAmount=Math.ceil(d*pricePerHour);document.getElementById('priceDisplay').textContent='Rs.'+currentAmount;document.getElementById('durationNote').textContent=d.toFixed(1)+' hr'+(d!==1?'s':'');document.getElementById('totalAmountField').value=currentAmount;updateQrAmount();}
-    function updateQrAmount(){var el=document.getElementById('qrAmountDisplay');if(!el)return;el.textContent=currentAmount>0?'Rs.'+currentAmount:'Rs.--';}
-    function togglePaidCheck(){var w=document.getElementById('upiWarn');if(w)w.style.display='none';}
-    var fe=document.querySelector('input[name="BookingFrom"][type="hidden"]')||document.getElementById('bookingFrom');
-    if(fe&&fe.type!=='hidden'){fe.addEventListener('change',function(){document.getElementById('bookingTo').min=this.value;calcPrice();});}
-    document.getElementById('bookingTo').addEventListener('change',calcPrice);
-    function validateForm(){var fe=document.querySelector('input[name="BookingFrom"][type="hidden"]')||document.getElementById('bookingFrom'),fr=new Date(fe?fe.value:''),to=new Date(document.getElementById('bookingTo').value);if(!document.getElementById('bookingTo').value){alert('Please select an end time.');return false;}if(to<=fr){alert('End time must be after start time.');return false;}if(hasUpiQr){var c=document.getElementById('upiPaidCheck');if(c&&!c.checked){document.getElementById('upiWarn').style.display='block';document.getElementById('upiQrBox').scrollIntoView({behavior:'smooth',block:'center'});return false;}}return true;}
-    calcPrice();
+var pricePerHour  = @(slot?.PricePerHour ?? 0);
+var currentAmount = 0;
+var hasUpiQr      = @(hasUpiQr ? "true" : "false");
+
+// Reverse geocode slot location
+(function(){
+    var lat = @(slot?.Latitude ?? 0), lon = @(slot?.Longitude ?? 0);
+    if (!lat || !lon) return;
+    fetch('https://nominatim.openstreetmap.org/reverse?lat='+lat+'&lon='+lon+'&format=json')
+        .then(r => r.json())
+        .then(function(d){
+            var el = document.getElementById('locationDisplay'); if (!el) return;
+            var a = d.address || {}, p = [];
+            if (a.road) p.push(a.road);
+            if (a.suburb || a.neighbourhood) p.push(a.suburb || a.neighbourhood);
+            if (a.city || a.town || a.village) p.push(a.city || a.town || a.village);
+            el.textContent = p.length ? p.join(', ') : (d.display_name || 'Location found');
+        }).catch(function(){});
+})();
+
+// Price calculator
+function calcPrice() {
+    var fe = document.querySelector('input[name="BookingFrom"][type="hidden"]') || document.getElementById('bookingFrom');
+    var fr = fe ? fe.value : '';
+    var to = document.getElementById('bookingTo').value;
+    if (!fr || !to) return;
+    var d = (new Date(to) - new Date(fr)) / 3600000;
+    if (d <= 0) {
+        document.getElementById('priceDisplay').textContent  = '₹--';
+        document.getElementById('durationNote').textContent  = 'End time must be after start';
+        document.getElementById('totalAmountField').value    = '0';
+        currentAmount = 0; updateQrAmount(); return;
+    }
+    currentAmount = Math.ceil(d * pricePerHour);
+    document.getElementById('priceDisplay').textContent   = '₹' + currentAmount;
+    document.getElementById('durationNote').textContent   = d.toFixed(1) + ' hr' + (d !== 1 ? 's' : '');
+    document.getElementById('totalAmountField').value     = currentAmount;
+    updateQrAmount();
+}
+
+function updateQrAmount() {
+    var el = document.getElementById('qrAmountDisplay');
+    if (el) el.textContent = currentAmount > 0 ? '₹' + currentAmount : '₹--';
+}
+
+// ✅ Checkbox toggles button lock
+function onPaymentChecked() {
+    var checked = document.getElementById('upiPaidCheck').checked;
+    var btn     = document.getElementById('submitBtn');
+    var warn    = document.getElementById('upiWarn');
+    var notice  = document.getElementById('paymentLockNotice');
+
+    btn.disabled = !checked;
+
+    if (checked) {
+        if (warn)   warn.style.display   = 'none';
+        if (notice) notice.style.display = 'none';
+    } else {
+        if (notice) notice.style.display = 'flex';
+    }
+}
+
+// Time inputs
+var fe = document.querySelector('input[name="BookingFrom"][type="hidden"]') || document.getElementById('bookingFrom');
+if (fe && fe.type !== 'hidden') {
+    fe.addEventListener('change', function() {
+        document.getElementById('bookingTo').min = this.value;
+        calcPrice();
+    });
+}
+document.getElementById('bookingTo').addEventListener('change', calcPrice);
+
+// Form validation (safety net)
+function validateForm() {
+    var fe = document.querySelector('input[name="BookingFrom"][type="hidden"]') || document.getElementById('bookingFrom');
+    var fr = new Date(fe ? fe.value : '');
+    var to = new Date(document.getElementById('bookingTo').value);
+    if (!document.getElementById('bookingTo').value) { alert('Please select an end time.'); return false; }
+    if (to <= fr) { alert('End time must be after start time.'); return false; }
+    if (hasUpiQr) {
+        var c = document.getElementById('upiPaidCheck');
+        if (c && !c.checked) {
+            document.getElementById('upiWarn').style.display = 'block';
+            document.getElementById('upiQrBox').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return false;
+        }
+    }
+    return true;
+}
+
+calcPrice();
 </script>

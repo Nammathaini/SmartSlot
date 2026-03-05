@@ -99,7 +99,6 @@ namespace SmartSlot.Controllers
             if (HttpContext.Session.GetString("UserId") == null)
                 return RedirectToAction("Signin", "Auth", new { returnUrl = HttpContext.Request.Path });
 
-            // ── Save UPI QR image if uploaded ──
             if (upiQrImage != null && upiQrImage.Length > 0)
             {
                 var uploadsDir = Path.Combine(_env.WebRootPath, "uploads", "upi-qr");
@@ -117,7 +116,6 @@ namespace SmartSlot.Controllers
                 Console.WriteLine($"📷 UPI QR saved: {slot.UpiQrImagePath}");
             }
 
-            // Always QR Exit — generate token
             slot.ExitMethod = "QR";
             slot.QrToken = Guid.NewGuid().ToString("N");
             Console.WriteLine($"📷 QR Exit — Token generated: {slot.QrToken}");
@@ -180,9 +178,7 @@ namespace SmartSlot.Controllers
             var userId = HttpContext.Session.GetString("UserId");
             var user = _context.Users.FirstOrDefault(u => u.Id.ToString() == userId);
 
-            var bookingFromUtc = DateTime.SpecifyKind(BookingFrom.AddHours(-5.5), DateTimeKind.Utc);
-            var bookingToUtc = DateTime.SpecifyKind(BookingTo.AddHours(-5.5), DateTimeKind.Utc);
-
+            // ✅ FIX: DB stores IST — save as-is, no UTC conversion
             var booking = new Booking
             {
                 ParkingSlotId = ParkingSlotId,
@@ -190,8 +186,8 @@ namespace SmartSlot.Controllers
                 CustomerPhone = CustomerPhone,
                 CustomerEmail = user?.Email ?? "",
                 VehicleNumber = VehicleNumber,
-                BookingFrom = bookingFromUtc,
-                BookingTo = bookingToUtc,
+                BookingFrom = BookingFrom,
+                BookingTo = BookingTo,
                 ReviewSmsSent = false,
                 ReviewSubmitted = false,
                 OneHourAlertSent = false,
@@ -203,7 +199,7 @@ namespace SmartSlot.Controllers
             _context.Bookings.Add(booking);
             _context.SaveChanges();
 
-            Console.WriteLine($"✅ Booking saved — Id:{booking.Id} FromUTC:{bookingFromUtc} ToUTC:{bookingToUtc}");
+            Console.WriteLine($"✅ Booking saved — Id:{booking.Id} From:{BookingFrom} To:{BookingTo}");
 
             try
             {
@@ -218,8 +214,8 @@ namespace SmartSlot.Controllers
                         vehicleNumber: booking.VehicleNumber,
                         pricePerHour: slot.PricePerHour,
                         totalAmount: (double)totalAmount,
-                        bookingFrom: bookingFromUtc,
-                        bookingTo: bookingToUtc,
+                        bookingFrom: BookingFrom,
+                        bookingTo: BookingTo,
                         paymentMode: slot.PaymentMode,
                         qrToken: slot.QrToken
                     );
@@ -230,10 +226,11 @@ namespace SmartSlot.Controllers
                 Console.WriteLine($"📧 Booking email failed: {ex.Message}");
             }
 
+            // ✅ FIX: TempData cannot serialize double — store as string
             TempData["PaymentMode"] = slot.PaymentMode;
             TempData["OwnerUpiId"] = slot.OwnerUpiId ?? "";
             TempData["OwnerName"] = slot.OwnerName;
-            TempData["TotalAmount"] = (double)totalAmount;
+            TempData["TotalAmount"] = totalAmount.ToString("F2");
             TempData["UpiQrImagePath"] = slot.UpiQrImagePath ?? "";
 
             return RedirectToAction("BookingSuccess");
@@ -256,13 +253,11 @@ namespace SmartSlot.Controllers
             var slot = _context.ParkingSlots.Find(ParkingSlotId);
             if (slot == null) return NotFound();
 
-            var bookingToUtc = DateTime.SpecifyKind(BookingTo.AddHours(-5.5), DateTimeKind.Utc);
-
             var conflict = _context.Bookings
                 .Where(b =>
                     b.ParkingSlotId == ParkingSlotId &&
                     b.Id != ExistingBookingId &&
-                    b.BookingFrom < bookingToUtc &&
+                    b.BookingFrom < BookingTo &&
                     b.BookingTo > booking.BookingTo)
                 .FirstOrDefault();
 
@@ -272,7 +267,8 @@ namespace SmartSlot.Controllers
                 return RedirectToAction("Search");
             }
 
-            booking.BookingTo = bookingToUtc;
+            // ✅ FIX: DB stores IST — save as-is
+            booking.BookingTo = BookingTo;
             booking.OneHourAlertSent = false;
             booking.ReviewSmsSent = false;
             booking.ExitConfirmed = false;
@@ -298,7 +294,7 @@ namespace SmartSlot.Controllers
                         pricePerHour: slot.PricePerHour,
                         totalAmount: (double)totalAmount,
                         bookingFrom: booking.BookingFrom,
-                        bookingTo: bookingToUtc,
+                        bookingTo: BookingTo,
                         paymentMode: slot.PaymentMode,
                         qrToken: slot.QrToken
                     );
@@ -309,10 +305,11 @@ namespace SmartSlot.Controllers
                 Console.WriteLine($"📧 Extension email failed: {ex.Message}");
             }
 
+            // ✅ FIX: store as string
             TempData["PaymentMode"] = slot.PaymentMode;
             TempData["OwnerUpiId"] = slot.OwnerUpiId ?? "";
             TempData["OwnerName"] = slot.OwnerName;
-            TempData["TotalAmount"] = (double)totalAmount;
+            TempData["TotalAmount"] = totalAmount.ToString("F2");
             TempData["UpiQrImagePath"] = slot.UpiQrImagePath ?? "";
 
             return RedirectToAction("BookingSuccess");
@@ -326,7 +323,8 @@ namespace SmartSlot.Controllers
             ViewBag.PaymentMode = TempData["PaymentMode"] as string ?? "";
             ViewBag.OwnerUpiId = TempData["OwnerUpiId"] as string ?? "";
             ViewBag.OwnerName = TempData["OwnerName"] as string ?? "";
-            ViewBag.TotalAmount = TempData["TotalAmount"] as double? ?? 0;
+            // ✅ FIX: parse back from string
+            ViewBag.TotalAmount = double.TryParse(TempData["TotalAmount"] as string, out double amt) ? amt : 0;
             ViewBag.UpiQrImagePath = TempData["UpiQrImagePath"] as string ?? "";
 
             return View();
@@ -363,7 +361,8 @@ namespace SmartSlot.Controllers
             ViewBag.BookingId = booking.Id;
             ViewBag.CustomerEmail = booking.CustomerEmail;
             ViewBag.SlotOwner = slot.OwnerName;
-            ViewBag.BookingTo = booking.BookingTo.AddHours(5.5).ToString("hh:mm tt, dd MMM");
+            // ✅ DB stores IST — no AddHours needed
+            ViewBag.BookingTo = booking.BookingTo.ToString("hh:mm tt, dd MMM");
             return View();
         }
 
@@ -392,9 +391,8 @@ namespace SmartSlot.Controllers
             if (booking.ExitConfirmed)
                 return Json(new { success = true, message = "Exit already confirmed. Safe journey!" });
 
-            var istNow = DateTime.UtcNow.AddHours(5.5);
             booking.ExitConfirmed = true;
-            booking.ExitConfirmedAt = istNow;
+            booking.ExitConfirmedAt = DateTime.Now;
             booking.PenaltyApplied = false;
             _context.Bookings.Update(booking);
             slot.IsBooked = false;
@@ -434,12 +432,15 @@ namespace SmartSlot.Controllers
             }
         }
 
+        // ✅ FIX: Route attribute catches /Parking/Review/26
+        //         Old code had param "bookingId" but route segment is "id" — mismatch caused "Invalid booking ID"
         [HttpGet]
-        public IActionResult Review(int bookingId)
+        [Route("Parking/Review/{id:int}")]
+        public IActionResult Review(int id)
         {
-            if (bookingId <= 0) return NotFound("Invalid booking ID");
-            var booking = _context.Bookings.FirstOrDefault(b => b.Id == bookingId);
-            if (booking == null) return NotFound();
+            if (id <= 0) return Content("Invalid booking ID");
+            var booking = _context.Bookings.FirstOrDefault(b => b.Id == id);
+            if (booking == null) return Content("Invalid booking ID");
             if (booking.ReviewSubmitted) return RedirectToAction("ReviewSuccess");
             ViewBag.BookingId = booking.Id;
             ViewBag.ParkingSlotId = booking.ParkingSlotId;
@@ -459,7 +460,7 @@ namespace SmartSlot.Controllers
                 BookingId = BookingId,
                 Rating = Rating,
                 Comment = Comment,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.Now
             };
 
             _context.Reviews.Add(review);
@@ -536,17 +537,19 @@ namespace SmartSlot.Controllers
             if (HttpContext.Session.GetString("UserId") == null)
                 return Json(new { error = "Unauthorized" });
 
-            var utcNow = DateTime.UtcNow;
+            // ✅ FIX: DB stores IST — use UtcNow+5.5 so Render (UTC) compares correctly against IST dates
+            var istNow = DateTime.UtcNow.AddHours(5.5);
 
-            DateTime? filterFromUtc = null;
-            DateTime? filterToUtc = null;
-            if (!string.IsNullOrEmpty(fromTime))
-                filterFromUtc = DateTime.Parse(fromTime).AddHours(-5.5);
-            if (!string.IsNullOrEmpty(toTime))
-                filterToUtc = DateTime.Parse(toTime).AddHours(-5.5);
+            // ✅ FIX: Input from browser is IST — parse directly, NO .AddHours(-5.5)
+            DateTime? filterFrom = null;
+            DateTime? filterTo = null;
+            if (!string.IsNullOrEmpty(fromTime)) filterFrom = DateTime.Parse(fromTime);
+            if (!string.IsNullOrEmpty(toTime)) filterTo = DateTime.Parse(toTime);
+
+            Console.WriteLine($"[NearbySlots] istNow={istNow} filterFrom={filterFrom} filterTo={filterTo}");
 
             var allSlots = _context.ParkingSlots
-                .Where(s => s.AvailableTo > utcNow)
+                .Where(s => s.AvailableTo > istNow)
                 .ToList();
 
             var nearbySlots = allSlots
@@ -555,38 +558,39 @@ namespace SmartSlot.Controllers
                     if (_distanceService.GetDistance(lat, lon, slot.Latitude, slot.Longitude) > radius)
                         return false;
 
-                    if (filterFromUtc.HasValue && filterToUtc.HasValue)
+                    if (filterFrom.HasValue && filterTo.HasValue)
                     {
-                        if (slot.AvailableFrom > filterFromUtc.Value) return false;
-                        if (slot.AvailableTo < filterToUtc.Value) return false;
+                        // Slot must fully cover the requested time window
+                        if (slot.AvailableFrom > filterFrom.Value) return false;
+                        if (slot.AvailableTo < filterTo.Value) return false;
                     }
                     return true;
                 })
                 .Select(slot =>
                 {
                     bool isBooked;
-                    if (filterFromUtc.HasValue && filterToUtc.HasValue)
+                    if (filterFrom.HasValue && filterTo.HasValue)
                     {
                         isBooked = _context.Bookings.Any(b =>
                             b.ParkingSlotId == slot.Id &&
-                            b.BookingFrom < filterToUtc.Value &&
-                            b.BookingTo > filterFromUtc.Value &&
+                            b.BookingFrom < filterTo.Value &&
+                            b.BookingTo > filterFrom.Value &&
                             !b.ExitConfirmed);
                     }
                     else
                     {
                         isBooked = _context.Bookings.Any(b =>
                             b.ParkingSlotId == slot.Id &&
-                            b.BookingFrom <= utcNow &&
-                            b.BookingTo > utcNow &&
+                            b.BookingFrom <= istNow &&
+                            b.BookingTo > istNow &&
                             !b.ExitConfirmed);
                     }
 
                     var activeBookingInfo = _context.Bookings
                         .Where(b =>
                             b.ParkingSlotId == slot.Id &&
-                            b.BookingFrom <= utcNow &&
-                            b.BookingTo > utcNow &&
+                            b.BookingFrom <= istNow &&
+                            b.BookingTo > istNow &&
                             !b.ExitConfirmed)
                         .OrderByDescending(b => b.BookingFrom)
                         .FirstOrDefault();
@@ -628,6 +632,7 @@ namespace SmartSlot.Controllers
                 })
                 .ToList();
 
+            Console.WriteLine($"[NearbySlots] Slots returned: {nearbySlots.Count}");
             return Json(nearbySlots);
         }
 
