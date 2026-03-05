@@ -54,13 +54,18 @@ namespace SmartSlot.Controllers
             if (user == null)
                 return RedirectToAction("Signin", "Auth");
 
+            // ✅ FIX: query by UserId — whoever is logged in sees their own slots/bookings
+            // No phone/name matching needed — UserId is set at slot creation time
+            var userIdInt = int.Parse(userId);
+
             var mySlots = _context.ParkingSlots
-                .Where(s => s.OwnerPhone == user.PhoneNumber)
+                .Where(s => s.UserId == userIdInt)
                 .OrderByDescending(s => s.Id)
                 .ToList();
 
+            // Bookings matched by CustomerEmail — set at booking time from session
             var myBookings = _context.Bookings
-                .Where(b => b.CustomerPhone == user.PhoneNumber)
+                .Where(b => b.CustomerEmail == user.Email)
                 .OrderByDescending(b => b.BookingFrom)
                 .ToList();
 
@@ -99,8 +104,9 @@ namespace SmartSlot.Controllers
             if (HttpContext.Session.GetString("UserId") == null)
                 return RedirectToAction("Signin", "Auth", new { returnUrl = HttpContext.Request.Path });
 
-            // ✅ UPI QR image upload removed — owner uses UPI ID only (deep link flow)
-            // UpiQrImagePath is no longer used
+            // ✅ Save UserId from session — links slot to logged-in account
+            if (int.TryParse(HttpContext.Session.GetString("UserId"), out int parsedUserId))
+                slot.UserId = parsedUserId;
 
             slot.ExitMethod = "QR";
             slot.QrToken = Guid.NewGuid().ToString("N");

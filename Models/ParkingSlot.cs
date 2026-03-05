@@ -3,6 +3,10 @@
     public class ParkingSlot
     {
         public int Id { get; set; }
+
+        // ✅ NEW: links slot to the account that created it
+        public int UserId { get; set; } = 0;
+
         public string OwnerName { get; set; } = "";
         public string OwnerPhone { get; set; } = "";
         public bool IsBooked { get; set; } = false;
@@ -16,7 +20,7 @@
         public string PaymentMode { get; set; } = "Cash";
         public string? OwnerUpiId { get; set; }
 
-        // ── UPI QR Image (uploaded by owner) ──
+        // ── UPI QR Image (kept for backwards compat, no longer used) ──
         public string? UpiQrImagePath { get; set; }
 
         public string? ParkingImageBase64 { get; set; }
