@@ -17,7 +17,7 @@ builder.Services.Configure<TwilioSettings>(
     builder.Configuration.GetSection("Twilio"));
 
 builder.Services.AddScoped<SmsService>();
-builder.Services.AddHostedService<ReviewBackgroundService>();
+
 builder.Services.AddHostedService<BackgroundJobService>();
 builder.Services.AddScoped<SmartSlot.Services.DistanceService>();
 builder.Services.AddScoped<SmartSlot.Services.VerificationService>();
