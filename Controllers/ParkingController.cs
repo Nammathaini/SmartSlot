@@ -249,10 +249,11 @@ namespace SmartSlot.Controllers
             }
             catch (Exception ex) { Console.WriteLine($"📧 Booking confirmation email failed: {ex.Message}"); }
 
-            // ── FIX 3: Owner booking notification email ──
+            // ── Owner booking notification email ──
+            // ✅ FIX: Use slot.UserId (guaranteed match) instead of OwnerPhone (can mismatch)
             try
             {
-                var owner = _context.Users.FirstOrDefault(u => u.PhoneNumber == slot.OwnerPhone);
+                var owner = _context.Users.FirstOrDefault(u => u.Id == slot.UserId);
                 if (owner != null && !string.IsNullOrEmpty(owner.Email))
                 {
                     await _emailService.SendOwnerBookingNotificationEmail(
@@ -269,6 +270,10 @@ namespace SmartSlot.Controllers
                         bookingTo: BookingTo,
                         paymentMode: slot.PaymentMode);
                     Console.WriteLine($"📧 Owner booking notification sent → Owner:{owner.Email} Booking #{booking.Id}");
+                }
+                else
+                {
+                    Console.WriteLine($"⚠️ Owner booking notification skipped — owner not found or no email. SlotUserId:{slot.UserId}");
                 }
             }
             catch (Exception ex) { Console.WriteLine($"📧 Owner booking notification failed: {ex.Message}"); }
@@ -663,10 +668,11 @@ namespace SmartSlot.Controllers
 
             var istNow = DateTime.UtcNow.AddHours(5.5);
 
+            // ✅ FIX: Convert IST filter times to UTC before comparing with DB (which stores UTC)
             DateTime? filterFrom = null;
             DateTime? filterTo = null;
-            if (!string.IsNullOrEmpty(fromTime)) filterFrom = DateTime.Parse(fromTime);
-            if (!string.IsNullOrEmpty(toTime)) filterTo = DateTime.Parse(toTime);
+            if (!string.IsNullOrEmpty(fromTime)) filterFrom = DateTime.Parse(fromTime).AddHours(-5.5);
+            if (!string.IsNullOrEmpty(toTime)) filterTo = DateTime.Parse(toTime).AddHours(-5.5);
 
             var allSlots = _context.ParkingSlots
                 .Where(s => s.AvailableTo > istNow)
@@ -689,19 +695,23 @@ namespace SmartSlot.Controllers
                     bool isBooked;
                     if (filterFrom.HasValue && filterTo.HasValue)
                     {
+                        // ✅ FIX: filterFrom/filterTo are now UTC — correct overlap check
                         isBooked = _context.Bookings.Any(b =>
                             b.ParkingSlotId == slot.Id &&
                             b.BookingFrom < filterTo.Value &&
                             b.BookingTo > filterFrom.Value &&
-                            !b.ExitConfirmed);
+                            !b.ExitConfirmed &&
+                            !b.IsCancelled);
                     }
                     else
                     {
+                        // ✅ FIX: added !b.IsCancelled so cancelled bookings don't block slot
                         isBooked = _context.Bookings.Any(b =>
                             b.ParkingSlotId == slot.Id &&
                             b.BookingFrom <= istNow &&
                             b.BookingTo > istNow &&
-                            !b.ExitConfirmed);
+                            !b.ExitConfirmed &&
+                            !b.IsCancelled);
                     }
 
                     var activeBookingInfo = _context.Bookings
