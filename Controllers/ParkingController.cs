@@ -197,6 +197,7 @@ namespace SmartSlot.Controllers
             {
                 if (user != null && !string.IsNullOrEmpty(user.Email))
                 {
+                    // ✅ Customer confirmation mail
                     await _emailService.SendBookingConfirmationEmail(
                         toEmail: user.Email,
                         customerName: booking.CustomerName,
@@ -209,8 +210,34 @@ namespace SmartSlot.Controllers
                         bookingFrom: BookingFrom,
                         bookingTo: BookingTo,
                         paymentMode: slot.PaymentMode,
-                        qrToken: slot.QrToken
+                        qrToken: slot.QrToken,
+                        latitude: slot.Latitude,
+                        longitude: slot.Longitude
                     );
+                }
+
+                // ✅ NEW: Owner notification mail — look up owner's account by UserId on slot
+                if (slot.UserId > 0)
+                {
+                    var ownerUser = _context.Users.FirstOrDefault(u => u.Id == slot.UserId);
+                    if (ownerUser != null && !string.IsNullOrEmpty(ownerUser.Email))
+                    {
+                        await _emailService.SendOwnerBookingNotificationEmail(
+                            toEmail: ownerUser.Email,
+                            ownerName: slot.OwnerName,
+                            customerName: booking.CustomerName,
+                            customerPhone: booking.CustomerPhone,
+                            customerEmail: user?.Email ?? "",
+                            vehicleType: slot.VehicleType,
+                            vehicleNumber: booking.VehicleNumber,
+                            pricePerHour: slot.PricePerHour,
+                            totalAmount: (double)totalAmount,
+                            bookingFrom: BookingFrom,
+                            bookingTo: BookingTo,
+                            paymentMode: slot.PaymentMode
+                        );
+                        Console.WriteLine($"📧 Owner notification sent → {ownerUser.Email}");
+                    }
                 }
             }
             catch (Exception ex)
@@ -288,7 +315,9 @@ namespace SmartSlot.Controllers
                         bookingFrom: booking.BookingFrom,
                         bookingTo: BookingTo,
                         paymentMode: slot.PaymentMode,
-                        qrToken: slot.QrToken
+                        qrToken: slot.QrToken,
+                        latitude: slot.Latitude,
+                        longitude: slot.Longitude
                     );
                 }
             }

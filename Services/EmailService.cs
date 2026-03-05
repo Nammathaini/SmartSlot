@@ -16,7 +16,7 @@ namespace SmartSlot.Services
             _httpClient = httpClient;
         }
 
-        // ── Slot Added Confirmation ──
+        // ── Slot Added Confirmation (to owner) ──
         public async Task SendSlotAddedEmail(string toEmail, string ownerName, string vehicleType,
             double pricePerHour, DateTime availableFrom, DateTime availableTo, string paymentMode,
             string qrToken = "")
@@ -69,12 +69,86 @@ namespace SmartSlot.Services
             await SendEmail(toEmail, ownerName, "✅ Your Parking Slot is Now Live — SmartSlot", html);
         }
 
-        // ── Booking Confirmation ──
+        // ── ✅ NEW: Owner Notification when slot is booked by a customer ──
+        public async Task SendOwnerBookingNotificationEmail(
+            string toEmail, string ownerName,
+            string customerName, string customerPhone, string customerEmail,
+            string vehicleType, string vehicleNumber,
+            double pricePerHour, double totalAmount,
+            DateTime bookingFrom, DateTime bookingTo,
+            string paymentMode)
+        {
+            var html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>
+<style>
+  body{{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0;}}
+  .container{{max-width:520px;margin:30px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.1);}}
+  .header{{background:linear-gradient(135deg,#0f766e,#0d9488);padding:30px;text-align:center;}}
+  .header h1{{color:white;margin:0;font-size:24px;}}
+  .header p{{color:rgba(255,255,255,0.85);margin:6px 0 0;font-size:14px;}}
+  .body{{padding:28px 32px;}}
+  .badge{{display:inline-block;background:#ccfbf1;color:#0f766e;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:20px;}}
+  .section-title{{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#888;margin:20px 0 10px;}}
+  .detail-row{{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid #f0f0f0;}}
+  .detail-row:last-child{{border-bottom:none;}}
+  .detail-label{{color:#888;font-size:13px;}}
+  .detail-value{{color:#111;font-size:14px;font-weight:600;}}
+  .total-box{{background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:16px;text-align:center;margin:20px 0;}}
+  .total-box .amount{{font-size:28px;font-weight:800;color:#16a34a;}}
+  .total-box .label{{color:#555;font-size:13px;margin-top:4px;}}
+  .info-note{{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px;color:#1d4ed8;font-size:13px;line-height:1.6;margin-top:16px;}}
+  .footer{{background:#f9f9f9;padding:18px 32px;text-align:center;color:#aaa;font-size:12px;border-top:1px solid #eee;}}
+</style></head>
+<body><div class='container'>
+  <div class='header'><h1>🅿 SmartSlot</h1><p>Your slot has been booked!</p></div>
+  <div class='body'>
+    <span class='badge'>🎉 New Booking Received</span>
+    <h2 style='color:#111;font-size:18px;margin-bottom:6px;'>Hi {ownerName},</h2>
+    <p style='color:#555;font-size:14px;margin-bottom:4px;'>Your parking slot has been successfully booked by a customer. Here are the details:</p>
+
+    <div class='section-title'>Customer Details</div>
+    <div class='detail-row'><span class='detail-label'>Customer Name</span><span class='detail-value'>{customerName}</span></div>
+    <div class='detail-row'><span class='detail-label'>Customer Phone</span><span class='detail-value'>{customerPhone}</span></div>
+    <div class='detail-row'><span class='detail-label'>Customer Email</span><span class='detail-value'>{customerEmail}</span></div>
+    <div class='detail-row'><span class='detail-label'>Vehicle Number</span><span class='detail-value'>{vehicleNumber}</span></div>
+
+    <div class='section-title'>Booking Details</div>
+    <div class='detail-row'><span class='detail-label'>Vehicle Type</span><span class='detail-value'>{vehicleType}</span></div>
+    <div class='detail-row'><span class='detail-label'>Booking From</span><span class='detail-value'>{bookingFrom:dd MMM yyyy, hh:mm tt}</span></div>
+    <div class='detail-row'><span class='detail-label'>Booking To</span><span class='detail-value'>{bookingTo:dd MMM yyyy, hh:mm tt}</span></div>
+    <div class='detail-row'><span class='detail-label'>Rate</span><span class='detail-value'>₹{pricePerHour}/hr</span></div>
+    <div class='detail-row'><span class='detail-label'>Payment Mode</span><span class='detail-value'>{paymentMode}</span></div>
+
+    <div class='total-box'>
+      <div class='amount'>₹{totalAmount:F2}</div>
+      <div class='label'>Total Amount to Collect</div>
+    </div>
+
+    <div class='info-note'>
+      ℹ️ The customer has been notified. Please ensure your slot is ready and the QR code is displayed at the spot for exit verification.
+    </div>
+  </div>
+  <div class='footer'>2025 SmartSlot. All rights reserved.</div>
+</div></body></html>";
+
+            await SendEmail(toEmail, ownerName, "🎉 Your Slot Has Been Booked — SmartSlot", html);
+        }
+
+        // ── ✅ UPDATED: Customer Booking Confirmation — redesigned with location ──
         public async Task SendBookingConfirmationEmail(string toEmail, string customerName,
             string ownerName, string ownerPhone, string vehicleType, string vehicleNumber,
             double pricePerHour, double totalAmount, DateTime bookingFrom, DateTime bookingTo,
-            string paymentMode, string qrToken = "")
+            string paymentMode, string qrToken = "",
+            double latitude = 0, double longitude = 0)
         {
+            // ✅ Times are already IST from DB — no AddHours needed
+            var locationLink = (latitude != 0 && longitude != 0)
+                ? $"https://www.google.com/maps?q={latitude},{longitude}"
+                : "";
+
+            var locationRow = !string.IsNullOrEmpty(locationLink)
+                ? $"<div class='detail-row'><span class='detail-label'>Slot Location</span><span class='detail-value'><a href='{locationLink}' style='color:#2563eb;'>View on Map →</a></span></div>"
+                : "";
+
             var html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>
 <style>
   body{{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0;}}
@@ -90,6 +164,7 @@ namespace SmartSlot.Services
   .detail-label{{color:#888;font-size:13px;}}
   .detail-value{{color:#111;font-size:14px;font-weight:600;}}
   .badge{{display:inline-block;background:#dbeafe;color:#2563eb;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:20px;}}
+  .section-title{{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#888;margin:20px 0 10px;}}
   .total-box{{background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:16px;text-align:center;margin:20px 0;}}
   .total-box .amount{{font-size:28px;font-weight:800;color:#16a34a;}}
   .total-box .label{{color:#555;font-size:13px;margin-top:4px;}}
@@ -103,19 +178,26 @@ namespace SmartSlot.Services
   <div class='body'>
     <span class='badge'>✅ Booking Confirmed</span>
     <h2>Hi {customerName},</h2>
-    <p>Your parking slot has been successfully booked. Here are your booking details:</p>
+    <p>Your parking slot has been successfully booked. Here are your details:</p>
+
+    <div class='section-title'>Owner & Slot Info</div>
     <div class='detail-row'><span class='detail-label'>Owner Name</span><span class='detail-value'>{ownerName}</span></div>
     <div class='detail-row'><span class='detail-label'>Owner Phone</span><span class='detail-value'>{ownerPhone}</span></div>
     <div class='detail-row'><span class='detail-label'>Vehicle Type</span><span class='detail-value'>{vehicleType}</span></div>
+    <div class='detail-row'><span class='detail-label'>Payment Mode</span><span class='detail-value'>{paymentMode}</span></div>
+    {locationRow}
+
+    <div class='section-title'>Your Booking</div>
     <div class='detail-row'><span class='detail-label'>Your Vehicle No.</span><span class='detail-value'>{vehicleNumber}</span></div>
     <div class='detail-row'><span class='detail-label'>Booking From</span><span class='detail-value'>{bookingFrom:dd MMM yyyy, hh:mm tt}</span></div>
     <div class='detail-row'><span class='detail-label'>Booking To</span><span class='detail-value'>{bookingTo:dd MMM yyyy, hh:mm tt}</span></div>
     <div class='detail-row'><span class='detail-label'>Rate</span><span class='detail-value'>₹{pricePerHour}/hr</span></div>
-    <div class='detail-row'><span class='detail-label'>Payment Mode</span><span class='detail-value'>{paymentMode}</span></div>
+
     <div class='total-box'>
       <div class='amount'>₹{totalAmount:F2}</div>
       <div class='label'>Total Amount</div>
     </div>
+
     <div class='qr-notice'>
       <h4>📷 QR Exit — Important</h4>
       <p>
@@ -238,8 +320,8 @@ namespace SmartSlot.Services
         // ── 1-Hour Alert Email ──
         public async Task SendOneHourAlertEmail(string toEmail, string customerName, DateTime bookingTo, int bookingId)
         {
-            // Render runs UTC — convert once to IST for display
-            string formattedTime = bookingTo.AddHours(5.5).ToString("hh:mm tt, dd MMM yyyy");
+            // ✅ FIX: bookingTo already stored as IST in DB — no AddHours needed
+            string formattedTime = bookingTo.ToString("hh:mm tt, dd MMM yyyy");
             var extendLink = $"https://smartslot-sc9u.onrender.com/Parking/Extend/{bookingId}";
 
             var html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>
@@ -280,8 +362,8 @@ namespace SmartSlot.Services
         // ── EXIT SCAN EMAIL ──
         public async Task SendExitScanEmail(string toEmail, string customerName, DateTime bookingTo, string scanLink, int bookingId)
         {
-            // Render runs UTC — convert once to IST for display
-            string formattedTime = bookingTo.AddHours(5.5).ToString("hh:mm tt, dd MMM yyyy");
+            // ✅ FIX: bookingTo already stored as IST in DB — no AddHours needed
+            string formattedTime = bookingTo.ToString("hh:mm tt, dd MMM yyyy");
 
             var html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>
 <style>
@@ -378,8 +460,8 @@ namespace SmartSlot.Services
             string toEmail, string customerName, DateTime bookingTo,
             int bookingId, string slotOwner, string qrToken)
         {
-            // Render runs UTC — convert once to IST for display
-            string formattedTime = bookingTo.AddHours(5.5).ToString("hh:mm tt, dd MMM yyyy");
+            // ✅ FIX: bookingTo already stored as IST in DB — no AddHours needed
+            string formattedTime = bookingTo.ToString("hh:mm tt, dd MMM yyyy");
             var extendUrl = $"https://smartslot-sc9u.onrender.com/Parking/Extend/{bookingId}";
 
             var body = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>
@@ -419,9 +501,9 @@ namespace SmartSlot.Services
         // ── Penalty Email ──
         public async Task SendPenaltyEmail(string toEmail, string customerName, DateTime bookingTo, int bookingId, string slotOwner)
         {
-            // Render runs UTC — convert once to IST for display
-            string formattedTime = bookingTo.AddHours(5.5).ToString("hh:mm tt");
-            string formattedDate = bookingTo.AddHours(5.5).ToString("dd MMM yyyy");
+            // ✅ FIX: bookingTo already stored as IST in DB — no AddHours needed
+            string formattedTime = bookingTo.ToString("hh:mm tt");
+            string formattedDate = bookingTo.ToString("dd MMM yyyy");
 
             var html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>
 <style>
