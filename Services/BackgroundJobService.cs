@@ -108,7 +108,7 @@ namespace SmartSlot.Services
 
             // ── 2. Review email ───────────────────────────────────────────────
             var reviewPending = context.Bookings
-                .Where(b => !b.ReviewSmsSent && b.BookingTo <= now)
+                .Where(b => !b.ReviewSmsSent && !b.IsCancelled && b.ExitConfirmed)
                 .ToList();
 
             foreach (var booking in reviewPending)
