@@ -668,11 +668,15 @@ namespace SmartSlot.Controllers
 
             var istNow = DateTime.UtcNow.AddHours(5.5);
 
-            // ✅ FIX: Convert IST filter times to UTC before comparing with DB (which stores UTC)
-            DateTime? filterFrom = null;
-            DateTime? filterTo = null;
-            if (!string.IsNullOrEmpty(fromTime)) filterFrom = DateTime.Parse(fromTime).AddHours(-5.5);
-            if (!string.IsNullOrEmpty(toTime)) filterTo = DateTime.Parse(toTime).AddHours(-5.5);
+            // IST filter times — for slot AvailableFrom/AvailableTo (stored as IST in DB)
+            DateTime? filterFromIst = null;
+            DateTime? filterToIst = null;
+            if (!string.IsNullOrEmpty(fromTime)) filterFromIst = DateTime.Parse(fromTime);
+            if (!string.IsNullOrEmpty(toTime)) filterToIst = DateTime.Parse(toTime);
+
+            // UTC filter times — for Booking overlap (BookingFrom/BookingTo stored as UTC in DB)
+            DateTime? filterFromUtc = filterFromIst?.AddHours(-5.5);
+            DateTime? filterToUtc = filterToIst?.AddHours(-5.5);
 
             var allSlots = _context.ParkingSlots
                 .Where(s => s.AvailableTo > istNow)
@@ -683,23 +687,24 @@ namespace SmartSlot.Controllers
                 {
                     if (_distanceService.GetDistance(lat, lon, slot.Latitude, slot.Longitude) > radius)
                         return false;
-                    if (filterFrom.HasValue && filterTo.HasValue)
+                    // ✅ Use IST times — AvailableFrom/AvailableTo are stored as IST in DB
+                    if (filterFromIst.HasValue && filterToIst.HasValue)
                     {
-                        if (slot.AvailableFrom > filterFrom.Value) return false;
-                        if (slot.AvailableTo < filterTo.Value) return false;
+                        if (slot.AvailableFrom > filterFromIst.Value) return false;
+                        if (slot.AvailableTo < filterToIst.Value) return false;
                     }
                     return true;
                 })
                 .Select(slot =>
                 {
                     bool isBooked;
-                    if (filterFrom.HasValue && filterTo.HasValue)
+                    if (filterFromUtc.HasValue && filterToUtc.HasValue)
                     {
-                        // ✅ FIX: filterFrom/filterTo are now UTC — correct overlap check
+                        // ✅ Use UTC times — BookingFrom/BookingTo are stored as UTC in DB
                         isBooked = _context.Bookings.Any(b =>
                             b.ParkingSlotId == slot.Id &&
-                            b.BookingFrom < filterTo.Value &&
-                            b.BookingTo > filterFrom.Value &&
+                            b.BookingFrom < filterToUtc.Value &&
+                            b.BookingTo > filterFromUtc.Value &&
                             !b.ExitConfirmed &&
                             !b.IsCancelled);
                     }
