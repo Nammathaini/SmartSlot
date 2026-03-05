@@ -10,7 +10,6 @@
         --dark:#0F172A;--surface:rgba(20,30,48,0.72);--border:rgba(255,255,255,0.08);
         --text:#f1f5f9;--text-dim:rgba(241,245,249,0.45);
     }
-    /* No body background — _Layout handles the parking photo + blue overlay */
     .page-wrap{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:40px 20px 60px;}
     .page-title{font-family:'Poppins',sans-serif;font-size:24px;font-weight:700;margin-bottom:28px;text-align:center;color:#f1f5f9;}
     .loc-section{width:100%;max-width:480px;margin-bottom:16px;}
@@ -30,25 +29,19 @@
     .field input:focus,.field select:focus{border-color:#3B82F6;}
     .field input::placeholder{color:var(--text-dim);}
     .field select option{background:#1e293b;}
+
+    /* UPI ID field styling */
+    .upi-id-box{border:1px solid rgba(139,92,246,0.25);border-radius:12px;padding:16px 18px;background:rgba(139,92,246,0.05);margin-top:4px;}
+    .upi-id-box input{background:rgba(15,23,42,0.7);border:1px solid rgba(139,92,246,0.2);}
+    .upi-id-box input:focus{border-color:#a78bfa;box-shadow:0 0 0 3px rgba(139,92,246,0.12);}
+    .upi-hint{font-size:11px;color:#a78bfa;margin-top:10px;padding:8px 12px;background:rgba(139,92,246,0.08);border-radius:8px;border:1px solid rgba(139,92,246,0.15);line-height:1.5;}
+    .upi-hint strong{color:#c4b5fd;}
+
     .upload-box{border:2px dashed rgba(255,255,255,0.1);border-radius:12px;padding:20px;text-align:center;margin-top:4px;background:rgba(255,255,255,0.02);cursor:pointer;transition:all 0.2s;}
     .upload-box:hover{border-color:rgba(16,185,129,0.4);background:rgba(16,185,129,0.03);}
     .upload-icon{font-size:32px;margin-bottom:8px;}
     .upload-text{font-size:13px;color:var(--text-dim);}
     .upload-sub{font-size:11px;color:var(--text-dim);opacity:0.6;margin-top:4px;}
-
-    /* UPI QR Upload */
-    .upi-qr-upload-box{border:2px dashed rgba(139,92,246,0.3);border-radius:12px;padding:20px;text-align:center;margin-top:4px;background:rgba(139,92,246,0.04);cursor:pointer;transition:all 0.2s;}
-    .upi-qr-upload-box:hover{border-color:rgba(139,92,246,0.6);background:rgba(139,92,246,0.08);}
-
-    /* QR icon in upload box */
-    .upi-qr-svg-icon{display:flex;justify-content:center;margin-bottom:10px;}
-    .upi-qr-svg-icon svg{width:44px;height:44px;opacity:0.75;}
-
-    .upi-qr-preview{display:none;margin-top:12px;text-align:center;}
-    .upi-qr-preview img{width:140px;height:140px;object-fit:contain;border-radius:10px;border:2px solid rgba(139,92,246,0.3);background:white;padding:6px;}
-    .upi-qr-preview-label{font-size:11px;color:#a78bfa;margin-top:6px;font-weight:600;}
-    .upi-hint{font-size:11px;color:#a78bfa;margin-top:8px;padding:8px 12px;background:rgba(139,92,246,0.08);border-radius:8px;border:1px solid rgba(139,92,246,0.15);}
-
     .analyzing-box{display:none;text-align:center;padding:16px;color:var(--text-dim);font-size:13px;}
     .analyzing-spinner{display:inline-block;width:20px;height:20px;border:2px solid rgba(255,255,255,0.1);border-top-color:#3B82F6;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:8px;}
     .ai-score-box{display:none;margin-top:16px;padding:24px 18px;border-radius:14px;text-align:center;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);}
@@ -95,43 +88,20 @@
                 <select name="PaymentMode" id="paymentMode" onchange="toggleUpi()">
                     <option value="Cash">Hard Cash Only</option>
                     <option value="UPI">UPI</option>
-                    
                 </select>
             </div>
 
+            <!-- UPI ID only — no QR upload needed -->
             <div id="upiSection" style="display:none;">
                 <div class="field">
-                    <label>Your UPI ID (optional)</label>
-                    <input type="text" name="OwnerUpiId" id="ownerUpiId" placeholder="example@upi"/>
-                </div>
-                <div class="field">
-                    <label>Upload Your UPI QR Code</label>
-                    <div class="upi-qr-upload-box" onclick="document.getElementById('upiQrFile').click()">
-                        <!-- SVG QR icon instead of crown emoji -->
-                        <div class="upi-qr-svg-icon">
-                            <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <rect x="4" y="4" width="24" height="24" rx="3" stroke="#a78bfa" stroke-width="2.5"/>
-                                <rect x="11" y="11" width="10" height="10" fill="#a78bfa" rx="1"/>
-                                <rect x="36" y="4" width="24" height="24" rx="3" stroke="#a78bfa" stroke-width="2.5"/>
-                                <rect x="43" y="11" width="10" height="10" fill="#a78bfa" rx="1"/>
-                                <rect x="4" y="36" width="24" height="24" rx="3" stroke="#a78bfa" stroke-width="2.5"/>
-                                <rect x="11" y="43" width="10" height="10" fill="#a78bfa" rx="1"/>
-                                <rect x="36" y="36" width="7" height="7" fill="#a78bfa" rx="1"/>
-                                <rect x="47" y="36" width="7" height="7" fill="#a78bfa" rx="1"/>
-                                <rect x="36" y="47" width="7" height="7" fill="#a78bfa" rx="1"/>
-                                <rect x="47" y="47" width="7" height="7" fill="#a78bfa" rx="1"/>
-                                <rect x="41" y="41" width="7" height="7" fill="#a78bfa" rx="1" opacity="0.5"/>
-                            </svg>
+                    <label>Your UPI ID</label>
+                    <div class="upi-id-box">
+                        <input type="text" name="OwnerUpiId" id="ownerUpiId" placeholder="e.g. yourname@upi or 9876543210@ybl"/>
+                        <div class="upi-hint">
+                            &#128161; Customers will pay you <strong>directly</strong> using this UPI ID via GPay, PhonePe, or any UPI app.<br/>
+                            Find your UPI ID in your GPay/PhonePe/Paytm profile settings.
                         </div>
-                        <div class="upload-text" style="color:#c4b5fd;font-weight:600;">Tap to upload your UPI QR image</div>
-                        <div class="upload-sub">Customer will scan this to pay you directly</div>
-                        <input type="file" id="upiQrFile" name="upiQrImage" accept="image/*" style="display:none;" onchange="previewUpiQr(this)"/>
                     </div>
-                    <div class="upi-qr-preview" id="upiQrPreview">
-                        <img id="upiQrPreviewImg" src="" alt="UPI QR Preview"/>
-                        <div class="upi-qr-preview-label">&#10003; QR uploaded &#8212; customers will scan this to pay</div>
-                    </div>
-                    <div class="upi-hint">&#128161; Open GPay/PhonePe/Paytm, go to your QR code, screenshot it and upload here</div>
                 </div>
             </div>
 
@@ -184,17 +154,7 @@ function toggleUpi(){
     var mode=document.getElementById("paymentMode").value;
     var show=(mode==="UPI");
     document.getElementById("upiSection").style.display=show?"block":"none";
-    if(!show){document.getElementById("ownerUpiId").value="";document.getElementById("upiQrFile").value="";document.getElementById("upiQrPreview").style.display="none";}
-}
-
-function previewUpiQr(input){
-    var file=input.files[0];if(!file)return;
-    var reader=new FileReader();
-    reader.onload=function(e){
-        document.getElementById("upiQrPreviewImg").src=e.target.result;
-        document.getElementById("upiQrPreview").style.display="block";
-    };
-    reader.readAsDataURL(file);
+    if(!show){document.getElementById("ownerUpiId").value="";}
 }
 
 function getBadgeInfo(score){
@@ -209,8 +169,8 @@ function validateLocation(){
     if(!document.getElementById("parkingImage").files.length){alert("Please upload a parking photo!");return false;}
     if(parseInt(document.getElementById("parkingScoreField").value)<35){alert("Score too low. Upload a clearer photo of your parking area.");return false;}
     var mode=document.getElementById("paymentMode").value;
-    if((mode==="UPI")&&!document.getElementById("upiQrFile").files.length){
-        alert("Please upload your UPI QR code image!");return false;
+    if(mode==="UPI" && !document.getElementById("ownerUpiId").value.trim()){
+        alert("Please enter your UPI ID!");return false;
     }
     return true;
 }

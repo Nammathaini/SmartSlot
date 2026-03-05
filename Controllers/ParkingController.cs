@@ -94,27 +94,13 @@ namespace SmartSlot.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> AddSlot(ParkingSlot slot, IFormFile upiQrImage)
+        public async Task<IActionResult> AddSlot(ParkingSlot slot)
         {
             if (HttpContext.Session.GetString("UserId") == null)
                 return RedirectToAction("Signin", "Auth", new { returnUrl = HttpContext.Request.Path });
 
-            if (upiQrImage != null && upiQrImage.Length > 0)
-            {
-                var uploadsDir = Path.Combine(_env.WebRootPath, "uploads", "upi-qr");
-                if (!Directory.Exists(uploadsDir))
-                    Directory.CreateDirectory(uploadsDir);
-
-                var ext = Path.GetExtension(upiQrImage.FileName).ToLower();
-                var fileName = $"upi_{Guid.NewGuid():N}{ext}";
-                var filePath = Path.Combine(uploadsDir, fileName);
-
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                    await upiQrImage.CopyToAsync(stream);
-
-                slot.UpiQrImagePath = $"/uploads/upi-qr/{fileName}";
-                Console.WriteLine($"📷 UPI QR saved: {slot.UpiQrImagePath}");
-            }
+            // ✅ UPI QR image upload removed — owner uses UPI ID only (deep link flow)
+            // UpiQrImagePath is no longer used
 
             slot.ExitMethod = "QR";
             slot.QrToken = Guid.NewGuid().ToString("N");
@@ -178,7 +164,7 @@ namespace SmartSlot.Controllers
             var userId = HttpContext.Session.GetString("UserId");
             var user = _context.Users.FirstOrDefault(u => u.Id.ToString() == userId);
 
-            // ✅ FIX: DB stores IST — save as-is, no UTC conversion
+            // ✅ DB stores IST — save as-is, no UTC conversion
             var booking = new Booking
             {
                 ParkingSlotId = ParkingSlotId,
@@ -226,12 +212,12 @@ namespace SmartSlot.Controllers
                 Console.WriteLine($"📧 Booking email failed: {ex.Message}");
             }
 
-            // ✅ FIX: TempData cannot serialize double — store as string
+            // ✅ TempData stored as strings (cannot serialize double)
             TempData["PaymentMode"] = slot.PaymentMode;
             TempData["OwnerUpiId"] = slot.OwnerUpiId ?? "";
             TempData["OwnerName"] = slot.OwnerName;
             TempData["TotalAmount"] = totalAmount.ToString("F2");
-            TempData["UpiQrImagePath"] = slot.UpiQrImagePath ?? "";
+            // ✅ UpiQrImagePath removed — no longer needed
 
             return RedirectToAction("BookingSuccess");
         }
@@ -267,7 +253,7 @@ namespace SmartSlot.Controllers
                 return RedirectToAction("Search");
             }
 
-            // ✅ FIX: DB stores IST — save as-is
+            // ✅ DB stores IST — save as-is
             booking.BookingTo = BookingTo;
             booking.OneHourAlertSent = false;
             booking.ReviewSmsSent = false;
@@ -305,12 +291,12 @@ namespace SmartSlot.Controllers
                 Console.WriteLine($"📧 Extension email failed: {ex.Message}");
             }
 
-            // ✅ FIX: store as string
+            // ✅ Store as strings
             TempData["PaymentMode"] = slot.PaymentMode;
             TempData["OwnerUpiId"] = slot.OwnerUpiId ?? "";
             TempData["OwnerName"] = slot.OwnerName;
             TempData["TotalAmount"] = totalAmount.ToString("F2");
-            TempData["UpiQrImagePath"] = slot.UpiQrImagePath ?? "";
+            // ✅ UpiQrImagePath removed
 
             return RedirectToAction("BookingSuccess");
         }
@@ -323,9 +309,9 @@ namespace SmartSlot.Controllers
             ViewBag.PaymentMode = TempData["PaymentMode"] as string ?? "";
             ViewBag.OwnerUpiId = TempData["OwnerUpiId"] as string ?? "";
             ViewBag.OwnerName = TempData["OwnerName"] as string ?? "";
-            // ✅ FIX: parse back from string
+            // ✅ Parse back from string
             ViewBag.TotalAmount = double.TryParse(TempData["TotalAmount"] as string, out double amt) ? amt : 0;
-            ViewBag.UpiQrImagePath = TempData["UpiQrImagePath"] as string ?? "";
+            // ✅ UpiQrImagePath removed from ViewBag — not needed
 
             return View();
         }
@@ -432,8 +418,7 @@ namespace SmartSlot.Controllers
             }
         }
 
-        // ✅ FIX: Route attribute catches /Parking/Review/26
-        //         Old code had param "bookingId" but route segment is "id" — mismatch caused "Invalid booking ID"
+        // ✅ Route attribute catches /Parking/Review/26
         [HttpGet]
         [Route("Parking/Review/{id:int}")]
         public IActionResult Review(int id)
@@ -537,10 +522,10 @@ namespace SmartSlot.Controllers
             if (HttpContext.Session.GetString("UserId") == null)
                 return Json(new { error = "Unauthorized" });
 
-            // ✅ FIX: DB stores IST — use UtcNow+5.5 so Render (UTC) compares correctly against IST dates
+            // ✅ DB stores IST — use UtcNow+5.5 so Render (UTC) compares correctly against IST dates
             var istNow = DateTime.UtcNow.AddHours(5.5);
 
-            // ✅ FIX: Input from browser is IST — parse directly, NO .AddHours(-5.5)
+            // ✅ Browser sends IST — parse directly, NO .AddHours(-5.5)
             DateTime? filterFrom = null;
             DateTime? filterTo = null;
             if (!string.IsNullOrEmpty(fromTime)) filterFrom = DateTime.Parse(fromTime);
@@ -560,7 +545,6 @@ namespace SmartSlot.Controllers
 
                     if (filterFrom.HasValue && filterTo.HasValue)
                     {
-                        // Slot must fully cover the requested time window
                         if (slot.AvailableFrom > filterFrom.Value) return false;
                         if (slot.AvailableTo < filterTo.Value) return false;
                     }
