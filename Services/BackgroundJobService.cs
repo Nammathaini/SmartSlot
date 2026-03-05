@@ -106,22 +106,30 @@ namespace SmartSlot.Services
                 }
             }
 
-            // ── 2. Review email ───────────────────────────────────────────────
+            // ── 2. Review email — only after exit confirmed, not cancelled ────
             var reviewPending = context.Bookings
                 .Where(b => !b.ReviewSmsSent && !b.IsCancelled && b.ExitConfirmed)
                 .ToList();
+
+            Console.WriteLine($"📦 Review pending count: {reviewPending.Count}");
 
             foreach (var booking in reviewPending)
             {
                 try
                 {
+                    Console.WriteLine($"📧 Attempting review email → Booking #{booking.Id} Email:{booking.CustomerEmail}");
+
                     if (!string.IsNullOrEmpty(booking.CustomerEmail))
                     {
                         await emailService.SendReviewEmail(
                             toEmail: booking.CustomerEmail,
                             customerName: booking.CustomerName,
                             bookingId: booking.Id);
-                        Console.WriteLine($"📧 Review email sent → Booking #{booking.Id}");
+                        Console.WriteLine($"✅ Review email sent → Booking #{booking.Id}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"⚠️ Review email skipped — no email for Booking #{booking.Id}");
                     }
 
                     var customer = context.Users.FirstOrDefault(u => u.PhoneNumber == booking.CustomerPhone);
@@ -137,7 +145,11 @@ namespace SmartSlot.Services
                     booking.ReviewSmsSent = true;
                     context.Bookings.Update(booking);
                 }
-                catch (Exception ex) { Console.WriteLine($"📧 Review email failed #{booking.Id}: {ex.Message}"); }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ Review email failed #{booking.Id}: {ex.Message}");
+                    Console.WriteLine($"❌ Review email stack: {ex.StackTrace}");
+                }
             }
 
             // ── 3. Exit scan alert ────────────────────────────────────────────
@@ -212,7 +224,50 @@ namespace SmartSlot.Services
                 catch (Exception ex) { Console.WriteLine($"⚠ Penalty failed #{booking.Id}: {ex.Message}"); }
             }
 
-            // ── 5. Slot-free notification (Notify Me) ─────────────────────────
+            // ── 5. Owner exit notification — slot now free after customer exit ─
+            var exitConfirmedBookings = context.Bookings
+                .Where(b => b.ExitConfirmed && !b.IsCancelled && !b.OwnerExitNotified)
+                .ToList();
+
+            foreach (var booking in exitConfirmedBookings)
+            {
+                try
+                {
+                    var slot = context.ParkingSlots.Find(booking.ParkingSlotId);
+                    if (slot != null)
+                    {
+                        var owner = context.Users.FirstOrDefault(u => u.PhoneNumber == slot.OwnerPhone);
+                        if (owner != null && !string.IsNullOrEmpty(owner.Email))
+                        {
+                            await emailService.SendOwnerSlotFreeEmail(
+                                toEmail: owner.Email,
+                                ownerName: slot.OwnerName,
+                                customerName: booking.CustomerName,
+                                customerPhone: booking.CustomerPhone,
+                                vehicleNumber: booking.VehicleNumber,
+                                bookingFrom: booking.BookingFrom.AddHours(5.5),
+                                bookingTo: booking.BookingTo.AddHours(5.5),
+                                exitConfirmedAt: (booking.ExitConfirmedAt ?? DateTime.UtcNow).AddHours(5.5));
+                            Console.WriteLine($"📧 Owner exit notification sent → Booking #{booking.Id} Owner:{owner.Email}");
+                        }
+
+                        if (owner != null)
+                        {
+                            await pushService.SendToUserAsync(
+                                owner.Id,
+                                "🅿️ Slot Now Free",
+                                $"{booking.CustomerName} confirmed exit. Your slot is now available for new bookings!",
+                                "/Parking/Dashboard");
+                        }
+                    }
+
+                    booking.OwnerExitNotified = true;
+                    context.Bookings.Update(booking);
+                }
+                catch (Exception ex) { Console.WriteLine($"❌ Owner exit notification failed #{booking.Id}: {ex.Message}"); }
+            }
+
+            // ── 6. Slot-free notification (Notify Me) ─────────────────────────
             var notifyPending = context.SlotNotifyRequests
                 .Where(n => !n.NotificationSent)
                 .ToList();
@@ -260,7 +315,7 @@ namespace SmartSlot.Services
 
             context.SaveChanges();
 
-            // ── 6. SignalR — auto-free expired slots ──────────────────────────
+            // ── 7. SignalR — auto-free expired slots ──────────────────────────
             var staleBookedSlots = context.ParkingSlots
                 .Where(s => s.IsBooked)
                 .ToList()

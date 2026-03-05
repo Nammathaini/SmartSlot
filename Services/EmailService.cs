@@ -79,6 +79,35 @@ namespace SmartSlot.Services
             await SendEmail(toEmail, ownerName, "Your Slot Has Been Booked - SmartSlot", html);
         }
 
+        // ── Owner Notified When Customer Exit is Confirmed ──
+        public async Task SendOwnerSlotFreeEmail(
+            string toEmail, string ownerName,
+            string customerName, string customerPhone,
+            string vehicleNumber, DateTime bookingFrom, DateTime bookingTo, DateTime exitConfirmedAt)
+        {
+            var dashboardLink = "https://smartslot-sc9u.onrender.com/Parking/Dashboard";
+            var html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>
+<style>body{{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0;}}.container{{max-width:520px;margin:30px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.1);}}.header{{background:linear-gradient(135deg,#10b981,#059669);padding:30px;text-align:center;}}.header h1{{color:white;margin:0;font-size:24px;}}.header p{{color:rgba(255,255,255,0.85);margin:6px 0 0;font-size:14px;}}.body{{padding:28px 32px;}}.badge{{display:inline-block;background:#dcfce7;color:#16a34a;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:20px;}}.detail-row{{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid #f0f0f0;}}.detail-row:last-child{{border-bottom:none;}}.detail-label{{color:#888;font-size:13px;}}.detail-value{{color:#111;font-size:14px;font-weight:600;}}.info-note{{background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:14px;color:#16a34a;font-size:13px;line-height:1.6;margin-top:16px;}}.btn{{display:block;text-align:center;background:linear-gradient(90deg,#10b981,#059669);color:white;text-decoration:none;padding:13px;border-radius:10px;font-size:14px;font-weight:700;margin-top:20px;}}.footer{{background:#f9f9f9;padding:18px 32px;text-align:center;color:#aaa;font-size:12px;border-top:1px solid #eee;}}</style></head>
+<body><div class='container'>
+  <div class='header'><h1>SmartSlot</h1><p>Your Slot is Now Free!</p></div>
+  <div class='body'>
+    <span class='badge'>Exit Confirmed ✅</span>
+    <h2 style='color:#111;font-size:18px;margin-bottom:6px;'>Hi {ownerName},</h2>
+    <p style='color:#555;font-size:14px;'>Your previous customer has confirmed their exit by scanning the QR code you displayed at your parking slot. Your slot is now free and available for new bookings!</p>
+    <div class='detail-row'><span class='detail-label'>Customer Name</span><span class='detail-value'>{customerName}</span></div>
+    <div class='detail-row'><span class='detail-label'>Customer Phone</span><span class='detail-value'>{customerPhone}</span></div>
+    <div class='detail-row'><span class='detail-label'>Vehicle No.</span><span class='detail-value'>{vehicleNumber}</span></div>
+    <div class='detail-row'><span class='detail-label'>Booking From</span><span class='detail-value'>{bookingFrom:dd MMM yyyy, hh:mm tt}</span></div>
+    <div class='detail-row'><span class='detail-label'>Booking To</span><span class='detail-value'>{bookingTo:dd MMM yyyy, hh:mm tt}</span></div>
+    <div class='detail-row'><span class='detail-label'>Exit Confirmed At</span><span class='detail-value'>{exitConfirmedAt:dd MMM yyyy, hh:mm tt}</span></div>
+    <div class='info-note'>🅿️ Your slot is now visible to other customers on SmartSlot and ready for new bookings.</div>
+    <a href='{dashboardLink}' class='btn'>View Dashboard</a>
+  </div>
+  <div class='footer'>2025 SmartSlot. All rights reserved.</div>
+</div></body></html>";
+            await SendEmail(toEmail, ownerName, "Your Slot is Now Free - Customer Exit Confirmed", html);
+        }
+
         // ── Customer Booking Confirmation (with Cancel button) ──
         public async Task SendBookingConfirmationEmail(string toEmail, string customerName,
             string ownerName, string ownerPhone, string vehicleType, string vehicleNumber,
@@ -91,7 +120,6 @@ namespace SmartSlot.Services
             var locationRow = !string.IsNullOrEmpty(locationLink)
                 ? $"<div class='detail-row'><span class='detail-label'>Slot Location</span><span class='detail-value'><a href='{locationLink}' style='color:#2563eb;'>View on Map</a></span></div>" : "";
 
-            // Cancel booking link — goes to CancelBooking controller
             var cancelLink = $"https://smartslot-sc9u.onrender.com/Parking/CancelBooking?bookingId={bookingId}&token={qrToken}";
 
             var html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>
@@ -101,18 +129,18 @@ namespace SmartSlot.Services
   <div class='body'>
     <span class='badge'>Booking Confirmed</span>
     <h2>Hi {customerName},</h2>
-    <p>Your parking slot has been successfully booked.</p>
+    <p>You successfully booked a parking slot .</p>
     <div class='section-title'>Owner &amp; Slot Info</div>
-    <div class='detail-row'><span class='detail-label'>Owner Name</span><span class='detail-value'>{ownerName}</span></div>
-    <div class='detail-row'><span class='detail-label'>Owner Phone</span><span class='detail-value'>{ownerPhone}</span></div>
-    <div class='detail-row'><span class='detail-label'>Vehicle Type</span><span class='detail-value'>{vehicleType}</span></div>
-    <div class='detail-row'><span class='detail-label'>Payment Mode</span><span class='detail-value'>{paymentMode}</span></div>
+    <div class='detail-row'><span class='detail-label'>Owner Name: </span><span class='detail-value'>{ownerName}</span></div>
+    <div class='detail-row'><span class='detail-label'>Owner Phone: </span><span class='detail-value'>{ownerPhone}</span></div>
+    <div class='detail-row'><span class='detail-label'>Vehicle Type: </span><span class='detail-value'>{vehicleType}</span></div>
+    <div class='detail-row'><span class='detail-label'>Payment Mode: </span><span class='detail-value'>{paymentMode}</span></div>
     {locationRow}
     <div class='section-title'>Your Booking</div>
-    <div class='detail-row'><span class='detail-label'>Vehicle No.</span><span class='detail-value'>{vehicleNumber}</span></div>
-    <div class='detail-row'><span class='detail-label'>From</span><span class='detail-value'>{bookingFrom:dd MMM yyyy, hh:mm tt}</span></div>
-    <div class='detail-row'><span class='detail-label'>To</span><span class='detail-value'>{bookingTo:dd MMM yyyy, hh:mm tt}</span></div>
-    <div class='detail-row'><span class='detail-label'>Rate</span><span class='detail-value'>Rs.{pricePerHour}/hr</span></div>
+    <div class='detail-row'><span class='detail-label'>Vehicle No.  </span><span class='detail-value'>{vehicleNumber}</span></div>
+    <div class='detail-row'><span class='detail-label'>From: </span><span class='detail-value'>{bookingFrom:dd MMM yyyy, hh:mm tt}</span></div>
+    <div class='detail-row'><span class='detail-label'>To: </span><span class='detail-value'>{bookingTo:dd MMM yyyy, hh:mm tt}</span></div>
+    <div class='detail-row'><span class='detail-label'>Rate: </span><span class='detail-value'>Rs.{pricePerHour}/hr</span></div>
     <div class='total-box'><div class='amount'>Rs.{totalAmount:F0}</div><div class='label'>Total Amount</div></div>
     <div class='qr-notice'>
       <h4>QR Exit - Important</h4>
@@ -152,6 +180,7 @@ namespace SmartSlot.Services
 </div></body></html>";
             await SendEmail(toEmail, customerName, "Your Booking Has Been Cancelled - SmartSlot", html);
         }
+
         // ── Owner Notified When Booking is Cancelled ──
         public async Task SendOwnerCancelNotificationEmail(
             string toEmail, string ownerName,
@@ -241,7 +270,6 @@ namespace SmartSlot.Services
         // ── 1-Hour Alert ──
         public async Task SendOneHourAlertEmail(string toEmail, string customerName, DateTime bookingTo, int bookingId)
         {
-            // bookingTo is stored as IST in DB — display directly, NO AddHours
             string formattedTime = bookingTo.ToString("hh:mm tt, dd MMM yyyy");
             var extendLink = $"https://smartslot-sc9u.onrender.com/Parking/Extend/{bookingId}";
             var html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>
@@ -263,7 +291,6 @@ namespace SmartSlot.Services
         // ── Exit Scan Email ──
         public async Task SendExitScanEmail(string toEmail, string customerName, DateTime bookingTo, string scanLink, int bookingId)
         {
-            // bookingTo is stored as IST in DB — display directly, NO AddHours
             string formattedTime = bookingTo.ToString("hh:mm tt, dd MMM yyyy");
             var html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>
 <style>body{{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0;}}.container{{max-width:520px;margin:30px auto;background:white;border-radius:12px;overflow:hidden;}}.header{{background:linear-gradient(135deg,#7c3aed,#4f46e5);padding:30px;text-align:center;}}.header h1{{color:white;margin:0;font-size:24px;}}.body{{padding:28px 32px;text-align:center;}}.scan-btn{{display:block;padding:16px 28px;background:linear-gradient(90deg,#7c3aed,#4f46e5);color:white;text-decoration:none;border-radius:10px;font-weight:700;font-size:16px;text-align:center;margin:0 auto 16px;}}.penalty-box{{background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:14px;color:#dc2626;font-size:13px;margin-top:16px;line-height:1.6;}}.footer{{background:#f9f9f9;padding:18px 32px;text-align:center;color:#aaa;font-size:12px;border-top:1px solid #eee;}}</style></head>
@@ -308,7 +335,6 @@ namespace SmartSlot.Services
         public async Task SendOneHourAlert(string toEmail, string customerName, DateTime bookingTo,
             int bookingId, string slotOwner, string qrToken)
         {
-            // bookingTo is stored as IST in DB — display directly, NO AddHours
             string formattedTime = bookingTo.ToString("hh:mm tt, dd MMM yyyy");
             var extendUrl = $"https://smartslot-sc9u.onrender.com/Parking/Extend/{bookingId}";
             var html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>
@@ -329,7 +355,6 @@ namespace SmartSlot.Services
         // ── Penalty Email ──
         public async Task SendPenaltyEmail(string toEmail, string customerName, DateTime bookingTo, int bookingId, string slotOwner)
         {
-            // bookingTo is stored as IST in DB — display directly, NO AddHours
             string formattedTime = bookingTo.ToString("hh:mm tt");
             string formattedDate = bookingTo.ToString("dd MMM yyyy");
             var html = $@"<!DOCTYPE html><html><head><meta charset='utf-8'/>

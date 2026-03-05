@@ -141,8 +141,6 @@ namespace SmartSlot.Controllers
             slot.IsBooked = false;
             slot.UserId = int.Parse(HttpContext.Session.GetString("UserId") ?? "0");
 
-
-
             _context.ParkingSlots.Add(slot);
             _context.SaveChanges();
 
@@ -208,7 +206,6 @@ namespace SmartSlot.Controllers
             var user = _context.Users.FirstOrDefault(u => u.Id.ToString() == userId);
 
             // ✅ KEY FIX: Browser sends IST time → convert to real UTC for storage
-            // BackgroundJobService uses DateTime.UtcNow → comparisons work correctly
             var bookingFromSave = DateTime.SpecifyKind(BookingFrom.AddHours(-5.5), DateTimeKind.Utc);
             var bookingToSave = DateTime.SpecifyKind(BookingTo.AddHours(-5.5), DateTimeKind.Utc);
 
@@ -236,6 +233,7 @@ namespace SmartSlot.Controllers
 
             Console.WriteLine($"✅ Booking saved — Id:{booking.Id} From:{bookingFromSave} To:{bookingToSave}");
 
+            // ── Customer booking confirmation email ──
             try
             {
                 if (user != null && !string.IsNullOrEmpty(user.Email))
@@ -249,7 +247,31 @@ namespace SmartSlot.Controllers
                         latitude: slot.Latitude, longitude: slot.Longitude,
                         bookingId: booking.Id);
             }
-            catch (Exception ex) { Console.WriteLine($"📧 Booking email failed: {ex.Message}"); }
+            catch (Exception ex) { Console.WriteLine($"📧 Booking confirmation email failed: {ex.Message}"); }
+
+            // ── FIX 3: Owner booking notification email ──
+            try
+            {
+                var owner = _context.Users.FirstOrDefault(u => u.PhoneNumber == slot.OwnerPhone);
+                if (owner != null && !string.IsNullOrEmpty(owner.Email))
+                {
+                    await _emailService.SendOwnerBookingNotificationEmail(
+                        toEmail: owner.Email,
+                        ownerName: slot.OwnerName,
+                        customerName: booking.CustomerName,
+                        customerPhone: booking.CustomerPhone,
+                        customerEmail: booking.CustomerEmail,
+                        vehicleType: slot.VehicleType,
+                        vehicleNumber: booking.VehicleNumber,
+                        pricePerHour: slot.PricePerHour,
+                        totalAmount: (double)totalAmount,
+                        bookingFrom: BookingFrom,
+                        bookingTo: BookingTo,
+                        paymentMode: slot.PaymentMode);
+                    Console.WriteLine($"📧 Owner booking notification sent → Owner:{owner.Email} Booking #{booking.Id}");
+                }
+            }
+            catch (Exception ex) { Console.WriteLine($"📧 Owner booking notification failed: {ex.Message}"); }
 
             if (user != null)
             {
@@ -274,7 +296,6 @@ namespace SmartSlot.Controllers
                 catch (Exception ex) { Console.WriteLine($"📡 SignalR (confirm booking) failed: {ex.Message}"); }
             });
 
-            // ✅ FIX: TempData stores string not double
             TempData["PaymentMode"] = slot.PaymentMode;
             TempData["OwnerUpiId"] = slot.OwnerUpiId ?? "";
             TempData["OwnerName"] = slot.OwnerName;
@@ -343,7 +364,6 @@ namespace SmartSlot.Controllers
             }
             catch (Exception ex) { Console.WriteLine($"📧 Extension email failed: {ex.Message}"); }
 
-            // ✅ FIX: TempData stores string not double
             TempData["PaymentMode"] = slot.PaymentMode;
             TempData["OwnerUpiId"] = slot.OwnerUpiId ?? "";
             TempData["OwnerName"] = slot.OwnerName;
@@ -365,6 +385,7 @@ namespace SmartSlot.Controllers
             ViewBag.UpiQrImagePath = TempData["UpiQrImagePath"] as string ?? "";
             return View();
         }
+
         [HttpGet]
         public async Task<IActionResult> CancelBooking(int bookingId, string token)
         {
@@ -380,24 +401,20 @@ namespace SmartSlot.Controllers
                 return RedirectToAction("Dashboard");
             }
 
-            // Mark booking cancelled
             booking.IsCancelled = true;
             booking.ExitConfirmed = true;
             _context.Bookings.Update(booking);
 
-            // Free the slot
             slot.IsBooked = false;
             _context.ParkingSlots.Update(slot);
             _context.SaveChanges();
 
-            // SignalR live update
             _ = Task.Run(async () =>
             {
                 try { await _hub.Clients.Group("map").SendAsync("SlotUpdated", new { slotId = slot.Id, isBooked = false }); }
                 catch (Exception ex) { Console.WriteLine($"📡 SignalR (cancel) failed: {ex.Message}"); }
             });
 
-            // Email to customer
             try
             {
                 if (!string.IsNullOrEmpty(booking.CustomerEmail))
@@ -412,7 +429,6 @@ namespace SmartSlot.Controllers
             }
             catch (Exception ex) { Console.WriteLine($"📧 Cancel email failed: {ex.Message}"); }
 
-            // Email to owner
             try
             {
                 var owner = _context.Users.FirstOrDefault(u => u.PhoneNumber == slot.OwnerPhone);
@@ -426,7 +442,6 @@ namespace SmartSlot.Controllers
                         bookingFrom: booking.BookingFrom.AddHours(5.5),
                         bookingTo: booking.BookingTo.AddHours(5.5),
                         paymentMode: slot.PaymentMode);
-                        
             }
             catch (Exception ex) { Console.WriteLine($"📧 Owner cancel email failed: {ex.Message}"); }
 
@@ -451,8 +466,6 @@ namespace SmartSlot.Controllers
             ViewBag.BookingId = booking.Id;
             ViewBag.CustomerEmail = booking.CustomerEmail;
             ViewBag.SlotOwner = slot.OwnerName;
-            // ✅ BookingTo stored as IST-tagged-Utc — display as-is, no conversion needed
-            // BookingTo stored as real UTC — add 5.5hrs to show IST
             ViewBag.BookingTo = booking.BookingTo.AddHours(5.5).ToString("hh:mm tt, dd MMM");
             return View();
         }
@@ -478,7 +491,6 @@ namespace SmartSlot.Controllers
                 return Json(new { success = true, message = "Exit already confirmed. Safe journey!" });
 
             booking.ExitConfirmed = true;
-            // ✅ Store exit time as IST-tagged-Utc (consistent with booking times)
             booking.ExitConfirmedAt = DateTime.SpecifyKind(DateTime.UtcNow.AddHours(5.5), DateTimeKind.Utc);
             booking.PenaltyApplied = false;
             _context.Bookings.Update(booking);
