@@ -167,9 +167,7 @@
         <a href="/Parking/AddSlot" class="action-btn">
             <span class="action-icon" style="background:rgba(16,185,129,0.1)">&#10133;</span>Add Slot
         </a>
-        <a href="#" class="action-btn" onclick="openModal('transactions');return false;">
-            <span class="action-icon" style="background:rgba(139,92,246,0.1)">&#128179;</span>Transactions
-        </a>
+        
         <a href="/Parking/Search" class="action-btn">
             <span class="action-icon" style="background:rgba(37,99,235,0.1)">&#128269;</span>Find Parking
         </a>
@@ -415,58 +413,7 @@ function openModal(type) {
             });
         }
 
-    } else if (type === 'transactions') {
-        title.innerHTML = 'Transaction History <button class="modal-close" onclick="closeModal()">Close</button>';
-        var mySlotIds = slotsData.map(function(s){ return s.id; });
-        var ownerBookings    = bookingsData.filter(function(b){ return mySlotIds.indexOf(b.parkingSlotId) !== -1; });
-        var customerBookings = bookingsData.filter(function(b){ return mySlotIds.indexOf(b.parkingSlotId) === -1; });
-        var totalEarned = ownerBookings.reduce(function(sum,b){ return sum+(b.totalAmount||0); }, 0);
-        var totalSpent  = customerBookings.reduce(function(sum,b){ return sum+(b.totalAmount||0); }, 0);
-
-        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;">'
-            + '<div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:14px;padding:18px;text-align:center;">'
-            + '<div style="font-size:10px;color:#10b981;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">&#127968; As Owner</div>'
-            + '<div style="font-family:Poppins,sans-serif;font-size:28px;font-weight:800;color:#10b981;">Rs.' + totalEarned.toFixed(0) + '</div>'
-            + '<div style="font-size:11px;color:rgba(241,245,249,0.4);margin-top:6px;">Earned from ' + ownerBookings.length + ' booking(s)</div>'
-            + '</div>'
-            + '<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:14px;padding:18px;text-align:center;">'
-            + '<div style="font-size:10px;color:#ef4444;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">&#128179; As Customer</div>'
-            + '<div style="font-family:Poppins,sans-serif;font-size:28px;font-weight:800;color:#ef4444;">Rs.' + totalSpent.toFixed(0) + '</div>'
-            + '<div style="font-size:11px;color:rgba(241,245,249,0.4);margin-top:6px;">Spent on ' + customerBookings.length + ' booking(s)</div>'
-            + '</div></div>';
-
-        if (ownerBookings.length) {
-            html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(241,245,249,0.4);margin-bottom:10px;">Owner Earnings</div>';
-            ownerBookings.forEach(function(b) {
-                html += '<div class="detail-card" style="margin-bottom:10px;">'
-                    + '<div class="dc-top">'
-                    + '<div class="dc-icon" style="background:rgba(16,185,129,0.1)">&#127968;</div>'
-                    + '<div class="dc-body">'
-                    + '<div class="dc-title">Slot #' + b.parkingSlotId + ' — ' + b.customerName + '</div>'
-                    + '<div class="dc-meta">' + b.bookingFrom + ' → ' + b.bookingTo + '</div>'
-                    + '</div>'
-                    + '<span style="font-family:Poppins,sans-serif;font-size:15px;font-weight:700;color:#10b981;white-space:nowrap;">+Rs.' + (b.totalAmount||0).toFixed(0) + '</span>'
-                    + '</div></div>';
-            });
-        }
-        if (customerBookings.length) {
-            html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(241,245,249,0.4);margin:16px 0 10px;">Customer Spending</div>';
-            customerBookings.forEach(function(b) {
-                html += '<div class="detail-card" style="margin-bottom:10px;">'
-                    + '<div class="dc-top">'
-                    + '<div class="dc-icon" style="background:rgba(239,68,68,0.1)">&#128179;</div>'
-                    + '<div class="dc-body">'
-                    + '<div class="dc-title">Slot #' + b.parkingSlotId + ' — ' + b.vehicleNumber + '</div>'
-                    + '<div class="dc-meta">' + b.bookingFrom + ' → ' + b.bookingTo + '</div>'
-                    + '</div>'
-                    + '<span style="font-family:Poppins,sans-serif;font-size:15px;font-weight:700;color:#ef4444;white-space:nowrap;">-Rs.' + (b.totalAmount||0).toFixed(0) + '</span>'
-                    + '</div></div>';
-            });
-        }
-        if (!ownerBookings.length && !customerBookings.length) {
-            html += '<div class="empty-state"><div class="empty-icon">&#128179;</div><div class="empty-text">No transactions yet.</div></div>';
-        }
-    }
+    } 
 
     body.innerHTML = html;
     document.getElementById('modalOverlay').classList.add('open');
