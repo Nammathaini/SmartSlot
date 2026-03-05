@@ -4,7 +4,7 @@
     var slots = ViewBag.MySlots as List<SmartSlot.Models.ParkingSlot> ?? new List<SmartSlot.Models.ParkingSlot>();
     var bookings = (ViewBag.MyBookings as System.Collections.IEnumerable)?.Cast<dynamic>().ToList() ?? new List<dynamic>();
     var istNow = DateTime.UtcNow.AddHours(5.5);
-    var activeBookings = bookings.Where(b => ((DateTime)b.BookingTo) > istNow && !(bool)b.ExitConfirmed).ToList();
+    var activeBookings = bookings.Where(b => ((DateTime)b.BookingTo).AddHours(5.5) > istNow && !(bool)b.ExitConfirmed && !(bool)b.IsCancelled).ToList();
     var totalBooked = bookings.Count;
 }
 
@@ -151,7 +151,7 @@ var bookingsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(bookings.
     customerName  = (string)b.CustomerName,
     bookingFrom   = ((DateTime)b.BookingFrom).AddHours(5.5).ToString("dd MMM, hh:mm tt"),
     bookingTo     = ((DateTime)b.BookingTo).AddHours(5.5).ToString("dd MMM, hh:mm tt"),
-    isActive      = ((DateTime)b.BookingTo) > istNow && !(bool)b.ExitConfirmed,
+    isActive      = ((DateTime)b.BookingTo).AddHours(5.5) > istNow && !(bool)b.ExitConfirmed && !(bool)b.IsCancelled,
     exitConfirmed = (bool)b.ExitConfirmed,
     isCancelled   = (bool)b.IsCancelled,
     totalAmount   = (double)(Math.Ceiling(((DateTime)b.BookingTo - (DateTime)b.BookingFrom).TotalHours
