@@ -236,7 +236,7 @@ namespace SmartSlot.Services
                     var slot = context.ParkingSlots.Find(booking.ParkingSlotId);
                     if (slot != null)
                     {
-                        var owner = context.Users.FirstOrDefault(u => u.PhoneNumber == slot.OwnerPhone);
+                        var owner = context.Users.FirstOrDefault(u => u.Id == slot.UserId);
                         if (owner != null && !string.IsNullOrEmpty(owner.Email))
                         {
                             await emailService.SendOwnerSlotFreeEmail(

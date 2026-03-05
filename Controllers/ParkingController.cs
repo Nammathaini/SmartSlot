@@ -431,7 +431,7 @@ namespace SmartSlot.Controllers
 
             try
             {
-                var owner = _context.Users.FirstOrDefault(u => u.PhoneNumber == slot.OwnerPhone);
+                var owner = _context.Users.FirstOrDefault(u => u.Id == slot.UserId);
                 if (owner != null && !string.IsNullOrEmpty(owner.Email))
                     await _emailService.SendOwnerCancelNotificationEmail(
                         toEmail: owner.Email,
