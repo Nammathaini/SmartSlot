@@ -134,8 +134,8 @@
             <div class="penalty-header">
                 <div class="penalty-icon">⚠️</div>
                 <div>
-                    <div class="penalty-title">Penalty Running — @penaltyBookings.Count Overdue Booking(s)</div>
-                    <div class="penalty-sub">Tap to see live penalty timer &amp; amount</div>
+                    <div class="penalty-title">⚠️ Penalty Running — @penaltyBookings.Count Overdue Booking(s)</div>
+                    <div class="penalty-sub">Tap to view Owner &amp; Customer penalty timers</div>
                 </div>
             </div>
             <div class="penalty-items">
@@ -167,7 +167,9 @@
         <a href="/Parking/AddSlot" class="action-btn">
             <span class="action-icon" style="background:rgba(16,185,129,0.1)">&#10133;</span>Add Slot
         </a>
-        
+        <a href="#" class="action-btn" onclick="openModal('transactions');return false;">
+            <span class="action-icon" style="background:rgba(139,92,246,0.1)">&#128179;</span>Transactions
+        </a>
         <a href="/Parking/Search" class="action-btn">
             <span class="action-icon" style="background:rgba(37,99,235,0.1)">&#128269;</span>Find Parking
         </a>
@@ -222,29 +224,42 @@ var bookingsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(bookings.
     penaltyAmount   = (decimal)(b.PenaltyAmount ?? 0),
     totalAmount     = (double)(Math.Ceiling(((DateTime)b.BookingTo - (DateTime)b.BookingFrom).TotalHours
                       * (ViewBag.MySlots as List<SmartSlot.Models.ParkingSlot> ?? new List<SmartSlot.Models.ParkingSlot>())
-                      .Where(s => s.Id == (int)b.ParkingSlotId).Select(s=>s.PricePerHour).FirstOrDefault()))
+                      .Where(s => s.Id == (int)b.ParkingSlotId).Select(s=>s.PricePerHour).FirstOrDefault())),
+    // ✅ Price of the booked slot — for customer-side penalty calculation
+    slotPricePerHour = (ViewBag.AllSlotPrices as System.Collections.Generic.Dictionary<int,double> != null &&
+                        (ViewBag.AllSlotPrices as System.Collections.Generic.Dictionary<int,double>).ContainsKey((int)b.ParkingSlotId))
+                       ? (ViewBag.AllSlotPrices as System.Collections.Generic.Dictionary<int,double>)[(int)b.ParkingSlotId]
+                       : 0.0
 })));
 
 var activeData = bookingsData.filter(function(b){ return b.isActive; });
 
-// Penalty bookings: not exited, not cancelled, overdue > 15 mins
+// Build penalty rate map from slotsData (owner slots)
+var slotPriceMap = {};
+slotsData.forEach(function(s){ slotPriceMap[s.id] = s.pricePerHour; });
+var mySlotIds = slotsData.map(function(s){ return s.id; });
+
+// All overdue bookings
 var penaltyData = bookingsData.filter(function(b){
     if (b.exitConfirmed || b.isCancelled) return false;
     var overdueMs = Date.now() - b.bookingToUtcMs;
-    return overdueMs > 15 * 60 * 1000; // 15 min grace
+    return overdueMs > 15 * 60 * 1000;
 });
 
-// Build penalty rate map from slotsData
-var slotPriceMap = {};
-slotsData.forEach(function(s){ slotPriceMap[s.id] = s.pricePerHour; });
+// Split by role
+var ownerPenaltyData    = penaltyData.filter(function(b){ return mySlotIds.indexOf(b.parkingSlotId) !== -1; });
+var customerPenaltyData = penaltyData.filter(function(b){ return mySlotIds.indexOf(b.parkingSlotId) === -1; });
 
 function calcPenalty(b) {
-    var pricePerHour = slotPriceMap[b.parkingSlotId] || 0;
+    // Owner slots: use slotPriceMap. Customer bookings: use slotPricePerHour from booking
+    var pricePerHour = mySlotIds.indexOf(b.parkingSlotId) !== -1
+        ? (slotPriceMap[b.parkingSlotId] || 0)
+        : (b.slotPricePerHour || 0);
     var penaltyRate = pricePerHour * 2;
     var overdueMs = Date.now() - b.bookingToUtcMs - (15 * 60 * 1000);
     if (overdueMs < 0) overdueMs = 0;
     var overdueHours = overdueMs / 3600000;
-    return { amount: Math.round(overdueHours * penaltyRate * 100) / 100, rate: penaltyRate };
+    return { amount: Math.round(overdueHours * penaltyRate * 100) / 100, rate: penaltyRate, pricePerHour: pricePerHour };
 }
 
 function formatOverdue(ms) {
@@ -270,58 +285,73 @@ function openModal(type) {
     if (type === 'penalty') {
         title.innerHTML = '⚠️ Penalty Details <button class="modal-close" onclick="closeModal()">Close</button>';
 
-        if (!penaltyData.length) {
-            html = '<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">No penalty bookings right now.</div></div>';
-        } else {
-            penaltyData.forEach(function(b, idx) {
-                var mySlotIds = slotsData.map(function(s){ return s.id; });
-                var isOwner   = mySlotIds.indexOf(b.parkingSlotId) !== -1;
-                var isCustomer = !isOwner;
-                var roleHtml = isOwner
-                    ? '<span class="penalty-role-badge role-owner">🏠 You are the Owner</span>'
-                    : '<span class="penalty-role-badge role-customer">🚗 You are the Customer</span>';
+        // ── Tab UI ──
+        html = '<div style="display:flex;gap:8px;margin-bottom:18px;">'
+            + '<button id="tab-owner" onclick="switchPenaltyTab(\'owner\')" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(245,158,11,0.4);background:rgba(245,158,11,0.15);color:#fcd34d;font-weight:700;font-size:13px;cursor:pointer;">🏠 As Owner (' + ownerPenaltyData.length + ')</button>'
+            + '<button id="tab-customer" onclick="switchPenaltyTab(\'customer\')" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.08);color:#fca5a5;font-weight:700;font-size:13px;cursor:pointer;">🚗 As Customer (' + customerPenaltyData.length + ')</button>'
+            + '</div>'
+            + '<div id="penalty-tab-owner"></div>'
+            + '<div id="penalty-tab-customer" style="display:none;"></div>';
+
+        body.innerHTML = html;
+        document.getElementById('modalOverlay').classList.add('open');
+
+        function buildPenaltyCards(data, prefix, isOwner) {
+            if (!data.length) {
+                return '<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">' + (isOwner ? 'No customer penalties on your slots.' : 'You have no penalty bookings.') + '</div></div>';
+            }
+            var h = '';
+            data.forEach(function(b, idx) {
                 var p = calcPenalty(b);
-                html += '<div class="penalty-detail-card" id="pcard-' + idx + '">'
+                h += '<div class="penalty-detail-card" id="' + prefix + 'pcard-' + idx + '">'
                     + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'
                     + '<div>'
                     + '<div style="font-size:13px;font-weight:600;">Slot #' + b.parkingSlotId + ' · ' + b.vehicleNumber + '</div>'
                     + '<div style="font-size:11px;color:var(--text-dim);margin-top:2px;">Booking ended: ' + b.bookingTo + '</div>'
                     + '</div>'
-                    + roleHtml
+                    + (isOwner ? '<span class="penalty-role-badge role-owner">🏠 Owner</span>' : '<span class="penalty-role-badge role-customer">🚗 Customer</span>')
                     + '</div>'
                     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'
                     + '<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.18);border-radius:10px;padding:12px;text-align:center;">'
                     + '<div style="font-size:10px;color:rgba(252,165,165,0.6);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Overdue Time</div>'
-                    + '<div class="live-timer" id="ptimer-' + idx + '">--:--:--</div>'
+                    + '<div class="live-timer" id="' + prefix + 'timer-' + idx + '">--:--:--</div>'
                     + '</div>'
                     + '<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.18);border-radius:10px;padding:12px;text-align:center;">'
                     + '<div style="font-size:10px;color:rgba(252,165,165,0.6);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Penalty Amount</div>'
-                    + '<div class="live-amount" id="pamount-' + idx + '">₹' + p.amount.toFixed(2) + '</div>'
+                    + '<div class="live-amount" id="' + prefix + 'amount-' + idx + '">₹' + p.amount.toFixed(2) + '</div>'
                     + '</div>'
                     + '</div>'
                     + '<div style="font-size:11px;color:rgba(252,165,165,0.55);padding:8px 10px;background:rgba(239,68,68,0.06);border-radius:8px;">'
-                    + '⚠️ Rate: ₹' + p.rate + '/hr (2× slot price of ₹' + (p.rate/2) + '/hr) · Grace: 15 mins'
-                    + (isCustomer ? '<br>💳 Penalty payable to the slot owner in cash or UPI.' : '<br>💰 This amount is owed to you by the customer.')
+                    + '⚠️ Rate: ₹' + p.rate + '/hr (2× slot price ₹' + p.pricePerHour + '/hr) · Grace: 15 mins'
+                    + (isOwner ? '<br>💰 This penalty amount is owed to you by the customer.' : '<br>💳 Please pay this penalty to the slot owner in cash or UPI.')
                     + '</div>'
                     + '</div>';
             });
+            return h;
         }
 
-        body.innerHTML = html;
-        document.getElementById('modalOverlay').classList.add('open');
+        document.getElementById('penalty-tab-owner').innerHTML    = buildPenaltyCards(ownerPenaltyData,    'own', true);
+        document.getElementById('penalty-tab-customer').innerHTML = buildPenaltyCards(customerPenaltyData, 'cus', false);
 
-        // Start live timer
+        // Active tab = whichever has data, default owner
+        switchPenaltyTab(customerPenaltyData.length > 0 && ownerPenaltyData.length === 0 ? 'customer' : 'owner');
+
         function tickPenalty() {
-            penaltyData.forEach(function(b, idx) {
-                var overdueMs = Date.now() - b.bookingToUtcMs - (15 * 60 * 1000);
-                if (overdueMs < 0) overdueMs = 0;
-                var timerEl  = document.getElementById('ptimer-'  + idx);
-                var amountEl = document.getElementById('pamount-' + idx);
-                if (timerEl)  timerEl.textContent  = formatOverdue(overdueMs);
-                if (amountEl) {
-                    var p = calcPenalty(b);
-                    amountEl.textContent = '₹' + p.amount.toFixed(2);
-                }
+            // Owner timers
+            ownerPenaltyData.forEach(function(b, idx) {
+                var overdueMs = Math.max(0, Date.now() - b.bookingToUtcMs - 15*60*1000);
+                var t = document.getElementById('owntimer-' + idx);
+                var a = document.getElementById('ownamount-' + idx);
+                if (t) t.textContent = formatOverdue(overdueMs);
+                if (a) a.textContent = '₹' + calcPenalty(b).amount.toFixed(2);
+            });
+            // Customer timers
+            customerPenaltyData.forEach(function(b, idx) {
+                var overdueMs = Math.max(0, Date.now() - b.bookingToUtcMs - 15*60*1000);
+                var t = document.getElementById('custimer-' + idx);
+                var a = document.getElementById('cusamount-' + idx);
+                if (t) t.textContent = formatOverdue(overdueMs);
+                if (a) a.textContent = '₹' + calcPenalty(b).amount.toFixed(2);
             });
         }
         tickPenalty();
@@ -413,7 +443,58 @@ function openModal(type) {
             });
         }
 
-    } 
+    } else if (type === 'transactions') {
+        title.innerHTML = 'Transaction History <button class="modal-close" onclick="closeModal()">Close</button>';
+        var mySlotIds = slotsData.map(function(s){ return s.id; });
+        var ownerBookings    = bookingsData.filter(function(b){ return mySlotIds.indexOf(b.parkingSlotId) !== -1; });
+        var customerBookings = bookingsData.filter(function(b){ return mySlotIds.indexOf(b.parkingSlotId) === -1; });
+        var totalEarned = ownerBookings.reduce(function(sum,b){ return sum+(b.totalAmount||0); }, 0);
+        var totalSpent  = customerBookings.reduce(function(sum,b){ return sum+(b.totalAmount||0); }, 0);
+
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;">'
+            + '<div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:14px;padding:18px;text-align:center;">'
+            + '<div style="font-size:10px;color:#10b981;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">&#127968; As Owner</div>'
+            + '<div style="font-family:Poppins,sans-serif;font-size:28px;font-weight:800;color:#10b981;">Rs.' + totalEarned.toFixed(0) + '</div>'
+            + '<div style="font-size:11px;color:rgba(241,245,249,0.4);margin-top:6px;">Earned from ' + ownerBookings.length + ' booking(s)</div>'
+            + '</div>'
+            + '<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:14px;padding:18px;text-align:center;">'
+            + '<div style="font-size:10px;color:#ef4444;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">&#128179; As Customer</div>'
+            + '<div style="font-family:Poppins,sans-serif;font-size:28px;font-weight:800;color:#ef4444;">Rs.' + totalSpent.toFixed(0) + '</div>'
+            + '<div style="font-size:11px;color:rgba(241,245,249,0.4);margin-top:6px;">Spent on ' + customerBookings.length + ' booking(s)</div>'
+            + '</div></div>';
+
+        if (ownerBookings.length) {
+            html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(241,245,249,0.4);margin-bottom:10px;">Owner Earnings</div>';
+            ownerBookings.forEach(function(b) {
+                html += '<div class="detail-card" style="margin-bottom:10px;">'
+                    + '<div class="dc-top">'
+                    + '<div class="dc-icon" style="background:rgba(16,185,129,0.1)">&#127968;</div>'
+                    + '<div class="dc-body">'
+                    + '<div class="dc-title">Slot #' + b.parkingSlotId + ' — ' + b.customerName + '</div>'
+                    + '<div class="dc-meta">' + b.bookingFrom + ' → ' + b.bookingTo + '</div>'
+                    + '</div>'
+                    + '<span style="font-family:Poppins,sans-serif;font-size:15px;font-weight:700;color:#10b981;white-space:nowrap;">+Rs.' + (b.totalAmount||0).toFixed(0) + '</span>'
+                    + '</div></div>';
+            });
+        }
+        if (customerBookings.length) {
+            html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(241,245,249,0.4);margin:16px 0 10px;">Customer Spending</div>';
+            customerBookings.forEach(function(b) {
+                html += '<div class="detail-card" style="margin-bottom:10px;">'
+                    + '<div class="dc-top">'
+                    + '<div class="dc-icon" style="background:rgba(239,68,68,0.1)">&#128179;</div>'
+                    + '<div class="dc-body">'
+                    + '<div class="dc-title">Slot #' + b.parkingSlotId + ' — ' + b.vehicleNumber + '</div>'
+                    + '<div class="dc-meta">' + b.bookingFrom + ' → ' + b.bookingTo + '</div>'
+                    + '</div>'
+                    + '<span style="font-family:Poppins,sans-serif;font-size:15px;font-weight:700;color:#ef4444;white-space:nowrap;">-Rs.' + (b.totalAmount||0).toFixed(0) + '</span>'
+                    + '</div></div>';
+            });
+        }
+        if (!ownerBookings.length && !customerBookings.length) {
+            html += '<div class="empty-state"><div class="empty-icon">&#128179;</div><div class="empty-text">No transactions yet.</div></div>';
+        }
+    }
 
     body.innerHTML = html;
     document.getElementById('modalOverlay').classList.add('open');
@@ -465,6 +546,30 @@ function downloadQR(slotId, ownerName) {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+}
+
+function switchPenaltyTab(tab) {
+    var ownerTab    = document.getElementById('tab-owner');
+    var customerTab = document.getElementById('tab-customer');
+    var ownerPanel    = document.getElementById('penalty-tab-owner');
+    var customerPanel = document.getElementById('penalty-tab-customer');
+    if (!ownerTab) return;
+
+    if (tab === 'owner') {
+        ownerPanel.style.display    = 'block';
+        customerPanel.style.display = 'none';
+        ownerTab.style.background    = 'rgba(245,158,11,0.35)';
+        ownerTab.style.borderColor   = 'rgba(245,158,11,0.8)';
+        customerTab.style.background = 'rgba(239,68,68,0.08)';
+        customerTab.style.borderColor= 'rgba(239,68,68,0.3)';
+    } else {
+        ownerPanel.style.display    = 'none';
+        customerPanel.style.display = 'block';
+        customerTab.style.background = 'rgba(239,68,68,0.3)';
+        customerTab.style.borderColor= 'rgba(239,68,68,0.8)';
+        ownerTab.style.background    = 'rgba(245,158,11,0.08)';
+        ownerTab.style.borderColor   = 'rgba(245,158,11,0.3)';
+    }
 }
 
 function closeModal() {
