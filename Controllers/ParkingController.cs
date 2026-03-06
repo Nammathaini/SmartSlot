@@ -68,18 +68,28 @@ namespace SmartSlot.Controllers
                 .OrderByDescending(s => s.Id)
                 .ToList();
 
+            // Customer bookings — slots I booked
             var myBookings = _context.Bookings
                 .Where(b => b.CustomerPhone == user.PhoneNumber)
                 .OrderByDescending(b => b.BookingFrom)
                 .ToList();
 
-            // ✅ Pass slot prices for ALL booked slots (for customer penalty calculation)
+            // ✅ Owner bookings — customers who booked MY slots (for owner penalty tab)
+            var mySlotIds = mySlots.Select(s => s.Id).ToList();
+            var mySlotBookings = _context.Bookings
+                .Where(b => mySlotIds.Contains(b.ParkingSlotId))
+                .OrderByDescending(b => b.BookingFrom)
+                .ToList();
+
+            // Slot prices for customer bookings penalty calculation
             var bookedSlotIds = myBookings.Select(b => b.ParkingSlotId).Distinct().ToList();
             var allSlotPrices = _context.ParkingSlots
                 .Where(s => bookedSlotIds.Contains(s.Id))
                 .ToDictionary(s => s.Id, s => s.PricePerHour);
+
             ViewBag.MySlots = mySlots;
             ViewBag.MyBookings = myBookings;
+            ViewBag.MySlotBookings = mySlotBookings;
             ViewBag.AllSlotPrices = allSlotPrices;
             return View();
         }

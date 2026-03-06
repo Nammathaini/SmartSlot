@@ -239,22 +239,42 @@ var slotPriceMap = {};
 slotsData.forEach(function(s){ slotPriceMap[s.id] = s.pricePerHour; });
 var mySlotIds = slotsData.map(function(s){ return s.id; });
 
-// All overdue bookings
-var penaltyData = bookingsData.filter(function(b){
+// ✅ Owner-side: bookings on MY slots made by customers
+var slotBookingsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    ((ViewBag.MySlotBookings as List<SmartSlot.Models.Booking>) ?? new List<SmartSlot.Models.Booking>())
+    .Select(b => new {
+        id             = b.Id,
+        parkingSlotId  = b.ParkingSlotId,
+        vehicleNumber  = b.VehicleNumber ?? "",
+        customerName   = b.CustomerName ?? "",
+        bookingFrom    = b.BookingFrom.AddHours(5.5).ToString("dd MMM, hh:mm tt"),
+        bookingTo      = b.BookingTo.AddHours(5.5).ToString("dd MMM, hh:mm tt"),
+        bookingToUtcMs = (long)(b.BookingTo - new DateTime(1970,1,1,0,0,0,DateTimeKind.Utc)).TotalMilliseconds,
+        exitConfirmed  = b.ExitConfirmed,
+        isCancelled    = b.IsCancelled,
+        slotPricePerHour = (double)(slots.Where(s => s.Id == b.ParkingSlotId).Select(s => s.PricePerHour).FirstOrDefault())
+    })));
+
+// Customer penalty — bookings I made that are overdue
+var customerPenaltyData = bookingsData.filter(function(b){
     if (b.exitConfirmed || b.isCancelled) return false;
-    var overdueMs = Date.now() - b.bookingToUtcMs;
-    return overdueMs > 15 * 60 * 1000;
+    return Date.now() - b.bookingToUtcMs > 15 * 60 * 1000;
 });
 
-// Split by role
-var ownerPenaltyData    = penaltyData.filter(function(b){ return mySlotIds.indexOf(b.parkingSlotId) !== -1; });
-var customerPenaltyData = penaltyData.filter(function(b){ return mySlotIds.indexOf(b.parkingSlotId) === -1; });
+// Owner penalty — customers who booked MY slots and are overdue
+var ownerPenaltyData = slotBookingsData.filter(function(b){
+    if (b.exitConfirmed || b.isCancelled) return false;
+    return Date.now() - b.bookingToUtcMs > 15 * 60 * 1000;
+});
+
+// Combined for penalty card count
+var penaltyData = ownerPenaltyData.concat(customerPenaltyData);
 
 function calcPenalty(b) {
-    // Owner slots: use slotPriceMap. Customer bookings: use slotPricePerHour from booking
-    var pricePerHour = mySlotIds.indexOf(b.parkingSlotId) !== -1
-        ? (slotPriceMap[b.parkingSlotId] || 0)
-        : (b.slotPricePerHour || 0);
+    // Use slotPricePerHour if present (slotBookingsData), else slotPriceMap (slotsData)
+    var pricePerHour = (b.slotPricePerHour > 0)
+        ? b.slotPricePerHour
+        : (slotPriceMap[b.parkingSlotId] || 0);
     var penaltyRate = pricePerHour * 2;
     var overdueMs = Date.now() - b.bookingToUtcMs - (15 * 60 * 1000);
     if (overdueMs < 0) overdueMs = 0;
