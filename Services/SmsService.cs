@@ -6,24 +6,36 @@ using Twilio.Types;
 
 namespace SmartSlot.Services
 {
-    public class SmsService
+public class SmsService
+{
+private readonly TwilioSettings _settings;
+
+```
+    public SmsService(IOptions<TwilioSettings> settings)
     {
-        private readonly TwilioSettings _settings;
+        _settings = settings.Value;
+    }
 
-        public SmsService(IOptions<TwilioSettings> settings)
+    // OTP SMS — for Signup & Forgot Password only
+    public async Task SendOtpSms(string toNumber, string otp)
+    {
+        try
         {
-            _settings = settings.Value;
-        }
-
-        // 🔐 OTP SMS — for Signup & Forgot Password only
-        public async Task SendOtpSms(string toNumber, string otp)
-        {
-            Console.WriteLine($"📞 Sending OTP to: {toNumber}");
+            Console.WriteLine($"Sending OTP to: {toNumber}");
 
             if (string.IsNullOrWhiteSpace(toNumber))
                 throw new ArgumentException("Phone number is empty.");
 
             toNumber = NormalizePhoneNumber(toNumber);
+
+            if (string.IsNullOrWhiteSpace(_settings.AccountSid))
+                throw new Exception("Twilio AccountSid is empty");
+
+            if (string.IsNullOrWhiteSpace(_settings.AuthToken))
+                throw new Exception("Twilio AuthToken is empty");
+
+            if (string.IsNullOrWhiteSpace(_settings.FromNumber))
+                throw new Exception("Twilio FromNumber is empty");
 
             TwilioClient.Init(_settings.AccountSid, _settings.AuthToken);
 
@@ -33,19 +45,32 @@ namespace SmartSlot.Services
                 to: new PhoneNumber(toNumber)
             );
 
-            Console.WriteLine($"✅ OTP SMS sent | SID: {message.Sid} | Status: {message.Status}");
+            Console.WriteLine($"SMS Sent | SID: {message.Sid} | Status: {message.Status}");
 
             if (message.ErrorCode != null)
-                Console.WriteLine($"❌ Twilio Error: {message.ErrorCode} - {message.ErrorMessage}");
+            {
+                throw new Exception(
+                    $"Twilio Error {message.ErrorCode}: {message.ErrorMessage}"
+                );
+            }
         }
-
-        // 🔧 Phone Normalization
-        private string NormalizePhoneNumber(string toNumber)
+        catch (Exception ex)
         {
-            toNumber = toNumber.Trim();
-            if (!toNumber.StartsWith("+91"))
-                toNumber = "+91" + toNumber;
-            return toNumber;
+            Console.WriteLine($"TWILIO ERROR: {ex.Message}");
+            throw;
         }
     }
+
+    private string NormalizePhoneNumber(string toNumber)
+    {
+        toNumber = toNumber.Trim();
+
+        if (!toNumber.StartsWith("+91"))
+            toNumber = "+91" + toNumber;
+
+        return toNumber;
+    }
+}
+```
+
 }
